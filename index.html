@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maintenance Management System (MMS) | Industrial Manufacturing Dashboard</title>
+  <meta name="description" content="Professional, modern web-based Maintenance Management System dashboard for industrial manufacturing operations.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+
+  <!-- Layout Shell -->
+  <div class="app-shell">
+
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+    <!-- ===================================================================
+         SECTION 2: FIXED LEFT SIDEBAR NAVIGATION (~275px)
+         =================================================================== -->
+    <aside id="sidebar" class="sidebar">
+      
+      <!-- Top Section -->
+      <div>
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+          <div class="sidebar-logo-icon">
+            <!-- White Maintenance Gear Icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+            </svg>
+          </div>
+          <div class="sidebar-title">
+            <h1>MAINTENANCE</h1>
+            <h1>MANAGEMENT SYSTEM</h1>
+            <span>Plant Operations 4.0</span>
+          </div>
+        </div>
+
+        <!-- Sidebar Navigation Menu -->
+        <nav class="sidebar-nav">
+          <div class="nav-section-title">Main Navigation</div>
+
+          <!-- MENU 1: HOME -->
+          <a class="nav-link active" data-view="home" onclick="window.navigateTo('home')" id="navLinkHome">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span>Home</span>
+          </a>
+
+          <!-- MENU 2: BREAKDOWN RECORD -->
+          <a class="nav-link" data-view="breakdown" onclick="window.navigateTo('breakdown')" id="navLinkBreakdown">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+              <path d="m9.5 12 2-2 2 2"></path>
+            </svg>
+            <span>Breakdown Record</span>
+          </a>
+
+          <!-- MENU 3: MAINTENANCE RECORD -->
+          <a class="nav-link" data-view="maintenance" onclick="window.navigateTo('maintenance')" id="navLinkMaintenance">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+              <line x1="4" y1="20" x2="7" y2="17"></line>
+            </svg>
+            <span>Maintenance Record</span>
+          </a>
+
+          <!-- MENU 4: SPARE PARTS -->
+          <a class="nav-link" data-view="spareparts" onclick="window.navigateTo('spareparts')" id="navLinkSpareParts">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            <span>Spare Parts</span>
+          </a>
+
+          <!-- Technicians Directory Menu Item -->
+          <a class="nav-link" data-view="technicians" onclick="window.navigateTo('technicians')" id="navLinkTechnicians">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Technicians List</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- BOTTOM SIDEBAR MENU -->
+      <div class="sidebar-footer-menu">
+        <div class="nav-section-title">System & Account</div>
+
+        <!-- MENU 5: NOTIFICATIONS -->
+        <a class="nav-link" onclick="window.toggleNotificationsDrawer()" id="navLinkNotifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <div class="nav-badge-wrapper">
+            <span>Notifications</span>
+            <span id="sidebarNotifBadge" class="badge-unread">3</span>
+          </div>
+        </a>
+
+        <!-- MENU 6: PROFILE -->
+        <a class="nav-link" onclick="window.switchUserRole('Administrator')" id="navLinkProfile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>Profile</span>
+        </a>
+
+        <!-- MENU 7: LOGOUT -->
+        <a class="nav-link" onclick="window.simulateLogout()" id="navLinkLogout" style="color: #FF8B94;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Logout</span>
+        </a>
+      </div>
+
+    </aside>
+
+    <!-- ===================================================================
+         MAIN CONTENT AREA
+         =================================================================== -->
+    <main class="main-content">
+
+      <!-- ===================================================================
+           SECTION 3: TOP HEADER BAR (~70px height)
+           =================================================================== -->
+      <header class="top-header">
+        
+        <div class="header-left">
+          <!-- Mobile Menu Hamburger -->
+          <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Navigation">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+
+          <div class="plant-badge">
+            <span class="plant-badge-dot"></span>
+            <span>Plant Site 01 • Automotive Assembly</span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Dynamic Live Date & Time -->
+          <div class="datetime-display" id="datetimeDisplay">
+            <div id="liveDate" class="datetime-date">Friday, 9 Oct 2026</div>
+            <div id="liveTime" class="datetime-time">11:55 AM</div>
+          </div>
+
+          <!-- User Account Section with Dropdown -->
+          <div class="user-account-wrapper" id="userAccountWrapper">
+            <button class="user-account-btn" id="userAccountBtn" aria-expanded="false">
+              <!-- Circular Blue Avatar with User Initials -->
+              <div id="userAvatar" class="user-avatar">SH</div>
+              
+              <div class="user-meta">
+                <span id="userName" class="user-name">Siti Humairah</span>
+                <span id="userRoleTag" class="user-role-tag">Administrator</span>
+              </div>
+
+              <!-- Small downward arrow -->
+              <svg class="user-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div class="user-dropdown-menu" id="userDropdownMenu">
+              <div class="dropdown-header-info">
+                <div id="dropdownUserName" class="dropdown-user-full">Siti Humairah</div>
+                <div id="dropdownUserEmail" class="dropdown-user-email">siti.humairah@industrialmms.com</div>
+              </div>
+
+              <!-- Role Switcher for seamless demonstration -->
+              <div class="role-switcher-box">
+                <div class="role-switcher-label">Switch System Role (RBAC)</div>
+                <div class="role-switch-btns">
+                  <button class="role-switch-btn active" data-role="Administrator" onclick="window.switchUserRole('Administrator')">
+                    <span>Administrator</span>
+                    <small>Full Access</small>
+                  </button>
+                  <button class="role-switch-btn" data-role="Supervisor / Engineer" onclick="window.switchUserRole('Supervisor / Engineer')">
+                    <span>Supervisor / Engineer</span>
+                    <small>Ops & Assign</small>
+                  </button>
+                  <button class="role-switch-btn" data-role="Technician" onclick="window.switchUserRole('Technician')">
+                    <span>Technician</span>
+                    <small>Tasks Only</small>
+                  </button>
+                </div>
+              </div>
+
+              <button class="dropdown-item" onclick="window.switchUserRole('Administrator')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span>My Profile</span>
+              </button>
+
+              <button class="dropdown-item" onclick="window.resetState()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                <span>Reset Demo Data</span>
+              </button>
+
+              <button class="dropdown-item logout-item" onclick="window.simulateLogout()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </header>
+
+      <!-- Scrollable Main Content Container -->
+      <div class="content-body">
+
+        <!-- ===============================================================
+             VIEW: HOME DASHBOARD (Exact Reference Layout)
+             =============================================================== -->
+        <section id="view-home" class="subview-container active">
+
+          <!-- SECTION 4: WELCOME SECTION -->
+          <div class="welcome-section">
+            <h1 class="welcome-heading">Welcome,</h1>
+            <h2 class="welcome-subheading">Maintenance Management System</h2>
+            <p class="welcome-instruction">Select a module to continue</p>
+
+            <div class="quick-action-bar">
+              <span><strong>Operational Status:</strong> All core manufacturing lines active (Press, CNC, Assembly, Painting).</span>
+              <div class="quick-action-btns">
+                <button class="btn-pill" onclick="window.openReportBreakdownModal()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E50920" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  + Report Breakdown
+                </button>
+                <button class="btn-pill" onclick="window.resetState()">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                  Reset Live Demo
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===============================================================
+               SECTION 5: MAIN MODULE CARDS (3 Large Rectangular Cards)
+               =============================================================== -->
+          <div class="module-cards-grid">
+
+            <!-- CARD 1: BREAKDOWN RECORD -->
+            <div class="module-card module-card-breakdown" onclick="window.navigateTo('breakdown')" id="cardBreakdown">
+              <div class="card-icon-container">
+                <div class="card-icon-circle">
+                  <!-- Red document containing machine monitoring symbol -->
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <path d="M9 13h1.5l1.5-3 2 6 1.5-3H17"></path>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="card-body-text">
+                <h3 class="card-title">Breakdown Record</h3>
+                <p class="card-description">
+                  Record and track machine breakdowns, downtime and corrective actions.
+                </p>
+              </div>
+
+              <div class="card-action-row">
+                <!-- Red Circular Button with White Right Arrow -->
+                <button class="card-nav-button" aria-label="Open Breakdown Record">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- CARD 2: MAINTENANCE RECORD -->
+            <div class="module-card module-card-maintenance" onclick="window.navigateTo('maintenance')" id="cardMaintenance">
+              <div class="card-icon-container">
+                <div class="card-icon-circle">
+                  <!-- Blue crossed wrench and screwdriver with small gear -->
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m14.7 6.3 1.6 1.6-9.9 9.9-1.6-1.6 9.9-9.9z"></path>
+                    <path d="M17 3a2.83 2.83 0 0 1 4 4l-2 2-4-4 2-2z"></path>
+                    <path d="m5 15-2 2 4 4 2-2-4-4z"></path>
+                    <circle cx="18" cy="18" r="3"></circle>
+                    <path d="M18 15v1m0 4v1m-3-3h1m4 0h1"></path>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="card-body-text">
+                <h3 class="card-title">Maintenance Record</h3>
+                <p class="card-description">
+                  Manage preventive maintenance (PM) records, schedules and history.
+                </p>
+              </div>
+
+              <div class="card-action-row">
+                <!-- Blue Circular Button with White Right Arrow -->
+                <button class="card-nav-button" aria-label="Open Maintenance Record">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- CARD 3: SPARE PARTS -->
+            <div class="module-card module-card-spareparts" onclick="window.navigateTo('spareparts')" id="cardSpareParts">
+              <div class="card-icon-container">
+                <div class="card-icon-circle">
+                  <!-- Green storage box -->
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                    <rect x="1" y="3" width="22" height="5"></rect>
+                    <line x1="10" y1="12" x2="14" y2="12"></line>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="card-body-text">
+                <h3 class="card-title">Spare Parts</h3>
+                <p class="card-description">
+                  Monitor spare part inventory, usage and stock level.
+                </p>
+              </div>
+
+              <div class="card-action-row">
+                <!-- Green Circular Button with White Right Arrow -->
+                <button class="card-nav-button" aria-label="Open Spare Parts">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ===============================================================
+               SECTION 6: SYSTEM OVERVIEW SECTION (Container + 4 KPI Cards)
+               =============================================================== -->
+          <div class="system-overview-container">
+            <div class="overview-header">
+              <h2 class="overview-title">System Overview</h2>
+              <div class="overview-meta">
+                <span class="overview-meta-indicator"></span>
+                <span>Live Plant Telemetry Active</span>
+              </div>
+            </div>
+
+            <!-- 4 KPI Cards Grid -->
+            <div class="kpi-cards-grid">
+
+              <!-- KPI 1: OPEN BREAKDOWN -->
+              <div class="kpi-card kpi-card-breakdown" onclick="window.navigateTo('breakdown', 'active-jobs')" id="kpiCardBreakdown">
+                <div class="kpi-left-group">
+                  <div class="kpi-icon-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                  </div>
+                  <div class="kpi-data-group">
+                    <div id="kpiOpenBreakdown" class="kpi-value">5</div>
+                    <div class="kpi-label">Open Breakdown</div>
+                  </div>
+                </div>
+                <div class="kpi-chevron">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- KPI 2: PM DUE THIS WEEK -->
+              <div class="kpi-card kpi-card-pm" onclick="window.navigateTo('maintenance', 'pm-schedule')" id="kpiCardPM">
+                <div class="kpi-left-group">
+                  <div class="kpi-icon-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                    </svg>
+                  </div>
+                  <div class="kpi-data-group">
+                    <div id="kpiPmDue" class="kpi-value">12</div>
+                    <div class="kpi-label">PM Due This Week</div>
+                  </div>
+                </div>
+                <div class="kpi-chevron">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- KPI 3: LOW STOCK ITEMS -->
+              <div class="kpi-card kpi-card-stock" onclick="window.navigateTo('spareparts', 'low')" id="kpiCardStock">
+                <div class="kpi-left-group">
+                  <div class="kpi-icon-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                      <rect x="1" y="3" width="22" height="5"></rect>
+                      <line x1="10" y1="12" x2="14" y2="12"></line>
+                    </svg>
+                  </div>
+                  <div class="kpi-data-group">
+                    <div id="kpiLowStock" class="kpi-value">3</div>
+                    <div class="kpi-label">Low Stock Items</div>
+                  </div>
+                </div>
+                <div class="kpi-chevron">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- KPI 4: TOTAL TECHNICIANS -->
+              <div class="kpi-card kpi-card-technicians" onclick="window.navigateTo('technicians')" id="kpiCardTechnicians">
+                <div class="kpi-left-group">
+                  <div class="kpi-icon-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                  </div>
+                  <div class="kpi-data-group">
+                    <div id="kpiTotalTechs" class="kpi-value">8</div>
+                    <div class="kpi-label">Total Technicians</div>
+                  </div>
+                </div>
+                <div class="kpi-chevron">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ===============================================================
+             VIEW: BREAKDOWN RECORD MODULE
+             Features: 1. Report BD  2. Active Job  3. Pending Job  4. BD Dashboard
+             =============================================================== -->
+        <section id="view-breakdown" class="subview-container">
+          <div class="subview-header">
+            <div>
+              <div class="breadcrumb-nav">
+                <span class="breadcrumb-link" onclick="window.navigateTo('home')">Home</span>
+                <span>/</span>
+                <span>Breakdown Record</span>
+              </div>
+              <div class="subview-title-group">
+                <h2>Breakdown Management</h2>
+                <p>Track machine downtime, active technician work orders, and plant MTTR metrics.</p>
+              </div>
+            </div>
+
+            <div class="subview-actions">
+              <button class="btn-primary" onclick="window.openReportBreakdownModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Report Breakdown
+              </button>
+            </div>
+          </div>
+
+          <!-- Module Tabs -->
+          <div class="module-tabs-nav" id="breakdownTabs">
+            <button class="module-tab-btn active" data-tab="active-jobs" onclick="window.switchBreakdownTab('active-jobs')">
+              Active Jobs
+            </button>
+            <button class="module-tab-btn" data-tab="pending-jobs" onclick="window.switchBreakdownTab('pending-jobs')">
+              Pending Jobs
+            </button>
+            <button class="module-tab-btn" data-tab="resolved-history" onclick="window.switchBreakdownTab('resolved-history')">
+              Resolved History
+            </button>
+            <button class="module-tab-btn" data-tab="bd-dashboard" onclick="window.switchBreakdownTab('bd-dashboard')">
+              BD Dashboard (Admin Only)
+            </button>
+          </div>
+
+          <!-- TAB 1: ACTIVE JOBS -->
+          <div id="bd-tab-active-jobs" class="breakdown-tab-content">
+            <div class="data-table-container">
+              <div class="table-toolbar">
+                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Active Breakdown Work Orders</h3>
+                <span class="status-badge status-badge-red">In Progress</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Breakdown ID</th>
+                      <th>Machine / Location</th>
+                      <th>Reported Failure Issue</th>
+                      <th>Priority</th>
+                      <th>Assigned Technician</th>
+                      <th>Downtime</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activeBreakdownTbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: PENDING JOBS -->
+          <div id="bd-tab-pending-jobs" class="breakdown-tab-content" style="display:none;">
+            <div class="data-table-container">
+              <div class="table-toolbar">
+                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Pending Breakdown Queue</h3>
+                <span class="status-badge status-badge-amber">Awaiting Tech Assignment</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Breakdown ID</th>
+                      <th>Machine / Location</th>
+                      <th>Issue Description</th>
+                      <th>Priority</th>
+                      <th>Status</th>
+                      <th>Reported By</th>
+                      <th>Assign Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pendingBreakdownTbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: RESOLVED HISTORY -->
+          <div id="bd-tab-resolved-history" class="breakdown-tab-content" style="display:none;">
+            <div class="data-table-container">
+              <div class="table-toolbar">
+                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Resolved Machine Restorations</h3>
+                <span class="status-badge status-badge-green">Completed</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Machine</th>
+                      <th>Root Cause / Issue</th>
+                      <th>Status</th>
+                      <th>Lead Tech</th>
+                      <th>Total Downtime</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="resolvedBreakdownTbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 4: BD DASHBOARD (Admin Only) -->
+          <div id="bd-tab-bd-dashboard" class="breakdown-tab-content" style="display:none;">
+            
+            <!-- Lock notification for restricted roles -->
+            <div id="bdDashboardLockNotice" style="display:none; background:#FFFBEB; border:1px solid #FCD34D; border-radius:var(--radius-md); padding:24px; text-align:center;">
+              <h3 style="color:#B45309; font-size:18px;">Restricted Access: BD Dashboard</h3>
+              <p style="color:#78350F; margin-top:6px; font-size:13.5px;">This analytics dashboard is restricted to <strong>Administrator</strong> and <strong>Engineering Supervisors</strong>. Please switch to an Administrator profile via the top right menu to view MTTR, MTBF, and line downtime analytics.</p>
+            </div>
+
+            <div id="bdDashboardMainContent">
+              <div class="analytics-grid">
+                <div class="analytics-card">
+                  <div class="analytics-card-title">Mean Time to Repair (MTTR)</div>
+                  <div class="analytics-card-val">1.48 hrs</div>
+                  <div class="analytics-card-sub">↓ 12% faster than target</div>
+                </div>
+                <div class="analytics-card">
+                  <div class="analytics-card-title">Mean Time Between Failures (MTBF)</div>
+                  <div class="analytics-card-val">48.2 hrs</div>
+                  <div class="analytics-card-sub">↑ 4.5% improvement</div>
+                </div>
+                <div class="analytics-card">
+                  <div class="analytics-card-title">Overall Equipment Effectiveness (OEE)</div>
+                  <div class="analytics-card-val">87.4%</div>
+                  <div class="analytics-card-sub">World class standard > 85%</div>
+                </div>
+                <div class="analytics-card">
+                  <div class="analytics-card-title">Total Downtime (This Month)</div>
+                  <div class="analytics-card-val">14.6 hrs</div>
+                  <div class="analytics-card-sub negative">Press Shop Line 2 highest impact</div>
+                </div>
+              </div>
+
+              <!-- Downtime chart visual representation -->
+              <div class="chart-container-card">
+                <div class="chart-card-header">
+                  <h4 class="chart-card-title">Downtime Hours by Manufacturing Line (October 2026)</h4>
+                  <span style="font-size:12px; color:var(--text-muted);">Real-time Telemetry Data</span>
+                </div>
+                <div class="bar-chart-mock">
+                  <div class="bar-col">
+                    <div class="bar-fill danger" style="height: 75%;">
+                      <span class="bar-tooltip">6.2h</span>
+                    </div>
+                    <span class="bar-label">Press Shop 2</span>
+                  </div>
+                  <div class="bar-col">
+                    <div class="bar-fill" style="height: 52%;">
+                      <span class="bar-tooltip">4.3h</span>
+                    </div>
+                    <span class="bar-label">Machining 1</span>
+                  </div>
+                  <div class="bar-col">
+                    <div class="bar-fill" style="height: 30%;">
+                      <span class="bar-tooltip">2.1h</span>
+                    </div>
+                    <span class="bar-label">Chassis Assembly</span>
+                  </div>
+                  <div class="bar-col">
+                    <div class="bar-fill" style="height: 18%;">
+                      <span class="bar-tooltip">1.2h</span>
+                    </div>
+                    <span class="bar-label">Plastics Molding</span>
+                  </div>
+                  <div class="bar-col">
+                    <div class="bar-fill" style="height: 10%;">
+                      <span class="bar-tooltip">0.8h</span>
+                    </div>
+                    <span class="bar-label">Paint Shop</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- ===============================================================
+             VIEW: MAINTENANCE RECORD MODULE (PM)
+             Features: 1. PM Schedule 2. Task Assignment 3. Status 4. History 5. PM Dashboard
+             =============================================================== -->
+        <section id="view-maintenance" class="subview-container">
+          <div class="subview-header">
+            <div>
+              <div class="breadcrumb-nav">
+                <span class="breadcrumb-link" onclick="window.navigateTo('home')">Home</span>
+                <span>/</span>
+                <span>Maintenance Record</span>
+              </div>
+              <div class="subview-title-group">
+                <h2>Preventive Maintenance (PM) Management</h2>
+                <p>Plan routine equipment servicing, inspections, and ensure zero unplanned line stoppage.</p>
+              </div>
+            </div>
+
+            <div class="subview-actions">
+              <button class="btn-secondary" onclick="window.navigateTo('technicians')">
+                View Assigned Techs
+              </button>
+            </div>
+          </div>
+
+          <!-- Module Tabs -->
+          <div class="module-tabs-nav" id="maintenanceTabs">
+            <button class="module-tab-btn active" data-tab="pm-schedule" onclick="window.switchMaintenanceTab('pm-schedule')">
+              PM Schedule (This Week)
+            </button>
+            <button class="module-tab-btn" data-tab="pm-history" onclick="window.switchMaintenanceTab('pm-history')">
+              Maintenance History
+            </button>
+            <button class="module-tab-btn" data-tab="pm-dashboard" onclick="window.switchMaintenanceTab('pm-dashboard')">
+              PM Dashboard
+            </button>
+          </div>
+
+          <!-- TAB 1: PM SCHEDULE -->
+          <div id="pm-tab-pm-schedule" class="maintenance-tab-content">
+            <div class="data-table-container">
+              <div class="table-toolbar">
+                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Preventive Maintenance Scheduled For Current Week</h3>
+                <span class="status-badge status-badge-blue">Active Schedule</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>PM Code</th>
+                      <th>Machine / Section</th>
+                      <th>Preventive Maintenance Task</th>
+                      <th>Frequency</th>
+                      <th>Scheduled Date</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pmScheduleTbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: PM HISTORY -->
+          <div id="pm-tab-pm-history" class="maintenance-tab-content" style="display:none;">
+            <div class="data-table-container">
+              <div class="table-toolbar">
+                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Completed PM History Log</h3>
+                <span class="status-badge status-badge-green">Audited Records</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Machine</th>
+                      <th>Task Title</th>
+                      <th>Status</th>
+                      <th>Technician</th>
+                      <th>Completion Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pmHistoryTbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: PM DASHBOARD -->
+          <div id="pm-tab-pm-dashboard" class="maintenance-tab-content" style="display:none;">
+            <div class="analytics-grid">
+              <div class="analytics-card">
+                <div class="analytics-card-title">PM Schedule Compliance Rate</div>
+                <div class="analytics-card-val">96.4%</div>
+                <div class="analytics-card-sub">Target: > 95%</div>
+              </div>
+              <div class="analytics-card">
+                <div class="analytics-card-title">Completed PMs (Past 30 Days)</div>
+                <div class="analytics-card-val">48 Tasks</div>
+                <div class="analytics-card-sub">100% On Time</div>
+              </div>
+              <div class="analytics-card">
+                <div class="analytics-card-title">Breakdown vs PM Ratio</div>
+                <div class="analytics-card-val">1 : 4.2</div>
+                <div class="analytics-card-sub">Healthy proactive ratio</div>
+              </div>
+              <div class="analytics-card">
+                <div class="analytics-card-title">Overdue Tasks</div>
+                <div class="analytics-card-val" style="color:#10B981;">0</div>
+                <div class="analytics-card-sub">No backlog pending</div>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ===============================================================
+             VIEW: SPARE PARTS INVENTORY MODULE
+             Features: 1. Parts List 2. Edit Stock 3. Request Stock 4. Movement History
+             =============================================================== -->
+        <section id="view-spareparts" class="subview-container">
+          <div class="subview-header">
+            <div>
+              <div class="breadcrumb-nav">
+                <span class="breadcrumb-link" onclick="window.navigateTo('home')">Home</span>
+                <span>/</span>
+                <span>Spare Parts</span>
+              </div>
+              <div class="subview-title-group">
+                <h2>Spare Parts Inventory & Stores</h2>
+                <p>Manage critical replacement parts, stock thresholds, and material movement tracking.</p>
+              </div>
+            </div>
+
+            <div class="subview-actions">
+              <button class="btn-primary" onclick="window.openRequestStockModal('')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Request Stock (Requisition)
+              </button>
+            </div>
+          </div>
+
+          <!-- Module Tabs -->
+          <div class="module-tabs-nav" id="sparepartsTabs">
+            <button class="module-tab-btn active" data-tab="parts-list" onclick="window.switchSparePartsTab('parts-list')">
+              Spare Parts List
+            </button>
+            <button class="module-tab-btn" data-tab="stock-movement" onclick="window.switchSparePartsTab('stock-movement')">
+              Stock Movement History
+            </button>
+          </div>
+
+          <!-- TAB 1: PARTS LIST -->
+          <div id="sp-tab-parts-list" class="spareparts-tab-content">
+            <div class="data-table-container">
+              <div class="table-toolbar">
+                <div class="search-input-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <input type="text" id="sparePartsSearch" class="search-input" placeholder="Search by code, part name, category, bin...">
+                </div>
+
+                <div class="table-filter-group">
+                  <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">Stock Filter:</label>
+                  <select id="sparePartsFilter" class="filter-select">
+                    <option value="all">All Inventory Items</option>
+                    <option value="low">Low Stock (≤ Min Level)</option>
+                    <option value="out">Out of Stock (0 units)</option>
+                    <option value="ok">In Stock (Healthy)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Part Code</th>
+                      <th>Part Description & Bin</th>
+                      <th>Stock Level</th>
+                      <th>Status</th>
+                      <th>Unit Price</th>
+                      <th>Authorized Supplier</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sparePartsTbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: STOCK MOVEMENT HISTORY -->
+          <div id="sp-tab-stock-movement" class="spareparts-tab-content" style="display:none;">
+            <div class="data-table-container">
+              <div class="table-toolbar">
+                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Inventory Movement Audit Trail</h3>
+                <span class="status-badge status-badge-blue">Live Ledger</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Movement ID</th>
+                      <th>Timestamp</th>
+                      <th>Part Code & Name</th>
+                      <th>Type</th>
+                      <th>Qty Change</th>
+                      <th>New Balance</th>
+                      <th>Reference Job / PO</th>
+                      <th>Authorized By</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stockMovementTbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ===============================================================
+             VIEW: TECHNICIANS DIRECTORY (Connected via KPI 4)
+             =============================================================== -->
+        <section id="view-technicians" class="subview-container">
+          <div class="subview-header">
+            <div>
+              <div class="breadcrumb-nav">
+                <span class="breadcrumb-link" onclick="window.navigateTo('home')">Home</span>
+                <span>/</span>
+                <span>Technicians</span>
+              </div>
+              <div class="subview-title-group">
+                <h2>Total Registered Technicians</h2>
+                <p>Maintenance engineering staff, skill matrix, duty shifts, and live active task status.</p>
+              </div>
+            </div>
+
+            <div class="subview-actions">
+              <span class="status-badge status-badge-blue">8 Active on Roster</span>
+            </div>
+          </div>
+
+          <!-- 8 Technicians Grid -->
+          <div class="technician-grid" id="techniciansGrid">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ===================================================================
+       SECTION 9: NOTIFICATION DRAWER / PANEL
+       =================================================================== -->
+  <div id="notificationDrawer" class="notification-drawer">
+    <div class="drawer-header">
+      <h3>System Notifications</h3>
+      <div class="drawer-actions">
+        <button class="btn-text-sm" onclick="window.markAllNotificationsRead()">Mark all as read</button>
+        <button class="modal-close-btn" onclick="window.closeNotificationsDrawer()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+    <div id="notificationList" class="notification-list">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: REPORT BREAKDOWN
+       =================================================================== -->
+  <div id="reportBreakdownModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Report Machine Breakdown</h3>
+        <button class="modal-close-btn" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <form id="reportBreakdownForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="rbMachine">Machine / Equipment Name *</label>
+            <input type="text" id="rbMachine" class="form-control" placeholder="e.g. CNC Milling Machine 04, Robotic Welder 02" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="rbLine">Plant Line / Department *</label>
+              <select id="rbLine" class="form-control" required>
+                <option value="Press Shop Line 2">Press Shop Line 2</option>
+                <option value="Machining Line 1">Machining Line 1</option>
+                <option value="Chassis Assembly">Chassis Assembly</option>
+                <option value="Plastics Molding">Plastics Molding</option>
+                <option value="Paint Shop">Paint Shop</option>
+                <option value="Central Plant Utility">Central Plant Utility</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rbPriority">Urgency / Priority *</label>
+              <select id="rbPriority" class="form-control" required>
+                <option value="Critical">Critical (Line Stoppage)</option>
+                <option value="High" selected>High (Intermittent)</option>
+                <option value="Medium">Medium (Speed Reduced)</option>
+                <option value="Low">Low (Minor Alarm)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="rbIssue">Problem Description & Observed Symptoms *</label>
+            <textarea id="rbIssue" class="form-control" rows="3" placeholder="Describe abnormal noise, error codes, fluid leaks, temperature, etc." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-danger">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Submit Breakdown Report
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: EDIT / ADJUST STOCK
+       =================================================================== -->
+  <div id="editStockModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Adjust Spare Part Stock</h3>
+        <button class="modal-close-btn" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <form id="editStockForm">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Part Code</label>
+              <input type="text" id="editStockPartCode" class="form-control" readonly style="background:#F1F5F9;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Current Quantity</label>
+              <input type="number" id="editStockCurrentQty" class="form-control" readonly style="background:#F1F5F9; font-weight:700;">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Part Name</label>
+            <input type="text" id="editStockPartName" class="form-control" readonly style="background:#F1F5F9;">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="editStockAdjustment">Quantity Adjustment (+ or -) *</label>
+              <input type="number" id="editStockAdjustment" class="form-control" value="0" placeholder="+5 or -2" required>
+              <small style="color:var(--text-muted); font-size:11px;">e.g., enter 5 to receive stock, or -2 for manual scrap/issue</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editStockMinQty">Minimum Threshold (Alert Trigger) *</label>
+              <input type="number" id="editStockMinQty" class="form-control" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes & Recalculate KPI</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: REQUEST STOCK (REQUISITION)
+       =================================================================== -->
+  <div id="requestStockModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Submit Spare Part Purchase Requisition</h3>
+        <button class="modal-close-btn" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <form id="requestStockForm">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="reqStockPartCode">Part Code / Item *</label>
+              <input type="text" id="reqStockPartCode" class="form-control" placeholder="e.g. SP-303" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reqStockQty">Requested Quantity *</label>
+              <input type="number" id="reqStockQty" class="form-control" min="1" value="5" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reqStockPartName">Part Name / Specifications</label>
+            <input type="text" id="reqStockPartName" class="form-control" placeholder="e.g. Heavy Duty Timing Belt 8M">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reqStockReason">Reason for Request / Urgency</label>
+            <textarea id="reqStockReason" class="form-control" rows="2" placeholder="e.g. Stock at zero units; required for Stamping Press PM overhaul next Tuesday."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary">Submit Purchase Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: ASSIGN TECHNICIAN
+       =================================================================== -->
+  <div id="assignTechModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Assign Technician to Breakdown</h3>
+        <button class="modal-close-btn" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <form id="assignTechForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Breakdown Work Order</label>
+            <div id="assignBdTitle" style="font-weight:700; color:var(--navy-darkest); font-size:14px; padding:8px 12px; background:#F8FAFC; border-radius:6px; border:1px solid var(--border-light);"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="assignTechSelect">Select Available Technician</label>
+            <select id="assignTechSelect" class="form-control" required>
+              <!-- Populated by JS -->
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary">Confirm Technician Assignment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
