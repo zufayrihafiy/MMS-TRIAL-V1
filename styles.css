@@ -1927,3 +1927,144 @@ body {
     width: 100vw;
   }
 }
+
+/* ===================================================================
+   MODAL: REPORT MACHINE BREAKDOWN ENHANCEMENTS
+   =================================================================== */
+.modal-box-breakdown {
+  max-width: 660px;
+}
+
+.required-star {
+  color: var(--red-primary);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.label-badge-info {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--blue-primary);
+  background: #EBF5FF;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.label-badge-optional {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: #F1F5F9;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+.form-hint {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.calc-preview-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #F8FAFC;
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  margin-bottom: 18px;
+  font-size: 12.5px;
+}
+
+.calc-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.calc-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.calc-value {
+  font-weight: 700;
+  color: var(--navy-darkest);
+  font-family: inherit;
+}
+
+.form-alert-banner {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  transition: all var(--transition-fast);
+}
+
+.form-alert-banner.error {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+}
+
+.form-alert-banner.success {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #15803D;
+}
+
+.form-alert-banner.info {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1D4ED8;
+}
+
+.file-upload-wrapper {
+  position: relative;
+}
+
+.file-input-control {
+  font-size: 12px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.file-name-preview {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.form-control.input-error {
+  border-color: #E50914 !important;
+  background-color: #FFF8F8 !important;
+  box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.12) !important;
+}

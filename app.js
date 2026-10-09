@@ -702,6 +702,7 @@
       state.currentUser = JSON.parse(JSON.stringify(match));
       saveState();
       renderUserAccount();
+      populateStaffIdFromProfile();
       showToast(`Switched active profile to ${match.name} (${match.role})`, 'info');
       
       // Close dropdown
@@ -1237,44 +1238,541 @@
   // 11. MODAL FORMS & MUTATIONS (CRUD OPERATIONS)
   // =========================================================================
 
-  // Report Breakdown Modal
+  // --- Breakdown Report Modal: Google Sheets (MMS DATABASE / BD DATABASE) ---
+  
+  function populateStaffIdFromProfile() {
+    const staffInput = document.getElementById('rbStaffId');
+    const badge = document.getElementById('rbStaffIdBadge');
+    if (staffInput && state.currentUser) {
+      staffInput.value = state.currentUser.id || '';
+    }
+    if (badge && state.currentUser) {
+      badge.textContent = `${state.currentUser.id} • ${state.currentUser.name}`;
+    }
+  }
+
+  function formatInputDateTime(date = new Date()) {
+    const pad = n => String(n).padStart(2, '0');
+    const y = date.getFullYear();
+    const m = pad(date.getMonth() + 1);
+    const d = pad(date.getDate());
+    const h = pad(date.getHours());
+    const min = pad(date.getMinutes());
+    return `${y}-${m}-${d}T${h}:${min}`;
+  }
+
+  function formatSubmissionTime(date = new Date()) {
+    const pad = n => String(n).padStart(2, '0');
+    const y = date.getFullYear();
+    const m = pad(date.getMonth() + 1);
+    const d = pad(date.getDate());
+    const h = pad(date.getHours());
+    const min = pad(date.getMinutes());
+    const s = pad(date.getSeconds());
+    return `${y}-${m}-${d} ${h}:${min}:${s}`;
+  }
+
+  function getMonthYearString(date = new Date()) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return `${months[date.getMonth()]} ${date.getFullYear()}`;
+  }
+
+  function updateDowntimeAndMonthPreview() {
+    const startVal = document.getElementById('rbStartTime')?.value;
+    const endVal = document.getElementById('rbEndTime')?.value;
+    const downtimeEl = document.getElementById('rbDowntimePreview');
+    const monthEl = document.getElementById('rbMonthPreview');
+
+    // Month calculation
+    const refDate = startVal ? new Date(startVal) : new Date();
+    const monthStr = getMonthYearString(isNaN(refDate.getTime()) ? new Date() : refDate);
+    if (monthEl) monthEl.textContent = monthStr;
+
+    if (!downtimeEl) return;
+
+    if (!startVal || !endVal) {
+      downtimeEl.innerHTML = '&mdash;';
+      return;
+    }
+
+    const startMs = new Date(startVal).getTime();
+    const endMs = new Date(endVal).getTime();
+
+    if (isNaN(startMs) || isNaN(endMs)) {
+      downtimeEl.innerHTML = '&mdash;';
+      return;
+    }
+
+    const diffMin = Math.round((endMs - startMs) / 60000);
+    if (diffMin < 0) {
+      downtimeEl.innerHTML = '<span style="color:var(--red-primary); font-weight:600;">Invalid (End earlier than Start)</span>';
+    } else {
+      downtimeEl.innerHTML = `<span style="color:var(--navy-darkest); font-weight:700;">${diffMin} min</span>`;
+    }
+  }
+
+  function showBreakdownFormAlert(message, type = 'error') {
+    const banner = document.getElementById('rbAlertBanner');
+    if (!banner) return;
+    banner.className = `form-alert-banner ${type}`;
+    banner.innerHTML = message;
+    banner.style.display = 'block';
+  }
+
+  function clearBreakdownFormAlert() {
+    const banner = document.getElementById('rbAlertBanner');
+    if (banner) {
+      banner.style.display = 'none';
+      banner.innerHTML = '';
+      banner.className = 'form-alert-banner';
+    }
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) return resolve(null);
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          name: file.name,
+          type: file.type || 'image/jpeg',
+          size: file.size,
+          data: reader.result
+        });
+      };
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function resetBreakdownForm() {
+    const form = document.getElementById('reportBreakdownForm');
+    if (form) form.reset();
+
+    populateStaffIdFromProfile();
+
+    const machineSelect = document.getElementById('rbMachine');
+    if (machineSelect) machineSelect.value = '';
+
+    const customMachine = document.getElementById('rbMachineCustom');
+    if (customMachine) {
+      customMachine.value = '';
+      customMachine.style.display = 'none';
+    }
+
+    const startInput = document.getElementById('rbStartTime');
+    if (startInput) startInput.value = formatInputDateTime(new Date());
+
+    const endInput = document.getElementById('rbEndTime');
+    if (endInput) endInput.value = '';
+
+    const statusSelect = document.getElementById('rbStatus');
+    if (statusSelect) statusSelect.value = 'Repair';
+
+    const beforePhotoName = document.getElementById('rbBeforePhotoName');
+    if (beforePhotoName) beforePhotoName.textContent = 'Supported: JPG, JPEG, PNG';
+
+    const afterPhotoName = document.getElementById('rbAfterPhotoName');
+    if (afterPhotoName) afterPhotoName.textContent = 'Supported: JPG, JPEG, PNG';
+
+    document.querySelectorAll('#reportBreakdownForm .input-error').forEach(el => el.classList.remove('input-error'));
+    clearBreakdownFormAlert();
+    updateDowntimeAndMonthPreview();
+  }
+
+  function setSubmitButtonLoading(isLoading) {
+    const submitBtn = document.getElementById('rbSubmitBtn');
+    const cancelBtn = document.getElementById('rbCancelBtn');
+    const spinner = document.getElementById('rbSubmitSpinner');
+    const icon = document.getElementById('rbSubmitIcon');
+    const text = document.getElementById('rbSubmitText');
+
+    if (!submitBtn) return;
+    if (isLoading) {
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.75';
+      submitBtn.style.cursor = 'not-allowed';
+      if (cancelBtn) cancelBtn.disabled = true;
+      if (spinner) spinner.style.display = 'inline-block';
+      if (icon) icon.style.display = 'none';
+      if (text) text.textContent = 'Submitting to Database...';
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.style.cursor = 'pointer';
+      if (cancelBtn) cancelBtn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+      if (icon) icon.style.display = 'inline';
+      if (text) text.textContent = 'Submit Breakdown Report';
+    }
+  }
+
   function openReportBreakdownModal() {
+    clearBreakdownFormAlert();
+    populateStaffIdFromProfile();
+
+    const startInput = document.getElementById('rbStartTime');
+    if (startInput && !startInput.value) {
+      startInput.value = formatInputDateTime(new Date());
+    }
+
+    const endInput = document.getElementById('rbEndTime');
+    if (endInput && !endInput.value) {
+      endInput.value = '';
+    }
+
+    const statusSelect = document.getElementById('rbStatus');
+    if (statusSelect && !statusSelect.value) {
+      statusSelect.value = 'Repair';
+    }
+
+    updateDowntimeAndMonthPreview();
+
     const modal = document.getElementById('reportBreakdownModal');
     if (modal) modal.classList.add('active');
   }
 
-  function submitReportBreakdown(e) {
-    if (e) e.preventDefault();
-    const machine = document.getElementById('rbMachine')?.value;
-    const line = document.getElementById('rbLine')?.value;
-    const priority = document.getElementById('rbPriority')?.value;
-    const issue = document.getElementById('rbIssue')?.value;
+  function validateBreakdownForm() {
+    const errors = [];
+    const staffId = document.getElementById('rbStaffId')?.value?.trim();
+    const machineSelect = document.getElementById('rbMachine')?.value;
+    const machineCustom = document.getElementById('rbMachineCustom')?.value?.trim();
+    const machine = (machineSelect === '__OTHER__') ? machineCustom : machineSelect;
+    const startTime = document.getElementById('rbStartTime')?.value;
+    const endTime = document.getElementById('rbEndTime')?.value;
+    const category = document.getElementById('rbCategory')?.value;
+    const status = document.getElementById('rbStatus')?.value || 'Repair';
+    const description = document.getElementById('rbDescription')?.value?.trim();
+    const beforePhotoInput = document.getElementById('rbBeforePhoto');
+    const afterPhotoInput = document.getElementById('rbAfterPhoto');
 
-    if (!machine || !issue) {
-      showToast('Please fill in required machine and issue details', 'error');
+    // Remove previous input-error marks
+    document.querySelectorAll('#reportBreakdownForm .input-error').forEach(el => el.classList.remove('input-error'));
+
+    if (!staffId) {
+      errors.push('Staff ID is required (must be populated from profile or entered).');
+      document.getElementById('rbStaffId')?.classList.add('input-error');
+    }
+
+    if (!machine) {
+      errors.push('Machine / Equipment Name is required.');
+      if (machineSelect === '__OTHER__') {
+        document.getElementById('rbMachineCustom')?.classList.add('input-error');
+      } else {
+        document.getElementById('rbMachine')?.classList.add('input-error');
+      }
+    }
+
+    if (!startTime) {
+      errors.push('Breakdown Start Time is required.');
+      document.getElementById('rbStartTime')?.classList.add('input-error');
+    }
+
+    if (!category) {
+      errors.push('Problem Category is required.');
+      document.getElementById('rbCategory')?.classList.add('input-error');
+    }
+
+    if (!description) {
+      errors.push('Problem Description is required.');
+      document.getElementById('rbDescription')?.classList.add('input-error');
+    }
+
+    // Required completion validation for status 'Completed':
+    // "Do not allow technicians to arbitrarily mark a repair as completed without recording the required completion information."
+    if (status === 'Completed') {
+      if (!endTime) {
+        errors.push('Breakdown End Time is required to mark the status as Completed.');
+        document.getElementById('rbEndTime')?.classList.add('input-error');
+      }
+    }
+
+    // Breakdown End Time comparison
+    if (startTime && endTime) {
+      const startMs = new Date(startTime).getTime();
+      const endMs = new Date(endTime).getTime();
+      if (endMs < startMs) {
+        errors.push('Breakdown End Time cannot be earlier than Breakdown Start Time.');
+        document.getElementById('rbEndTime')?.classList.add('input-error');
+      }
+    }
+
+    // Photo file format validation (JPG, JPEG, PNG)
+    const allowedExtensions = ['jpg', 'jpeg', 'png'];
+    if (beforePhotoInput?.files?.[0]) {
+      const file = beforePhotoInput.files[0];
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!allowedExtensions.includes(ext)) {
+        errors.push(`Before Photo "${file.name}" is invalid. Only JPG, JPEG, and PNG are allowed.`);
+        beforePhotoInput.classList.add('input-error');
+      }
+    }
+
+    if (afterPhotoInput?.files?.[0]) {
+      const file = afterPhotoInput.files[0];
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!allowedExtensions.includes(ext)) {
+        errors.push(`After Photo "${file.name}" is invalid. Only JPG, JPEG, and PNG are allowed.`);
+        afterPhotoInput.classList.add('input-error');
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      values: {
+        staffId,
+        machine,
+        startTime,
+        endTime,
+        category,
+        status,
+        description
+      }
+    };
+  }
+
+  async function submitReportBreakdown(e) {
+    if (e) e.preventDefault();
+    clearBreakdownFormAlert();
+
+    // 1. Validate all required inputs
+    const validation = validateBreakdownForm();
+    if (!validation.isValid) {
+      showBreakdownFormAlert(
+        `<strong>Please correct the following required fields:</strong>` +
+        `<ul style="margin:6px 0 0 18px; padding:0;">${validation.errors.map(err => `<li>${escapeHtml(err)}</li>`).join('')}</ul>`,
+        'error'
+      );
+      showToast('Validation failed. Please correct the highlighted errors.', 'error');
       return;
     }
 
-    const newId = 'BD-2026-' + (100 + state.breakdowns.length + 1);
-    const newRecord = {
-      id: newId,
-      machine,
-      line: line || 'General Plant Line',
-      issue,
-      priority: priority || 'High',
-      status: 'Pending',
-      reportedBy: state.currentUser.name,
-      assignedTech: 'Unassigned',
-      reportedAt: new Date().toLocaleDateString('en-GB') + ' ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      downtimeMin: 0
-    };
+    // 2. Prepare the breakdown data object matching Google Sheets database structure
+    // Database: MMS DATABASE | Worksheet: BD DATABASE (Columns A to L)
+    const now = new Date();
+    const timeStr = formatSubmissionTime(now);
+    const monthStr = getMonthYearString(now);
 
-    state.breakdowns.unshift(newRecord);
-    addNotification('New Breakdown Reported', `${machine}: ${issue}`, 'breakdown', newId);
-    saveState();
-    closeAllModals();
-    renderAll();
-    showToast(`Breakdown ${newId} logged successfully!`, 'success');
+    let downtimeVal = '';
+    if (validation.values.endTime) {
+      const startMs = new Date(validation.values.startTime).getTime();
+      const endMs = new Date(validation.values.endTime).getTime();
+      if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
+        downtimeVal = Math.round((endMs - startMs) / 60000);
+      }
+    }
+
+    // 3. Display loading state
+    setSubmitButtonLoading(true);
+
+    try {
+      // Process photos if attached
+      const beforeFileInput = document.getElementById('rbBeforePhoto');
+      const afterFileInput = document.getElementById('rbAfterPhoto');
+
+      const beforePhotoObj = beforeFileInput?.files?.[0] ? await fileToBase64(beforeFileInput.files[0]) : null;
+      const afterPhotoObj = afterFileInput?.files?.[0] ? await fileToBase64(afterFileInput.files[0]) : null;
+
+      // Database Columns Mapping:
+      // A - Time
+      // B - Month
+      // C - Staff ID
+      // D - Machine
+      // E - Breakdown Start Time
+      // F - Breakdown End Time
+      // G - Downtime (minutes)
+      // H - Problem Category
+      // I - Before Photo
+      // J - After Photo
+      // K - Problem Description
+      // L - Status
+      const payload = {
+        time: timeStr,                                           // Column A
+        month: monthStr,                                         // Column B
+        staffId: validation.values.staffId,                      // Column C
+        machine: validation.values.machine,                      // Column D
+        startTime: validation.values.startTime,                  // Column E
+        endTime: validation.values.endTime || '',                // Column F
+        downtime: downtimeVal !== '' ? downtimeVal : '',         // Column G
+        category: validation.values.category,                    // Column H
+        beforePhoto: beforePhotoObj ? beforePhotoObj.name : '',  // Column I
+        afterPhoto: afterPhotoObj ? afterPhotoObj.name : '',     // Column J
+        description: validation.values.description,              // Column K
+        status: validation.values.status,                        // Column L
+        // Secure file payloads forwarded to server function for storage
+        photoFiles: {
+          before: beforePhotoObj,
+          after: afterPhotoObj
+        }
+      };
+
+      // 4. Submit to configured Netlify server function
+      const API_ENDPOINT = window.MMS_BACKEND_URL || '/.netlify/functions/submit-breakdown';
+
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (response.ok && result && result.success) {
+        // 5. Show a success message only after receiving confirmation from the backend
+        showBreakdownFormAlert(
+          `<strong>Breakdown Report Recorded Successfully!</strong><br>` +
+          `Saved to Google Sheets: <em>MMS DATABASE</em> &bull; Worksheet: <em>BD DATABASE</em>.` +
+          (result.rowId ? `<br><small>Reference ID: ${escapeHtml(String(result.rowId))}</small>` : ''),
+          'success'
+        );
+        showToast('Breakdown report successfully saved to Google Sheets BD DATABASE!', 'success');
+
+        // Synchronize record into dashboard state
+        const newId = result.rowId || 'BD-2026-' + (100 + state.breakdowns.length + 1);
+        const newRecord = {
+          id: newId,
+          machine: validation.values.machine,
+          line: 'Central Line',
+          issue: validation.values.description,
+          category: validation.values.category,
+          priority: validation.values.status === 'Completed' ? 'Low' : 'High',
+          status: validation.values.status === 'Completed' ? 'Resolved' : (validation.values.status === 'Awaiting Part' ? 'Pending' : 'Active'),
+          reportedBy: `${validation.values.staffId} (${state.currentUser ? state.currentUser.name : 'Technician'})`,
+          assignedTech: 'Unassigned',
+          reportedAt: validation.values.startTime.replace('T', ' '),
+          downtimeMin: downtimeVal !== '' ? downtimeVal : 0
+        };
+
+        state.breakdowns.unshift(newRecord);
+        addNotification('New Breakdown Logged', `${validation.values.machine}: ${validation.values.category} reported to BD DATABASE.`, 'breakdown', newId);
+        saveState();
+        renderAll();
+
+        // 6. Clear the form after successful submission
+        resetBreakdownForm();
+
+        setTimeout(() => {
+          closeAllModals();
+        }, 1600);
+      } else {
+        // If the backend is not configured / returns error:
+        // Show clear error message. Do not pretend that data was saved.
+        const errMsg = (result && (result.error || result.message))
+          || `Backend server responded with status ${response.status} (${response.statusText || 'Error'})`;
+
+        showBreakdownFormAlert(
+          `<strong>Backend Submission Failed:</strong> ${escapeHtml(errMsg)}<br>` +
+          `<small style="margin-top:6px; display:block;">Target: Google Sheets (MMS DATABASE &bull; Sheet: BD DATABASE) via Netlify server function (<code>${escapeHtml(API_ENDPOINT)}</code>).<br>` +
+          `<strong>Breakdown data was NOT saved.</strong> Please ensure backend function and <code>GOOGLE_APPS_SCRIPT_URL</code> are configured.</small>`,
+          'error'
+        );
+        showToast('Submission rejected: Backend not configured. Data was not saved.', 'error');
+      }
+    } catch (netErr) {
+      // Unreachable endpoint or network failure
+      // Show clear error message. Do not pretend that data was saved.
+      const API_ENDPOINT = window.MMS_BACKEND_URL || '/.netlify/functions/submit-breakdown';
+      showBreakdownFormAlert(
+        `<strong>Backend Connection Error:</strong> Unable to connect to server function at <code>${escapeHtml(API_ENDPOINT)}</code>.<br>` +
+        `<small style="margin-top:6px; display:block;">The backend server function is not reachable or not running.<br>` +
+        `<strong>Breakdown data was NOT saved.</strong> Please deploy or start the Netlify function with Google Sheets integration.</small>`,
+        'error'
+      );
+      showToast('Network error: Backend unavailable. Data was not saved.', 'error');
+    } finally {
+      setSubmitButtonLoading(false);
+    }
+  }
+
+  function initBreakdownModalHandlers() {
+    const startInput = document.getElementById('rbStartTime');
+    const endInput = document.getElementById('rbEndTime');
+    if (startInput) startInput.addEventListener('input', updateDowntimeAndMonthPreview);
+    if (endInput) endInput.addEventListener('input', updateDowntimeAndMonthPreview);
+
+    const machineSelect = document.getElementById('rbMachine');
+    const machineCustom = document.getElementById('rbMachineCustom');
+    if (machineSelect) {
+      machineSelect.addEventListener('change', () => {
+        if (machineSelect.value === '__OTHER__') {
+          if (machineCustom) {
+            machineCustom.style.display = 'block';
+            machineCustom.focus();
+          }
+        } else {
+          if (machineCustom) {
+            machineCustom.style.display = 'none';
+            machineCustom.value = '';
+          }
+        }
+        machineSelect.classList.remove('input-error');
+      });
+    }
+
+    const statusSelect = document.getElementById('rbStatus');
+    const statusHint = document.getElementById('rbStatusHint');
+    if (statusSelect) {
+      statusSelect.addEventListener('change', () => {
+        if (statusSelect.value === 'Completed') {
+          if (statusHint) {
+            statusHint.innerHTML = '<span style="color:var(--amber-warning); font-weight:600;">Breakdown End Time is required for Completed status.</span>';
+          }
+          if (endInput && !endInput.value) {
+            endInput.focus();
+          }
+        } else {
+          if (statusHint) {
+            statusHint.textContent = "Default: Repair. 'Completed' requires End Time.";
+          }
+        }
+      });
+    }
+
+    const beforePhoto = document.getElementById('rbBeforePhoto');
+    const beforePhotoName = document.getElementById('rbBeforePhotoName');
+    if (beforePhoto) {
+      beforePhoto.addEventListener('change', () => {
+        if (beforePhoto.files && beforePhoto.files[0]) {
+          const file = beforePhoto.files[0];
+          const kb = Math.round(file.size / 1024);
+          if (beforePhotoName) beforePhotoName.textContent = `📎 ${file.name} (${kb} KB)`;
+        } else {
+          if (beforePhotoName) beforePhotoName.textContent = 'Supported: JPG, JPEG, PNG';
+        }
+        beforePhoto.classList.remove('input-error');
+      });
+    }
+
+    const afterPhoto = document.getElementById('rbAfterPhoto');
+    const afterPhotoName = document.getElementById('rbAfterPhotoName');
+    if (afterPhoto) {
+      afterPhoto.addEventListener('change', () => {
+        if (afterPhoto.files && afterPhoto.files[0]) {
+          const file = afterPhoto.files[0];
+          const kb = Math.round(file.size / 1024);
+          if (afterPhotoName) afterPhotoName.textContent = `📎 ${file.name} (${kb} KB)`;
+        } else {
+          if (afterPhotoName) afterPhotoName.textContent = 'Supported: JPG, JPEG, PNG';
+        }
+        afterPhoto.classList.remove('input-error');
+      });
+    }
+
+    // Clear input-error on typing
+    const form = document.getElementById('reportBreakdownForm');
+    if (form) {
+      form.querySelectorAll('.form-control').forEach(ctrl => {
+        ctrl.addEventListener('input', () => {
+          ctrl.classList.remove('input-error');
+        });
+      });
+    }
   }
 
   // Resolve Breakdown Action
@@ -1545,7 +2043,11 @@
 
     // Form Submissions
     const reportBreakdownForm = document.getElementById('reportBreakdownForm');
-    if (reportBreakdownForm) reportBreakdownForm.addEventListener('submit', submitReportBreakdown);
+    if (reportBreakdownForm) {
+      reportBreakdownForm.addEventListener('submit', submitReportBreakdown);
+      initBreakdownModalHandlers();
+      populateStaffIdFromProfile();
+    }
 
     const editStockForm = document.getElementById('editStockForm');
     if (editStockForm) editStockForm.addEventListener('submit', submitStockAdjustment);

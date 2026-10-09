@@ -950,56 +950,167 @@
   </div>
 
   <!-- ===================================================================
-       MODAL: REPORT BREAKDOWN
+       MODAL: REPORT MACHINE BREAKDOWN
+       Target Database: Google Sheets (MMS DATABASE)
+       Target Worksheet: BD DATABASE (Columns A to L)
        =================================================================== -->
   <div id="reportBreakdownModal" class="modal-overlay">
-    <div class="modal-box">
+    <div class="modal-box modal-box-breakdown">
       <div class="modal-header">
-        <h3 class="modal-title">Report Machine Breakdown</h3>
-        <button class="modal-close-btn" type="button">
+        <div>
+          <h3 class="modal-title">Report Machine Breakdown</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px; font-weight:500;">
+            Target: <strong>MMS DATABASE</strong> &bull; Worksheet: <strong>BD DATABASE</strong>
+          </div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
-      <form id="reportBreakdownForm">
+      <form id="reportBreakdownForm" novalidate>
         <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="rbMachine">Machine / Equipment Name *</label>
-            <input type="text" id="rbMachine" class="form-control" placeholder="e.g. CNC Milling Machine 04, Robotic Welder 02" required>
-          </div>
+          <!-- Alert Banner for Inline Validation & Backend Feedback -->
+          <div id="rbAlertBanner" class="form-alert-banner" style="display:none;" role="alert"></div>
 
+          <!-- ROW 1: STAFF ID & MACHINE / EQUIPMENT NAME -->
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="rbLine">Plant Line / Department *</label>
-              <select id="rbLine" class="form-control" required>
-                <option value="Press Shop Line 2">Press Shop Line 2</option>
-                <option value="Machining Line 1">Machining Line 1</option>
-                <option value="Chassis Assembly">Chassis Assembly</option>
-                <option value="Plastics Molding">Plastics Molding</option>
-                <option value="Paint Shop">Paint Shop</option>
-                <option value="Central Plant Utility">Central Plant Utility</option>
-              </select>
+              <label class="form-label" for="rbStaffId">
+                Staff ID <span class="required-star">*</span>
+                <span class="label-badge-info" id="rbStaffIdBadge">Auto-detected</span>
+              </label>
+              <input type="text" id="rbStaffId" class="form-control" placeholder="e.g. USR-01" required>
+              <small class="form-hint">Populated from authenticated user profile</small>
             </div>
             <div class="form-group">
-              <label class="form-label" for="rbPriority">Urgency / Priority *</label>
-              <select id="rbPriority" class="form-control" required>
-                <option value="Critical">Critical (Line Stoppage)</option>
-                <option value="High" selected>High (Intermittent)</option>
-                <option value="Medium">Medium (Speed Reduced)</option>
-                <option value="Low">Low (Minor Alarm)</option>
+              <label class="form-label" for="rbMachine">
+                Machine / Equipment Name <span class="required-star">*</span>
+              </label>
+              <select id="rbMachine" class="form-control" required>
+                <option value="" disabled selected>-- Select Machine / Equipment --</option>
+                <optgroup label="VIM Equipment">
+                  <option value="VIM 01">VIM 01</option>
+                  <option value="VIM 02">VIM 02</option>
+                  <option value="VIM 03">VIM 03</option>
+                </optgroup>
+                <optgroup label="Plant Machinery">
+                  <option value="CNC Milling Center 04">CNC Milling Center 04</option>
+                  <option value="Stamping Press Line 02">Stamping Press Line 02</option>
+                  <option value="Robotic Welding Station A">Robotic Welding Station A</option>
+                  <option value="Injection Molding Machine 03">Injection Molding Machine 03</option>
+                  <option value="Conveyor Line C Drive Motor">Conveyor Line C Drive Motor</option>
+                  <option value="Air Compressor Unit 01">Air Compressor Unit 01</option>
+                </optgroup>
+                <optgroup label="Custom Unit">
+                  <option value="__OTHER__">Other (Enter custom name...)</option>
+                </optgroup>
               </select>
+              <input type="text" id="rbMachineCustom" class="form-control" placeholder="Enter custom machine name (e.g. VIM 04)..." style="display:none; margin-top:8px;">
+              <small class="form-hint">Select failing machine unit or specify custom ID</small>
             </div>
           </div>
 
+          <!-- ROW 2: BREAKDOWN START TIME & BREAKDOWN END TIME -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="rbStartTime">
+                Breakdown Start Time <span class="required-star">*</span>
+              </label>
+              <input type="datetime-local" id="rbStartTime" class="form-control" required>
+              <small class="form-hint">Occurrence date & time of breakdown</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rbEndTime">
+                Breakdown End Time
+                <span class="label-badge-optional">Leave empty for new report</span>
+              </label>
+              <input type="datetime-local" id="rbEndTime" class="form-control">
+              <small class="form-hint" id="rbEndTimeHint">Technician can update when repair is completed</small>
+            </div>
+          </div>
+
+          <!-- AUTOMATIC DATA GENERATION PREVIEW STRIP -->
+          <div class="calc-preview-strip">
+            <div class="calc-item">
+              <span class="calc-label">⏱️ Calculated Downtime:</span>
+              <span id="rbDowntimePreview" class="calc-value">&mdash;</span>
+            </div>
+            <div class="calc-item">
+              <span class="calc-label">📅 Database Month:</span>
+              <span id="rbMonthPreview" class="calc-value">October 2026</span>
+            </div>
+          </div>
+
+          <!-- ROW 3: PROBLEM CATEGORY & STATUS -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="rbCategory">
+                Problem Category <span class="required-star">*</span>
+              </label>
+              <select id="rbCategory" class="form-control" required>
+                <option value="" disabled selected>-- Select Problem Category --</option>
+                <option value="Mechanical">Mechanical</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Hydraulic">Hydraulic</option>
+                <option value="Pneumatic">Pneumatic</option>
+                <option value="Sensor">Sensor</option>
+                <option value="Software">Software</option>
+                <option value="Others">Others</option>
+              </select>
+              <small class="form-hint">Primary classification of breakdown</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rbStatus">
+                Status <span class="required-star">*</span>
+              </label>
+              <select id="rbStatus" class="form-control" required>
+                <option value="Repair" selected>Repair</option>
+                <option value="Awaiting Part">Awaiting Part</option>
+                <option value="Completed">Completed</option>
+              </select>
+              <small class="form-hint" id="rbStatusHint">Default: Repair. 'Completed' requires End Time.</small>
+            </div>
+          </div>
+
+          <!-- ROW 4: PROBLEM DESCRIPTION -->
           <div class="form-group">
-            <label class="form-label" for="rbIssue">Problem Description & Observed Symptoms *</label>
-            <textarea id="rbIssue" class="form-control" rows="3" placeholder="Describe abnormal noise, error codes, fluid leaks, temperature, etc." required></textarea>
+            <label class="form-label" for="rbDescription">
+              Problem Description <span class="required-star">*</span>
+            </label>
+            <textarea id="rbDescription" class="form-control" rows="3" placeholder="Describe the machine problem, observed failure symptoms, abnormal noise, error codes, etc." required></textarea>
+            <small class="form-hint">Provide detailed description for maintenance log</small>
+          </div>
+
+          <!-- ROW 5: BEFORE PHOTO & AFTER PHOTO -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="rbBeforePhoto">
+                Before Photo
+                <span class="label-badge-optional">Optional (JPG, PNG)</span>
+              </label>
+              <div class="file-upload-wrapper">
+                <input type="file" id="rbBeforePhoto" class="form-control file-input-control" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+                <div class="file-name-preview" id="rbBeforePhotoName">Supported: JPG, JPEG, PNG</div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rbAfterPhoto">
+                After Photo
+                <span class="label-badge-optional">Post-repair (JPG, PNG)</span>
+              </label>
+              <div class="file-upload-wrapper">
+                <input type="file" id="rbAfterPhoto" class="form-control file-input-control" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+                <div class="file-name-preview" id="rbAfterPhotoName">Supported: JPG, JPEG, PNG</div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
-          <button type="submit" class="btn-danger">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            Submit Breakdown Report
+          <button type="button" class="btn-secondary modal-cancel-btn" id="rbCancelBtn">Cancel</button>
+          <button type="submit" class="btn-danger" id="rbSubmitBtn">
+            <span class="btn-spinner" id="rbSubmitSpinner" style="display:none;"></span>
+            <svg id="rbSubmitIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span id="rbSubmitText">Submit Breakdown Report</span>
           </button>
         </div>
       </form>
