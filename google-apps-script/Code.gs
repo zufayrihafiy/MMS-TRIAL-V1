@@ -41,6 +41,58 @@ function doPost(e) {
 
     const payload = JSON.parse(e.postData.contents);
     const cols = payload.columns || payload;
+    // Validate required breakdown fields
+const requiredFields = [
+  'staffId',
+  'machine',
+  'startTime',
+  'category',
+  'description'
+];
+
+for (const field of requiredFields) {
+  if (
+    cols[field] === undefined ||
+    cols[field] === null ||
+    String(cols[field]).trim() === ''
+  ) {
+    return createJsonResponse({
+      success: false,
+      error: `Missing required field: ${field}`
+    });
+  }
+}
+
+// Validate breakdown dates
+const startDate = new Date(cols.startTime);
+
+if (isNaN(startDate.getTime())) {
+  return createJsonResponse({
+    success: false,
+    error: 'Invalid Breakdown Start Time'
+  });
+}
+
+if (cols.endTime) {
+  const endDate = new Date(cols.endTime);
+
+  if (
+    isNaN(endDate.getTime()) ||
+    endDate < startDate
+  ) {
+    return createJsonResponse({
+      success: false,
+      error: 'Invalid Breakdown End Time'
+    });
+  }
+}
+
+if (cols.status === 'Completed' && !cols.endTime) {
+  return createJsonResponse({
+    success: false,
+    error: 'Breakdown End Time is required for completed repairs.'
+  });
+}
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName(SHEET_NAME);
@@ -73,17 +125,22 @@ function doPost(e) {
     const monthFormatted = cols.month || Utilities.formatDate(now, Session.getScriptTimeZone(), 'MMMM yyyy');
 
     // 2. Process Downtime Calculation
-    let downtimeVal = '';
-    if (cols.startTime && cols.endTime) {
-      const startMs = new Date(cols.startTime).getTime();
-      const endMs = new Date(cols.endTime).getTime();
-      if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
-        downtimeVal = Math.round((endMs - startMs) / (60 * 1000));
-      }
-    } else if (cols.downtime !== undefined && cols.downtime !== null && cols.downtime !== '') {
-      downtimeVal = cols.downtime;
-    }
+let downtimeVal = '';
 
+if (cols.startTime && cols.endTime) {
+  const startMs = new Date(cols.startTime).getTime();
+  const endMs = new Date(cols.endTime).getTime();
+
+  if (
+    !isNaN(startMs) &&
+    !isNaN(endMs) &&
+    endMs >= startMs
+  ) {
+    downtimeVal = Math.round(
+      (endMs - startMs) / (60 * 1000)
+    );
+  }
+}
     // 3. Process Photos into Authorized Storage (Google Drive)
     let beforePhotoUrl = cols.beforePhoto || '';
     let afterPhotoUrl = cols.afterPhoto || '';
@@ -144,10 +201,9 @@ function savePhotoToDrive(fileObj, machineName, type) {
     const base64Data = fileObj.data.split(',')[1] || fileObj.data;
     const decodedBlob = Utilities.newBlob(Utilities.base64Decode(base64Data), fileObj.type, `${machineName}_${type}_${Date.now()}_${fileObj.name}`);
     const file = folder.createFile(decodedBlob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     return file.getUrl();
   } catch (e) {
-    return fileObj.name || 'Upload failed';
+    throw new Error('Photo upload failed: ' + e.message);
   }
 }
 

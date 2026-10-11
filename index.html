@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -11,6 +11,129 @@
 </head>
 <body>
 
+  <!-- ===================================================================
+       SECTION 1: SECURE STAFF ID + PASSWORD LOGIN SCREEN
+       Theme: Dark Navy Blue + White + Light Blue
+       =================================================================== -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-bg-glow"></div>
+
+    <div class="login-card-container">
+      <div class="login-card">
+
+        <!-- Brand Header -->
+        <div class="login-header">
+          <div class="login-gear-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+            </svg>
+          </div>
+          <h1 class="login-title">
+            <span>MAINTENANCE</span>
+            <span>MANAGEMENT SYSTEM</span>
+          </h1>
+          <p class="login-subtitle">Plant Maintenance &amp; Operations</p>
+        </div>
+
+        <!-- Setup Required Notification Banner -->
+        <div id="loginSetupBanner" class="login-alert-banner alert-warning" style="display:none;" role="alert">
+          <div class="alert-icon">âš ï¸</div>
+          <div class="alert-content">
+            <div class="alert-title">Firebase Setup Required</div>
+            <div class="alert-desc" id="loginSetupDesc">Firebase Authentication is not yet configured on this Netlify site.</div>
+            <button type="button" class="btn-text-setup" onclick="window.openSetupGuideModal()">View Configuration Guide</button>
+          </div>
+        </div>
+
+        <!-- Login Error Notification Banner -->
+        <div id="loginErrorBanner" class="login-alert-banner alert-danger" style="display:none;" role="alert">
+          <div class="alert-icon">âœ•</div>
+          <div class="alert-content" id="loginErrorMessage">Invalid Staff ID or Password.</div>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="login-form" novalidate>
+
+          <!-- INPUT 1: Staff ID -->
+          <div class="login-form-group">
+            <label class="login-label" for="loginStaffId">Staff ID</label>
+            <div class="login-input-wrapper">
+              <span class="login-input-icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </span>
+              <input
+                type="text"
+                id="loginStaffId"
+                class="login-input"
+                placeholder="Enter Staff ID"
+                autocomplete="username"
+                autocapitalize="characters"
+                spellcheck="false"
+                required
+              >
+            </div>
+            <div class="login-input-hint">Example: <code>PN001</code></div>
+          </div>
+
+          <!-- INPUT 2: Password -->
+          <div class="login-form-group">
+            <label class="login-label" for="loginPassword">Password</label>
+            <div class="login-input-wrapper">
+              <span class="login-input-icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              </span>
+              <input
+                type="password"
+                id="loginPassword"
+                class="login-input login-input-password"
+                placeholder="Enter Password"
+                autocomplete="current-password"
+                required
+              >
+              <button
+                type="button"
+                id="loginTogglePassword"
+                class="login-pwd-toggle"
+                aria-label="Show / Hide Password"
+                title="Show / Hide Password"
+              >
+                <svg id="eyeIconOpen" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg id="eyeIconClosed" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- PRIMARY BUTTON: LOGIN -->
+          <button type="submit" id="loginSubmitBtn" class="login-submit-btn">
+            <span class="login-btn-spinner" id="loginBtnSpinner" style="display:none;"></span>
+            <span id="loginBtnText">LOGIN</span>
+          </button>
+
+          <!-- BELOW BUTTON: Forgot Password? Contact Administrator -->
+          <div class="login-below-btn">
+            <button type="button" class="login-forgot-btn" id="forgotPasswordBtn" onclick="window.openForgotPasswordModal()">
+              Forgot Password? Contact Administrator
+            </button>
+          </div>
+
+        </form>
+
+        <!-- FOOTER: Maintenance Management System -->
+        <div class="login-card-footer">
+          Maintenance Management System
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- Layout Shell -->
   <div class="app-shell">
 
@@ -21,7 +144,7 @@
          SECTION 2: FIXED LEFT SIDEBAR NAVIGATION (~275px)
          =================================================================== -->
     <aside id="sidebar" class="sidebar">
-      
+
       <!-- Top Section -->
       <div>
         <!-- Sidebar Header -->
@@ -113,7 +236,7 @@
         </a>
 
         <!-- MENU 6: PROFILE -->
-        <a class="nav-link" onclick="window.switchUserRole('Administrator')" id="navLinkProfile">
+        <a class="nav-link" onclick="window.openUserProfileModal()" id="navLinkProfile">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
@@ -122,7 +245,7 @@
         </a>
 
         <!-- MENU 7: LOGOUT -->
-        <a class="nav-link" onclick="window.simulateLogout()" id="navLinkLogout" style="color: #FF8B94;">
+        <a class="nav-link" onclick="window.handleLogout()" id="navLinkLogout" style="color: #FF8B94;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
@@ -143,7 +266,7 @@
            SECTION 3: TOP HEADER BAR (~70px height)
            =================================================================== -->
       <header class="top-header">
-        
+
         <div class="header-left">
           <!-- Mobile Menu Hamburger -->
           <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle Navigation">
@@ -156,7 +279,7 @@
 
           <div class="plant-badge">
             <span class="plant-badge-dot"></span>
-            <span>Plant Site 01 • Automotive Assembly</span>
+            <span>Plant Site 01 â€¢ Automotive Assembly</span>
           </div>
         </div>
 
@@ -172,7 +295,7 @@
             <button class="user-account-btn" id="userAccountBtn" aria-expanded="false">
               <!-- Circular Blue Avatar with User Initials -->
               <div id="userAvatar" class="user-avatar">SH</div>
-              
+
               <div class="user-meta">
                 <span id="userName" class="user-name">Siti Humairah</span>
                 <span id="userRoleTag" class="user-role-tag">Administrator</span>
@@ -188,39 +311,26 @@
             <div class="user-dropdown-menu" id="userDropdownMenu">
               <div class="dropdown-header-info">
                 <div id="dropdownUserName" class="dropdown-user-full">Siti Humairah</div>
-                <div id="dropdownUserEmail" class="dropdown-user-email">siti.humairah@industrialmms.com</div>
-              </div>
-
-              <!-- Role Switcher for seamless demonstration -->
-              <div class="role-switcher-box">
-                <div class="role-switcher-label">Switch System Role (RBAC)</div>
-                <div class="role-switch-btns">
-                  <button class="role-switch-btn active" data-role="Administrator" onclick="window.switchUserRole('Administrator')">
-                    <span>Administrator</span>
-                    <small>Full Access</small>
-                  </button>
-                  <button class="role-switch-btn" data-role="Supervisor / Engineer" onclick="window.switchUserRole('Supervisor / Engineer')">
-                    <span>Supervisor / Engineer</span>
-                    <small>Ops & Assign</small>
-                  </button>
-                  <button class="role-switch-btn" data-role="Technician" onclick="window.switchUserRole('Technician')">
-                    <span>Technician</span>
-                    <small>Tasks Only</small>
-                  </button>
+                <div style="font-size:12px; font-weight:600; color:var(--blue-primary); margin-top:3px;">
+                  Staff ID: <span id="dropdownStaffId">USR-01</span>
                 </div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">
+                  Role: <span id="dropdownUserRole">Administrator</span>
+                </div>
+                <div id="dropdownUserEmail" class="dropdown-user-email">siti.humairah@mms.internal</div>
               </div>
 
-              <button class="dropdown-item" onclick="window.switchUserRole('Administrator')">
+              <button class="dropdown-item" onclick="window.openUserProfileModal()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 <span>My Profile</span>
               </button>
 
-              <button class="dropdown-item" onclick="window.resetState()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-                <span>Reset Demo Data</span>
+              <button class="dropdown-item admin-only" id="dropdownManageUsersBtn" onclick="window.openManageUsersModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span>Manage Staff Accounts</span>
               </button>
 
-              <button class="dropdown-item logout-item" onclick="window.simulateLogout()">
+              <button class="dropdown-item logout-item" onclick="window.handleLogout()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                 <span>Logout</span>
               </button>
@@ -593,7 +703,7 @@
 
           <!-- TAB 4: BD DASHBOARD (Admin Only) -->
           <div id="bd-tab-bd-dashboard" class="breakdown-tab-content" style="display:none;">
-            
+
             <!-- Lock notification for restricted roles -->
             <div id="bdDashboardLockNotice" style="display:none; background:#FFFBEB; border:1px solid #FCD34D; border-radius:var(--radius-md); padding:24px; text-align:center;">
               <h3 style="color:#B45309; font-size:18px;">Restricted Access: BD Dashboard</h3>
@@ -605,12 +715,12 @@
                 <div class="analytics-card">
                   <div class="analytics-card-title">Mean Time to Repair (MTTR)</div>
                   <div class="analytics-card-val">1.48 hrs</div>
-                  <div class="analytics-card-sub">↓ 12% faster than target</div>
+                  <div class="analytics-card-sub">â†“ 12% faster than target</div>
                 </div>
                 <div class="analytics-card">
                   <div class="analytics-card-title">Mean Time Between Failures (MTBF)</div>
                   <div class="analytics-card-val">48.2 hrs</div>
-                  <div class="analytics-card-sub">↑ 4.5% improvement</div>
+                  <div class="analytics-card-sub">â†‘ 4.5% improvement</div>
                 </div>
                 <div class="analytics-card">
                   <div class="analytics-card-title">Overall Equipment Effectiveness (OEE)</div>
@@ -838,7 +948,7 @@
                   <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">Stock Filter:</label>
                   <select id="sparePartsFilter" class="filter-select">
                     <option value="all">All Inventory Items</option>
-                    <option value="low">Low Stock (≤ Min Level)</option>
+                    <option value="low">Low Stock (â‰¤ Min Level)</option>
                     <option value="out">Out of Stock (0 units)</option>
                     <option value="ok">In Stock (Healthy)</option>
                   </select>
@@ -977,10 +1087,10 @@
             <div class="form-group">
               <label class="form-label" for="rbStaffId">
                 Staff ID <span class="required-star">*</span>
-                <span class="label-badge-info" id="rbStaffIdBadge">Auto-detected</span>
+                <span class="label-badge-info" id="rbStaffIdBadge">Authenticated</span>
               </label>
-              <input type="text" id="rbStaffId" class="form-control" placeholder="e.g. USR-01" required>
-              <small class="form-hint">Populated from authenticated user profile</small>
+              <input type="text" id="rbStaffId" class="form-control" placeholder="e.g. USR-01" readonly required style="background:#F8FAFC; font-weight:600; color:var(--navy-darkest); cursor:not-allowed;">
+              <small class="form-hint">Locked to authenticated staff identity (anti-impersonation protected)</small>
             </div>
             <div class="form-group">
               <label class="form-label" for="rbMachine">
@@ -1032,11 +1142,11 @@
           <!-- AUTOMATIC DATA GENERATION PREVIEW STRIP -->
           <div class="calc-preview-strip">
             <div class="calc-item">
-              <span class="calc-label">⏱️ Calculated Downtime:</span>
+              <span class="calc-label">â±ï¸ Calculated Downtime:</span>
               <span id="rbDowntimePreview" class="calc-value">&mdash;</span>
             </div>
             <div class="calc-item">
-              <span class="calc-label">📅 Database Month:</span>
+              <span class="calc-label">ðŸ“… Database Month:</span>
               <span id="rbMonthPreview" class="calc-value">October 2026</span>
             </div>
           </div>
@@ -1235,6 +1345,225 @@
           <button type="submit" class="btn-primary">Confirm Technician Assignment</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: FORGOT PASSWORD CONTACT ADMINISTRATOR
+       =================================================================== -->
+  <div id="forgotPasswordModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Password Reset Assistance</h3>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="text-align:left;">
+        <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px; padding:14px; margin-bottom:16px;">
+          <h4 style="font-size:14px; font-weight:700; color:#1E40AF; margin-bottom:4px;">Enterprise Security Policy</h4>
+          <p style="font-size:12.5px; color:#1E3A8A; line-height:1.45;">
+            To ensure industrial manufacturing safety and traceability, staff password resets are managed directly through the Plant Maintenance Administrator.
+          </p>
+        </div>
+
+        <div style="font-size:13px; color:var(--text-body); line-height:1.6;">
+          <p>Please contact your shift supervisor or the system administrator with your <strong>Staff ID</strong>:</p>
+          <ul style="margin: 10px 0 10px 20px; font-size:12.5px; color:#475569;">
+            <li><strong>Admin Desk:</strong> Central Maintenance Engineering &amp; IT</li>
+            <li><strong>Internal Phone:</strong> Ext. 4402 / Ext. 4405</li>
+            <li><strong>Support Email:</strong> <code style="background:#F1F5F9; padding:2px 6px; border-radius:4px;">admin@industrialmms.com</code></li>
+            <li><strong>Shift Supervisor:</strong> Control Room B-12 (Shift A / Shift B)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary modal-cancel-btn">Understood</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: FIREBASE CONFIGURATION SETUP GUIDE
+       =================================================================== -->
+  <div id="setupGuideModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:620px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Firebase Authentication Setup Guide</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Staff ID + Password Secure Backend Integration</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px; color:var(--text-body); margin-bottom:14px;">
+          Follow these 5 steps to configure real Firebase Authentication with Staff ID mapping for production:
+        </p>
+
+        <div class="setup-guide-steps">
+          <div class="setup-guide-step">
+            <div class="setup-step-number">1</div>
+            <div class="setup-step-content">
+              <div class="setup-step-title">Create Firebase Project</div>
+              <div class="setup-step-desc">
+                Open <a href="https://console.firebase.google.com" target="_blank" rel="noopener" style="color:var(--blue-primary); font-weight:600;">Firebase Console</a>, create a new project named <strong>mms-plant-ops</strong>, and open <strong>Project Settings</strong>.
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-guide-step">
+            <div class="setup-step-number">2</div>
+            <div class="setup-step-content">
+              <div class="setup-step-title">Enable Email/Password Sign-In</div>
+              <div class="setup-step-desc">
+                In Firebase Console, go to <strong>Build &rarr; Authentication &rarr; Sign-in method</strong>. Enable <strong>Email/Password</strong> provider.
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-guide-step">
+            <div class="setup-step-number">3</div>
+            <div class="setup-step-content">
+              <div class="setup-step-title">Create Staff Accounts</div>
+              <div class="setup-step-desc">
+                Go to the <strong>Users</strong> tab in Firebase Authentication. Add users using the mapped domain (e.g. <code>pn001@mms.internal</code> or <code>usr-01@mms.internal</code>). Set a strong password for each user.
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-guide-step">
+            <div class="setup-step-number">4</div>
+            <div class="setup-step-content">
+              <div class="setup-step-title">Add Netlify Environment Variables</div>
+              <div class="setup-step-desc">
+                In your Netlify Dashboard &rarr; <strong>Site configuration &rarr; Environment variables</strong>, add:
+              </div>
+              <code class="setup-step-code">FIREBASE_WEB_API_KEY = (Your Web API Key from Firebase Project Settings)</code>
+              <code class="setup-step-code">FIREBASE_PROJECT_ID = (Your Firebase Project ID)</code>
+              <code class="setup-step-code">FIREBASE_STAFF_DOMAIN = mms.internal</code>
+              <code class="setup-step-code">FIREBASE_ADMIN_STAFF_IDS = USR-01,PN001</code>
+              <code class="setup-step-code">GOOGLE_APPS_SCRIPT_URL = (Your Apps Script Web App URL)</code>
+            </div>
+          </div>
+
+          <div class="setup-guide-step">
+            <div class="setup-step-number">5</div>
+            <div class="setup-step-content">
+              <div class="setup-step-title">Deploy &amp; Log In</div>
+              <div class="setup-step-desc">
+                Trigger a Netlify deployment. Enter Staff ID (e.g. <code>PN001</code>) and the configured password. The backend function will authenticate against Firebase and issue a secure JWT session.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: AUTHENTICATED USER PROFILE
+       =================================================================== -->
+  <div id="userProfileModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Authenticated Staff Profile</h3>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="user-profile-card">
+          <div class="user-profile-avatar-lg" id="modalUserAvatar">SH</div>
+          <div class="user-profile-name" id="modalUserName">Siti Humairah</div>
+          <div class="user-profile-badge badge-admin" id="modalUserRoleBadge">Administrator</div>
+
+          <div class="user-profile-details">
+            <div class="user-profile-row">
+              <span class="user-profile-key">Staff ID</span>
+              <span class="user-profile-val" id="modalStaffId">USR-01</span>
+            </div>
+            <div class="user-profile-row">
+              <span class="user-profile-key">Assigned Role</span>
+              <span class="user-profile-val" id="modalRoleName">Administrator</span>
+            </div>
+            <div class="user-profile-row">
+              <span class="user-profile-key">Domain Identity</span>
+              <span class="user-profile-val" id="modalUserEmail">usr-01@mms.internal</span>
+            </div>
+            <div class="user-profile-row">
+              <span class="user-profile-key">Plant Site</span>
+              <span class="user-profile-val">Plant 01 â€¢ Automotive Assembly</span>
+            </div>
+            <div class="user-profile-row">
+              <span class="user-profile-key">Auth Provider</span>
+              <span class="user-profile-val" style="color:#0078E7;">Firebase Authentication (Server-Verified)</span>
+            </div>
+          </div>
+
+          <div style="margin-top:16px; text-align:left;">
+            <div style="font-size:12px; font-weight:700; color:var(--navy-darkest); text-transform:uppercase; letter-spacing:0.5px;">Active Authorizations &amp; Permissions:</div>
+            <ul class="permissions-list" id="modalPermissionsList">
+              <!-- Dynamically populated based on role -->
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:space-between;">
+        <button type="button" class="btn-danger" onclick="window.handleLogout()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Logout
+        </button>
+        <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: MANAGE STAFF ACCOUNTS (ADMIN ONLY)
+       =================================================================== -->
+  <div id="manageUsersModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:680px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Staff Accounts &amp; Access Control (RBAC)</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Role-Based Permissions for Plant Maintenance</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:12px 14px; font-size:12.5px; color:#475569; margin-bottom:14px;">
+          <strong>Role Definition:</strong><br>
+          &bull; <strong>ADMIN</strong>: Full access to all modules, BD Dashboard analytics, user accounts, and assigning technician tasks.<br>
+          &bull; <strong>TECHNICIAN</strong>: Report breakdown, view active/pending jobs, update authorized jobs, request spare parts, and view personal profile.
+        </div>
+
+        <div class="table-responsive">
+          <table class="user-accounts-table">
+            <thead>
+              <tr>
+                <th>Staff ID</th>
+                <th>Full Name</th>
+                <th>Assigned Role</th>
+                <th>Firebase Email</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="userAccountsTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
     </div>
   </div>
 

@@ -1,0 +1,8 @@
+﻿.env
+.env.*
+!.env.example
+node_modules/
+google-apps-script/.clasp.json
+google-apps-script/Code.backup.txt
+*.backup
+firebase-admin-setup/
