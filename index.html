@@ -1226,39 +1226,15 @@
             </div>
           </div>
 
-          <!-- ROW 2: BREAKDOWN START TIME & BREAKDOWN END TIME -->
+          <!-- ROW 2: BREAKDOWN START TIME & PROBLEM CATEGORY -->
           <div class="form-row">
             <div class="form-group">
               <label class="form-label" for="rbStartTime">
                 Breakdown Start Time <span class="required-star">*</span>
               </label>
               <input type="datetime-local" id="rbStartTime" class="form-control" required>
-              <small class="form-hint">Occurrence date & time of breakdown</small>
+              <small class="form-hint">Occurrence date &amp; time of breakdown</small>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="rbEndTime">
-                Breakdown End Time
-                <span class="label-badge-optional">Leave empty for new report</span>
-              </label>
-              <input type="datetime-local" id="rbEndTime" class="form-control">
-              <small class="form-hint" id="rbEndTimeHint">Technician can update when repair is completed</small>
-            </div>
-          </div>
-
-          <!-- AUTOMATIC DATA GENERATION PREVIEW STRIP -->
-          <div class="calc-preview-strip">
-            <div class="calc-item">
-              <span class="calc-label">â±ï¸ Calculated Downtime:</span>
-              <span id="rbDowntimePreview" class="calc-value">&mdash;</span>
-            </div>
-            <div class="calc-item">
-              <span class="calc-label">ðŸ“… Database Month:</span>
-              <span id="rbMonthPreview" class="calc-value">October 2026</span>
-            </div>
-          </div>
-
-          <!-- ROW 3: PROBLEM CATEGORY & STATUS -->
-          <div class="form-row">
             <div class="form-group">
               <label class="form-label" for="rbCategory">
                 Problem Category <span class="required-star">*</span>
@@ -1275,20 +1251,9 @@
               </select>
               <small class="form-hint">Primary classification of breakdown</small>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="rbStatus">
-                Status <span class="required-star">*</span>
-              </label>
-              <select id="rbStatus" class="form-control" required>
-                <option value="Repair" selected>Repair</option>
-                <option value="Awaiting Part">Awaiting Part</option>
-                <option value="Completed">Completed</option>
-              </select>
-              <small class="form-hint" id="rbStatusHint">Default: Repair. 'Completed' requires End Time.</small>
-            </div>
           </div>
 
-          <!-- ROW 4: PROBLEM DESCRIPTION -->
+          <!-- ROW 3: PROBLEM DESCRIPTION -->
           <div class="form-group">
             <label class="form-label" for="rbDescription">
               Problem Description <span class="required-star">*</span>
@@ -1297,28 +1262,17 @@
             <small class="form-hint">Provide detailed description for maintenance log</small>
           </div>
 
-          <!-- ROW 5: BEFORE PHOTO & AFTER PHOTO -->
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="rbBeforePhoto">
-                Before Photo
-                <span class="label-badge-optional">Optional (JPG, PNG)</span>
-              </label>
-              <div class="file-upload-wrapper">
-                <input type="file" id="rbBeforePhoto" class="form-control file-input-control" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
-                <div class="file-name-preview" id="rbBeforePhotoName">Supported: JPG, JPEG, PNG</div>
-              </div>
+          <!-- ROW 4: BEFORE PHOTO -->
+          <div class="form-group">
+            <label class="form-label" for="rbBeforePhoto">
+              Before Photo
+              <span class="label-badge-optional">Optional (JPG, PNG)</span>
+            </label>
+            <div class="file-upload-wrapper">
+              <input type="file" id="rbBeforePhoto" class="form-control file-input-control" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+              <div class="file-name-preview" id="rbBeforePhotoName">Supported: JPG, JPEG, PNG</div>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="rbAfterPhoto">
-                After Photo
-                <span class="label-badge-optional">Post-repair (JPG, PNG)</span>
-              </label>
-              <div class="file-upload-wrapper">
-                <input type="file" id="rbAfterPhoto" class="form-control file-input-control" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
-                <div class="file-name-preview" id="rbAfterPhotoName">Supported: JPG, JPEG, PNG</div>
-              </div>
-            </div>
+            <small class="form-hint">Attach photo of observed machine breakdown / damage if available</small>
           </div>
         </div>
         <div class="modal-footer">

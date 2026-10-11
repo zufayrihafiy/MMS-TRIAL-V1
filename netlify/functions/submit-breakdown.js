@@ -216,17 +216,14 @@ exports.handler = async function (event, context) {
     };
   }
 
-  // Validate status completion condition
-  if (data.status === 'Completed' && !data.endTime) {
-    return {
-      statusCode: 422,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        error: 'Cannot mark breakdown as Completed without recording Breakdown End Time.'
-      })
-    };
-  }
+  // ENFORCE SERVER-SIDE DEFAULT VALUES FOR NEW BREAKDOWN:
+  // A newly created breakdown is always in 'Repair' status with no end time,
+  // downtime, or after photo. Breakdown completion is handled solely by the resolve action.
+  // Any client-submitted values for status, endTime, downtime, or afterPhoto are ignored.
+  const ENFORCED_STATUS = 'Repair';
+  const ENFORCED_END_TIME = '';
+  const ENFORCED_DOWNTIME = '';
+  const ENFORCED_AFTER_PHOTO = '';
 
   // =========================================================================
   // 4. FORWARD SECURELY TO GOOGLE SHEETS (COLUMNS A TO L)
@@ -243,15 +240,18 @@ exports.handler = async function (event, context) {
         staffId: submittedStaffId,                           // Column C: Verified Staff ID
         machine: String(data.machine).trim(),                // Column D: Machine
         startTime: data.startTime,                           // Column E: Breakdown Start Time
-        endTime: data.endTime || '',                         // Column F: Breakdown End Time
-        downtime: data.downtime !== undefined && data.downtime !== null ? String(data.downtime) : '', // Column G: Downtime
+        endTime: ENFORCED_END_TIME,                          // Column F: Breakdown End Time (Enforced empty)
+        downtime: ENFORCED_DOWNTIME,                         // Column G: Downtime (Enforced empty)
         category: String(data.category).trim(),              // Column H: Problem Category
         beforePhoto: data.beforePhoto || '',                 // Column I: Before Photo Ref / URL
-        afterPhoto: data.afterPhoto || '',                   // Column J: After Photo Ref / URL
+        afterPhoto: ENFORCED_AFTER_PHOTO,                    // Column J: After Photo (Enforced empty)
         description: String(data.description).trim(),        // Column K: Problem Description
-        status: data.status || 'Repair'                      // Column L: Status
+        status: ENFORCED_STATUS                              // Column L: Status (Enforced 'Repair')
       },
-      photoFiles: data.photoFiles || null,
+      photoFiles: {
+        before: data.photoFiles?.before || null,
+        after: null                                          // Strictly null on creation
+      },
       submittedBy: {
         staffId: authenticatedStaffId,
         name: authenticatedName,
@@ -297,7 +297,7 @@ exports.handler = async function (event, context) {
         data: {
           staffId: submittedStaffId,
           machine: data.machine,
-          status: data.status,
+          status: ENFORCED_STATUS,
           time: data.time
         }
       })

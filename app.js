@@ -2101,40 +2101,6 @@
     return `${months[date.getMonth()]} ${date.getFullYear()}`;
   }
 
-  function updateDowntimeAndMonthPreview() {
-    const startVal = document.getElementById('rbStartTime')?.value;
-    const endVal = document.getElementById('rbEndTime')?.value;
-    const downtimeEl = document.getElementById('rbDowntimePreview');
-    const monthEl = document.getElementById('rbMonthPreview');
-
-    // Month calculation
-    const refDate = startVal ? new Date(startVal) : new Date();
-    const monthStr = getMonthYearString(isNaN(refDate.getTime()) ? new Date() : refDate);
-    if (monthEl) monthEl.textContent = monthStr;
-
-    if (!downtimeEl) return;
-
-    if (!startVal || !endVal) {
-      downtimeEl.innerHTML = '&mdash;';
-      return;
-    }
-
-    const startMs = new Date(startVal).getTime();
-    const endMs = new Date(endVal).getTime();
-
-    if (isNaN(startMs) || isNaN(endMs)) {
-      downtimeEl.innerHTML = '&mdash;';
-      return;
-    }
-
-    const diffMin = Math.round((endMs - startMs) / 60000);
-    if (diffMin < 0) {
-      downtimeEl.innerHTML = '<span style="color:var(--red-primary); font-weight:600;">Invalid (End earlier than Start)</span>';
-    } else {
-      downtimeEl.innerHTML = `<span style="color:var(--navy-darkest); font-weight:700;">${diffMin} min</span>`;
-    }
-  }
-
   function showBreakdownFormAlert(message, type = 'error') {
     const banner = document.getElementById('rbAlertBanner');
     if (!banner) return;
@@ -2187,21 +2153,11 @@
     const startInput = document.getElementById('rbStartTime');
     if (startInput) startInput.value = formatInputDateTime(new Date());
 
-    const endInput = document.getElementById('rbEndTime');
-    if (endInput) endInput.value = '';
-
-    const statusSelect = document.getElementById('rbStatus');
-    if (statusSelect) statusSelect.value = 'Repair';
-
     const beforePhotoName = document.getElementById('rbBeforePhotoName');
     if (beforePhotoName) beforePhotoName.textContent = 'Supported: JPG, JPEG, PNG';
 
-    const afterPhotoName = document.getElementById('rbAfterPhotoName');
-    if (afterPhotoName) afterPhotoName.textContent = 'Supported: JPG, JPEG, PNG';
-
     document.querySelectorAll('#reportBreakdownForm .input-error').forEach(el => el.classList.remove('input-error'));
     clearBreakdownFormAlert();
-    updateDowntimeAndMonthPreview();
   }
 
   function setSubmitButtonLoading(isLoading) {
@@ -2240,18 +2196,6 @@
       startInput.value = formatInputDateTime(new Date());
     }
 
-    const endInput = document.getElementById('rbEndTime');
-    if (endInput && !endInput.value) {
-      endInput.value = '';
-    }
-
-    const statusSelect = document.getElementById('rbStatus');
-    if (statusSelect && !statusSelect.value) {
-      statusSelect.value = 'Repair';
-    }
-
-    updateDowntimeAndMonthPreview();
-
     const modal = document.getElementById('reportBreakdownModal');
     if (modal) modal.classList.add('active');
   }
@@ -2263,12 +2207,9 @@
     const machineCustom = document.getElementById('rbMachineCustom')?.value?.trim();
     const machine = (machineSelect === '__OTHER__') ? machineCustom : machineSelect;
     const startTime = document.getElementById('rbStartTime')?.value;
-    const endTime = document.getElementById('rbEndTime')?.value;
     const category = document.getElementById('rbCategory')?.value;
-    const status = document.getElementById('rbStatus')?.value || 'Repair';
     const description = document.getElementById('rbDescription')?.value?.trim();
     const beforePhotoInput = document.getElementById('rbBeforePhoto');
-    const afterPhotoInput = document.getElementById('rbAfterPhoto');
 
     // Remove previous input-error marks
     document.querySelectorAll('#reportBreakdownForm .input-error').forEach(el => el.classList.remove('input-error'));
@@ -2302,25 +2243,6 @@
       document.getElementById('rbDescription')?.classList.add('input-error');
     }
 
-    // Required completion validation for status 'Completed':
-    // "Do not allow technicians to arbitrarily mark a repair as completed without recording the required completion information."
-    if (status === 'Completed') {
-      if (!endTime) {
-        errors.push('Breakdown End Time is required to mark the status as Completed.');
-        document.getElementById('rbEndTime')?.classList.add('input-error');
-      }
-    }
-
-    // Breakdown End Time comparison
-    if (startTime && endTime) {
-      const startMs = new Date(startTime).getTime();
-      const endMs = new Date(endTime).getTime();
-      if (endMs < startMs) {
-        errors.push('Breakdown End Time cannot be earlier than Breakdown Start Time.');
-        document.getElementById('rbEndTime')?.classList.add('input-error');
-      }
-    }
-
     // Photo file format validation (JPG, JPEG, PNG)
     const allowedExtensions = ['jpg', 'jpeg', 'png'];
     if (beforePhotoInput?.files?.[0]) {
@@ -2332,15 +2254,6 @@
       }
     }
 
-    if (afterPhotoInput?.files?.[0]) {
-      const file = afterPhotoInput.files[0];
-      const ext = file.name.split('.').pop().toLowerCase();
-      if (!allowedExtensions.includes(ext)) {
-        errors.push(`After Photo "${file.name}" is invalid. Only JPG, JPEG, and PNG are allowed.`);
-        afterPhotoInput.classList.add('input-error');
-      }
-    }
-
     return {
       isValid: errors.length === 0,
       errors,
@@ -2348,9 +2261,7 @@
         staffId,
         machine,
         startTime,
-        endTime,
         category,
-        status,
         description
       }
     };
@@ -2360,7 +2271,7 @@
     if (e) e.preventDefault();
     clearBreakdownFormAlert();
 
-    // 1. Validate all required inputs
+    // 1. Validate required inputs
     const validation = validateBreakdownForm();
     if (!validation.isValid) {
       showBreakdownFormAlert(
@@ -2374,60 +2285,48 @@
 
     // 2. Prepare the breakdown data object matching Google Sheets database structure
     // Database: MMS DATABASE | Worksheet: BD DATABASE (Columns A to L)
+    // A newly reported breakdown is ALWAYS in 'Repair' status with no end time, downtime, or after photo.
     const now = new Date();
     const timeStr = formatSubmissionTime(now);
     const monthStr = getMonthYearString(now);
-
-    let downtimeVal = '';
-    if (validation.values.endTime) {
-      const startMs = new Date(validation.values.startTime).getTime();
-      const endMs = new Date(validation.values.endTime).getTime();
-      if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
-        downtimeVal = Math.round((endMs - startMs) / 60000);
-      }
-    }
 
     // 3. Display loading state
     setSubmitButtonLoading(true);
 
     try {
-      // Process photos if attached
+      // Process before photo if attached
       const beforeFileInput = document.getElementById('rbBeforePhoto');
-      const afterFileInput = document.getElementById('rbAfterPhoto');
-
       const beforePhotoObj = beforeFileInput?.files?.[0] ? await fileToBase64(beforeFileInput.files[0]) : null;
-      const afterPhotoObj = afterFileInput?.files?.[0] ? await fileToBase64(afterFileInput.files[0]) : null;
 
       // Database Columns Mapping:
-      // A - Time
-      // B - Month
-      // C - Staff ID
-      // D - Machine
-      // E - Breakdown Start Time
-      // F - Breakdown End Time
-      // G - Downtime (minutes)
-      // H - Problem Category
-      // I - Before Photo
-      // J - After Photo
-      // K - Problem Description
-      // L - Status
+      // Column A: Time
+      // Column B: Month
+      // Column C: Staff ID
+      // Column D: Machine
+      // Column E: Breakdown Start Time
+      // Column F: Breakdown End Time (Enforced empty for new active breakdown)
+      // Column G: Downtime (minutes) (Enforced empty for new active breakdown)
+      // Column H: Problem Category
+      // Column I: Before Photo
+      // Column J: After Photo (Enforced empty for new active breakdown)
+      // Column K: Problem Description
+      // Column L: Status (Enforced 'Repair' for new active breakdown)
       const payload = {
         time: timeStr,                                           // Column A
         month: monthStr,                                         // Column B
         staffId: validation.values.staffId,                      // Column C
         machine: validation.values.machine,                      // Column D
         startTime: validation.values.startTime,                  // Column E
-        endTime: validation.values.endTime || '',                // Column F
-        downtime: downtimeVal !== '' ? downtimeVal : '',         // Column G
+        endTime: '',                                             // Column F: strictly empty on creation
+        downtime: '',                                            // Column G: strictly empty on creation
         category: validation.values.category,                    // Column H
         beforePhoto: beforePhotoObj ? beforePhotoObj.name : '',  // Column I
-        afterPhoto: afterPhotoObj ? afterPhotoObj.name : '',     // Column J
+        afterPhoto: '',                                          // Column J: strictly empty on creation
         description: validation.values.description,              // Column K
-        status: validation.values.status,                        // Column L
-        // Secure file payloads forwarded to server function for storage
+        status: 'Repair',                                        // Column L: strictly Repair on creation
         photoFiles: {
           before: beforePhotoObj,
-          after: afterPhotoObj
+          after: null
         }
       };
 
@@ -2451,7 +2350,7 @@
       const result = await response.json().catch(() => null);
 
       if (response.ok && result && result.success) {
-        // 5. Show a success message only after receiving confirmation from the backend
+        // 5. Show confirmation
         showBreakdownFormAlert(
           `<strong>Breakdown Report Recorded Successfully!</strong><br>` +
           `Saved to Google Sheets: <em>MMS DATABASE</em> &bull; Worksheet: <em>BD DATABASE</em>.` +
@@ -2460,20 +2359,27 @@
         );
         showToast('Breakdown report successfully saved to Google Sheets BD DATABASE!', 'success');
 
-        // Synchronize record into dashboard state
-        const newId = result.rowId || 'BD-2026-' + (100 + state.breakdowns.length + 1);
+        // Synchronize active record into dashboard state
+        const newId = result.rowId || 'BD-' + (state.breakdowns.length + 2);
         const newRecord = {
           id: newId,
           machine: validation.values.machine,
           line: 'Central Line',
           issue: validation.values.description,
+          description: validation.values.description,
           category: validation.values.category,
-          priority: validation.values.status === 'Completed' ? 'Low' : 'High',
-          status: validation.values.status === 'Completed' ? 'Resolved' : (validation.values.status === 'Awaiting Part' ? 'Pending' : 'Active'),
+          priority: 'Not Assigned',
+          status: 'Repair',
           reportedBy: `${validation.values.staffId} (${state.currentUser ? state.currentUser.name : 'Technician'})`,
           assignedTech: 'Unassigned',
+          startTime: validation.values.startTime,
           reportedAt: validation.values.startTime.replace('T', ' '),
-          downtimeMin: downtimeVal !== '' ? downtimeVal : 0
+          time: timeStr,
+          endTime: '',
+          downtime: 0,
+          downtimeMin: 0,
+          beforePhoto: beforePhotoObj ? beforePhotoObj.name : '',
+          afterPhoto: ''
         };
 
         state.breakdowns.unshift(newRecord);
@@ -2481,15 +2387,13 @@
         saveState();
         renderAll();
 
-        // 6. Clear the form after successful submission
+        // 6. Clear form after successful submission
         resetBreakdownForm();
 
         setTimeout(() => {
           closeAllModals();
         }, 1600);
       } else {
-        // If the backend is not configured / returns error:
-        // Show clear error message. Do not pretend that data was saved.
         const errMsg = (result && (result.error || result.message))
           || `Backend server responded with status ${response.status} (${response.statusText || 'Error'})`;
 
@@ -2502,8 +2406,6 @@
         showToast('Submission rejected: Backend not configured. Data was not saved.', 'error');
       }
     } catch (netErr) {
-      // Unreachable endpoint or network failure
-      // Show clear error message. Do not pretend that data was saved.
       const API_ENDPOINT = window.MMS_BACKEND_URL || '/.netlify/functions/submit-breakdown';
       showBreakdownFormAlert(
         `<strong>Backend Connection Error:</strong> Unable to connect to server function at <code>${escapeHtml(API_ENDPOINT)}</code>.<br>` +
@@ -2518,11 +2420,6 @@
   }
 
   function initBreakdownModalHandlers() {
-    const startInput = document.getElementById('rbStartTime');
-    const endInput = document.getElementById('rbEndTime');
-    if (startInput) startInput.addEventListener('input', updateDowntimeAndMonthPreview);
-    if (endInput) endInput.addEventListener('input', updateDowntimeAndMonthPreview);
-
     const machineSelect = document.getElementById('rbMachine');
     const machineCustom = document.getElementById('rbMachineCustom');
     if (machineSelect) {
@@ -2542,25 +2439,6 @@
       });
     }
 
-    const statusSelect = document.getElementById('rbStatus');
-    const statusHint = document.getElementById('rbStatusHint');
-    if (statusSelect) {
-      statusSelect.addEventListener('change', () => {
-        if (statusSelect.value === 'Completed') {
-          if (statusHint) {
-            statusHint.innerHTML = '<span style="color:var(--amber-warning); font-weight:600;">Breakdown End Time is required for Completed status.</span>';
-          }
-          if (endInput && !endInput.value) {
-            endInput.focus();
-          }
-        } else {
-          if (statusHint) {
-            statusHint.textContent = "Default: Repair. 'Completed' requires End Time.";
-          }
-        }
-      });
-    }
-
     const beforePhoto = document.getElementById('rbBeforePhoto');
     const beforePhotoName = document.getElementById('rbBeforePhotoName');
     if (beforePhoto) {
@@ -2573,21 +2451,6 @@
           if (beforePhotoName) beforePhotoName.textContent = 'Supported: JPG, JPEG, PNG';
         }
         beforePhoto.classList.remove('input-error');
-      });
-    }
-
-    const afterPhoto = document.getElementById('rbAfterPhoto');
-    const afterPhotoName = document.getElementById('rbAfterPhotoName');
-    if (afterPhoto) {
-      afterPhoto.addEventListener('change', () => {
-        if (afterPhoto.files && afterPhoto.files[0]) {
-          const file = afterPhoto.files[0];
-          const kb = Math.round(file.size / 1024);
-          if (afterPhotoName) afterPhotoName.textContent = `📎 ${file.name} (${kb} KB)`;
-        } else {
-          if (afterPhotoName) afterPhotoName.textContent = 'Supported: JPG, JPEG, PNG';
-        }
-        afterPhoto.classList.remove('input-error');
       });
     }
 

@@ -226,29 +226,12 @@ function handleCreateBreakdown(payload) {
     }
   }
 
-  // Validate breakdown dates
+  // Validate breakdown start date
   const startDate = new Date(cols.startTime);
   if (isNaN(startDate.getTime())) {
     return createJsonResponse({
       success: false,
       error: 'Invalid Breakdown Start Time'
-    }, 422);
-  }
-
-  if (cols.endTime) {
-    const endDate = new Date(cols.endTime);
-    if (isNaN(endDate.getTime()) || endDate < startDate) {
-      return createJsonResponse({
-        success: false,
-        error: 'Invalid Breakdown End Time'
-      }, 422);
-    }
-  }
-
-  if (cols.status === 'Completed' && !cols.endTime) {
-    return createJsonResponse({
-      success: false,
-      error: 'Breakdown End Time is required for completed repairs.'
     }, 422);
   }
 
@@ -282,52 +265,39 @@ function handleCreateBreakdown(payload) {
   const timeFormatted = cols.time || Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
   const monthFormatted = cols.month || Utilities.formatDate(now, Session.getScriptTimeZone(), 'MMMM yyyy');
 
-  // 2. Process Downtime Calculation
-  let downtimeVal = '';
-  if (cols.startTime && cols.endTime) {
-    const startMs = new Date(cols.startTime).getTime();
-    const endMs = new Date(cols.endTime).getTime();
-
-    if (!isNaN(startMs) && !isNaN(endMs) && endMs >= startMs) {
-      downtimeVal = Math.round((endMs - startMs) / (60 * 1000));
-    }
-  } else if (cols.downtime !== undefined && cols.downtime !== null && cols.downtime !== '') {
-    downtimeVal = cols.downtime;
-  }
-
-  // 3. Process Photos into Authorized Storage (Google Drive)
+  // 2. Process Before Photo into Authorized Storage (Google Drive)
+  // After Photo is strictly empty on creation; photo upload for completion is handled by resolve.
   let beforePhotoUrl = cols.beforePhoto || '';
-  let afterPhotoUrl = cols.afterPhoto || '';
 
-  if (payload.photoFiles) {
-    if (payload.photoFiles.before && payload.photoFiles.before.data) {
-      beforePhotoUrl = savePhotoToDrive(payload.photoFiles.before, cols.machine, 'BEFORE');
-    }
-    if (payload.photoFiles.after && payload.photoFiles.after.data) {
-      afterPhotoUrl = savePhotoToDrive(payload.photoFiles.after, cols.machine, 'AFTER');
-    }
+  if (payload.photoFiles && payload.photoFiles.before && payload.photoFiles.before.data) {
+    beforePhotoUrl = savePhotoToDrive(payload.photoFiles.before, cols.machine, 'BEFORE');
   }
 
-  // 4. Assemble Database Row: STRICTLY COLUMNS A TO L
+  // 3. Assemble Database Row: STRICTLY COLUMNS A TO L
+  // Enforce server-side defaults for new breakdown:
+  // - Col F (Breakdown End Time): empty
+  // - Col G (Downtime): empty
+  // - Col J (After Photo): empty
+  // - Col L (Status): 'Repair'
   const rowData = [
     timeFormatted,                           // Column A: Time
     monthFormatted,                          // Column B: Month
     cols.staffId || '',                      // Column C: Staff ID
     cols.machine || '',                      // Column D: Machine
     cols.startTime || '',                    // Column E: Breakdown Start Time
-    cols.endTime || '',                      // Column F: Breakdown End Time
-    downtimeVal,                             // Column G: Downtime (minutes)
+    '',                                      // Column F: Breakdown End Time (Enforced empty)
+    '',                                      // Column G: Downtime (minutes) (Enforced empty)
     cols.category || '',                     // Column H: Problem Category
     beforePhotoUrl,                          // Column I: Before Photo
-    afterPhotoUrl,                           // Column J: After Photo
+    '',                                      // Column J: After Photo (Enforced empty)
     cols.description || '',                  // Column K: Problem Description
-    cols.status || 'Repair'                  // Column L: Status
+    'Repair'                                 // Column L: Status (Enforced 'Repair')
   ];
 
   // Optional backward-compatible columns M & N if present
   if (cols.priority || cols.assignedTech) {
-    rowData.push(cols.priority || '');
-    rowData.push(cols.assignedTech || '');
+    rowData.push(cols.priority || 'Not Assigned');
+    rowData.push(cols.assignedTech || 'Unassigned');
   }
 
   sheet.appendRow(rowData);
