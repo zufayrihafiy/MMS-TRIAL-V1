@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -135,7 +135,7 @@
   </div>
 
   <!-- Layout Shell -->
-  <div class="app-shell">
+  <div id="appShell" class="app-shell hidden">
 
     <!-- Mobile Sidebar Backdrop -->
     <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
@@ -323,6 +323,11 @@
               <button class="dropdown-item" onclick="window.openUserProfileModal()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 <span>My Profile</span>
+              </button>
+
+              <button class="dropdown-item" id="dropdownChangeMyPasswordBtn" onclick="window.openChangeMyPasswordModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span>Change My Password</span>
               </button>
 
               <button class="dropdown-item admin-only" id="dropdownManageUsersBtn" onclick="window.openManageUsersModal()">
@@ -1527,7 +1532,7 @@
        MODAL: MANAGE STAFF ACCOUNTS (ADMIN ONLY)
        =================================================================== -->
   <div id="manageUsersModal" class="modal-overlay">
-    <div class="modal-box" style="max-width:680px;">
+    <div class="modal-box" style="max-width:720px;">
       <div class="modal-header">
         <div>
           <h3 class="modal-title">Staff Accounts &amp; Access Control (RBAC)</h3>
@@ -1538,31 +1543,201 @@
         </button>
       </div>
       <div class="modal-body">
+        <!-- Role Definition Info -->
         <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:12px 14px; font-size:12.5px; color:#475569; margin-bottom:14px;">
           <strong>Role Definition:</strong><br>
           &bull; <strong>ADMIN</strong>: Full access to all modules, BD Dashboard analytics, user accounts, and assigning technician tasks.<br>
           &bull; <strong>TECHNICIAN</strong>: Report breakdown, view active/pending jobs, update authorized jobs, request spare parts, and view personal profile.
         </div>
 
-        <div class="table-responsive">
-          <table class="user-accounts-table">
-            <thead>
-              <tr>
-                <th>Staff ID</th>
-                <th>Full Name</th>
-                <th>Assigned Role</th>
-                <th>Firebase Email</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="userAccountsTableBody">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
+        <!-- Tab Navigation -->
+        <div class="manage-users-tabs" style="display:flex; gap:8px; margin-bottom:16px; border-bottom:1px solid #E2E8F0; padding-bottom:0;">
+          <button type="button" id="muTabViewUsers" class="mu-tab mu-tab-active" onclick="window.switchManageUsersTab('view')" style="padding:8px 16px; border:none; background:none; cursor:pointer; font-size:13px; font-weight:600; color:var(--accent-primary); border-bottom:2px solid var(--accent-primary); margin-bottom:-1px;">
+            View Accounts
+          </button>
+          <button type="button" id="muTabCreateUser" class="mu-tab" onclick="window.switchManageUsersTab('create')" style="padding:8px 16px; border:none; background:none; cursor:pointer; font-size:13px; font-weight:500; color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-1px;">
+            Add User
+          </button>
+          <button type="button" id="muTabChangePassword" class="mu-tab" onclick="window.switchManageUsersTab('change-password')" style="padding:8px 16px; border:none; background:none; cursor:pointer; font-size:13px; font-weight:500; color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-1px;">
+            Change Password
+          </button>
         </div>
+
+        <!-- Panel: View Users -->
+        <div id="muPanelViewUsers">
+          <div class="table-responsive">
+            <table class="user-accounts-table">
+              <thead>
+                <tr>
+                  <th>Staff ID</th>
+                  <th>Full Name</th>
+                  <th>Assigned Role</th>
+                  <th>Firebase Email</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="userAccountsTableBody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel: Create / Add User -->
+        <div id="muPanelCreateUser" style="display:none;">
+          <div id="muCreateUserAlert" style="display:none; margin-bottom:12px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:500;"></div>
+          <form id="createUserForm" novalidate autocomplete="off">
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label" for="newUserStaffId" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Staff ID <span style="color:#E53E3E;">*</span></label>
+              <input type="text" id="newUserStaffId" class="form-input" placeholder="e.g. PN002" autocomplete="off" spellcheck="false" autocapitalize="characters" required
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">Automatically mapped to <code>staffid@mms.internal</code> in Firebase.</div>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label" for="newUserDisplayName" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Full Name</label>
+              <input type="text" id="newUserDisplayName" class="form-input" placeholder="e.g. Ahmad Firdaus" autocomplete="off"
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label" for="newUserRole" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Role <span style="color:#E53E3E;">*</span></label>
+              <select id="newUserRole" class="form-input" style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <option value="TECHNICIAN">Technician</option>
+                <option value="ADMIN">Administrator</option>
+              </select>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">Custom role claims must be applied via Firebase Admin SDK after account creation.</div>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label" for="newUserPassword" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Password <span style="color:#E53E3E;">*</span></label>
+              <div style="position:relative;">
+                <input type="password" id="newUserPassword" class="form-input" placeholder="Min. 8 chars, letter + number" autocomplete="new-password" required
+                  style="width:100%; box-sizing:border-box; padding:9px 38px 9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <button type="button" onclick="window.togglePasswordField('newUserPassword', 'eyeNewUser')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted);" aria-label="Toggle password visibility">
+                  <svg id="eyeNewUser" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">
+                <strong>Password Policy:</strong> Minimum 8 characters &bull; At least one letter (A-Z or a-z) &bull; At least one number (0-9) &bull; Special characters optional.
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:4px;">
+              <label class="form-label" for="newUserConfirmPassword" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Confirm Password <span style="color:#E53E3E;">*</span></label>
+              <div style="position:relative;">
+                <input type="password" id="newUserConfirmPassword" class="form-input" placeholder="Re-enter password" autocomplete="new-password" required
+                  style="width:100%; box-sizing:border-box; padding:9px 38px 9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <button type="button" onclick="window.togglePasswordField('newUserConfirmPassword', 'eyeNewUserConfirm')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted);" aria-label="Toggle password visibility">
+                  <svg id="eyeNewUserConfirm" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+              </div>
+            </div>
+          </form>
+          <div style="margin-top:16px; display:flex; gap:10px; justify-content:flex-end;">
+            <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+            <button type="button" id="createUserSubmitBtn" onclick="window.submitCreateUser()" class="btn-primary" style="padding:9px 22px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; background:var(--accent-primary); color:#fff;">
+              Create Account
+            </button>
+          </div>
+        </div>
+
+        <!-- Panel: Change Password (admin resets another user's password) -->
+        <div id="muPanelChangePassword" style="display:none;">
+          <div id="muChangePasswordAlert" style="display:none; margin-bottom:12px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:500;"></div>
+          <form id="changePasswordForm" novalidate autocomplete="off">
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label" for="cpTargetStaffId" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Target Staff ID <span style="color:#E53E3E;">*</span></label>
+              <input type="text" id="cpTargetStaffId" class="form-input" placeholder="e.g. PN002" autocomplete="off" spellcheck="false" autocapitalize="characters"
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">Enter the Staff ID of the user whose password you want to change.</div>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label" for="cpNewPassword" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">New Password <span style="color:#E53E3E;">*</span></label>
+              <div style="position:relative;">
+                <input type="password" id="cpNewPassword" class="form-input" placeholder="Min. 8 chars, letter + number" autocomplete="new-password" required
+                  style="width:100%; box-sizing:border-box; padding:9px 38px 9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <button type="button" onclick="window.togglePasswordField('cpNewPassword', 'eyeCpNew')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted);" aria-label="Toggle password visibility">
+                  <svg id="eyeCpNew" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">
+                <strong>Password Policy:</strong> Minimum 8 characters &bull; At least one letter (A-Z or a-z) &bull; At least one number (0-9) &bull; Special characters optional.
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:4px;">
+              <label class="form-label" for="cpConfirmPassword" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Confirm New Password <span style="color:#E53E3E;">*</span></label>
+              <div style="position:relative;">
+                <input type="password" id="cpConfirmPassword" class="form-input" placeholder="Re-enter new password" autocomplete="new-password" required
+                  style="width:100%; box-sizing:border-box; padding:9px 38px 9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <button type="button" onclick="window.togglePasswordField('cpConfirmPassword', 'eyeCpConfirm')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted);" aria-label="Toggle password visibility">
+                  <svg id="eyeCpConfirm" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+              </div>
+            </div>
+            <div style="background:#FFF3CD; border:1px solid #FFC107; border-radius:8px; padding:10px 12px; font-size:12px; color:#7D5A00; margin-top:14px;">
+              &#9888; Password changes for other user accounts require Firebase Admin SDK execution.<br>
+              Validation will be confirmed here. Actual update must be applied via <code>firebase-admin-setup/reset-password.js</code>.
+            </div>
+          </form>
+          <div style="margin-top:16px; display:flex; gap:10px; justify-content:flex-end;">
+            <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+            <button type="button" id="changePasswordSubmitBtn" onclick="window.submitChangePassword()" class="btn-primary" style="padding:9px 22px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; background:var(--accent-primary); color:#fff;">
+              Validate &amp; Change Password
+            </button>
+          </div>
+        </div>
+
+      </div>
+      <div id="muPanelViewUsersFooter" class="modal-footer">
+        <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: CHANGE MY PASSWORD (Self-service for all users)
+       =================================================================== -->
+  <div id="changeMyPasswordModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Change My Password</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Update your MMS login password securely</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="changeMyPasswordAlert" style="display:none; margin-bottom:12px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:500;"></div>
+        <form id="changeMyPasswordForm" novalidate autocomplete="off">
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="myNewPassword" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">New Password <span style="color:#E53E3E;">*</span></label>
+            <div style="position:relative;">
+              <input type="password" id="myNewPassword" class="form-input" placeholder="Min. 8 chars, letter + number" autocomplete="new-password" required
+                style="width:100%; box-sizing:border-box; padding:9px 38px 9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+              <button type="button" onclick="window.togglePasswordField('myNewPassword', 'eyeMyNew')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted);" aria-label="Toggle password visibility">
+                <svg id="eyeMyNew" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">
+              <strong>Password Policy:</strong> Minimum 8 characters &bull; At least one letter (A-Z or a-z) &bull; At least one number (0-9) &bull; Special characters optional.
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:4px;">
+            <label class="form-label" for="myConfirmPassword" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Confirm New Password <span style="color:#E53E3E;">*</span></label>
+            <div style="position:relative;">
+              <input type="password" id="myConfirmPassword" class="form-input" placeholder="Re-enter new password" autocomplete="new-password" required
+                style="width:100%; box-sizing:border-box; padding:9px 38px 9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+              <button type="button" onclick="window.togglePasswordField('myConfirmPassword', 'eyeMyConfirm')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted);" aria-label="Toggle password visibility">
+                <svg id="eyeMyConfirm" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
+        <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+        <button type="button" id="changeMyPasswordSubmitBtn" onclick="window.submitMyPasswordChange()" class="btn-primary" style="padding:9px 22px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; background:var(--accent-primary); color:#fff;">
+          Update Password
+        </button>
       </div>
     </div>
   </div>

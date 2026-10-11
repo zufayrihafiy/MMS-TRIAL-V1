@@ -676,12 +676,16 @@
     const roleTagEl = document.getElementById('userRoleTag');
     const dropdownNameEl = document.getElementById('dropdownUserName');
     const dropdownEmailEl = document.getElementById('dropdownUserEmail');
+    const dropdownStaffIdEl = document.getElementById('dropdownStaffId');
+    const dropdownUserRoleEl = document.getElementById('dropdownUserRole');
 
-    if (avatarEl) avatarEl.textContent = user.initials;
-    if (nameEl) nameEl.textContent = user.name;
-    if (roleTagEl) roleTagEl.textContent = user.role;
-    if (dropdownNameEl) dropdownNameEl.textContent = user.name;
-    if (dropdownEmailEl) dropdownEmailEl.textContent = user.email;
+    if (avatarEl) avatarEl.textContent = user.initials || 'MM';
+    if (nameEl) nameEl.textContent = user.name || 'Staff User';
+    if (roleTagEl) roleTagEl.textContent = user.role || 'Staff';
+    if (dropdownNameEl) dropdownNameEl.textContent = user.name || 'Staff User';
+    if (dropdownEmailEl) dropdownEmailEl.textContent = user.email || '';
+    if (dropdownStaffIdEl) dropdownStaffIdEl.textContent = user.staffId || user.id || '';
+    if (dropdownUserRoleEl) dropdownUserRoleEl.textContent = user.role || 'Staff';
 
     // Update Role Switcher Buttons Active State
     document.querySelectorAll('.role-switch-btn').forEach(btn => {
@@ -704,7 +708,7 @@
       renderUserAccount();
       populateStaffIdFromProfile();
       showToast(`Switched active profile to ${match.name} (${match.role})`, 'info');
-      
+
       // Close dropdown
       const wrapper = document.getElementById('userAccountWrapper');
       if (wrapper) wrapper.classList.remove('open');
@@ -713,9 +717,10 @@
 
   function applyRolePermissions() {
     const role = state.currentUser.role;
-    const isTech = role === 'Technician';
+    const roleCode = state.currentUser.roleCode;
+    const isTech = role === 'Technician' || roleCode === 'TECHNICIAN';
     const isSupervisor = role === 'Supervisor / Engineer';
-    const isAdmin = role === 'Administrator';
+    const isAdmin = role === 'Administrator' || roleCode === 'ADMIN';
 
     // BD Dashboard restricted indicator
     const bdDashboardLock = document.getElementById('bdDashboardLockNotice');
@@ -730,7 +735,7 @@
       }
     }
 
-    // Admin-only badges/buttons
+    // Admin-only badges/buttons (strictly tied to verified Admin claim)
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.display = isAdmin ? '' : 'none';
     });
@@ -1040,9 +1045,9 @@
 
     let list = state.spareParts.filter(part => {
       const matchSearch = part.name.toLowerCase().includes(searchVal) ||
-                          part.code.toLowerCase().includes(searchVal) ||
-                          part.category.toLowerCase().includes(searchVal) ||
-                          part.location.toLowerCase().includes(searchVal);
+        part.code.toLowerCase().includes(searchVal) ||
+        part.category.toLowerCase().includes(searchVal) ||
+        part.location.toLowerCase().includes(searchVal);
 
       if (!matchSearch) return false;
 
@@ -1239,15 +1244,16 @@
   // =========================================================================
 
   // --- Breakdown Report Modal: Google Sheets (MMS DATABASE / BD DATABASE) ---
-  
+
   function populateStaffIdFromProfile() {
     const staffInput = document.getElementById('rbStaffId');
     const badge = document.getElementById('rbStaffIdBadge');
     if (staffInput && state.currentUser) {
-      staffInput.value = state.currentUser.id || '';
+      staffInput.value = state.currentUser.staffId || state.currentUser.id || '';
     }
     if (badge && state.currentUser) {
-      badge.textContent = `${state.currentUser.id} • ${state.currentUser.name}`;
+      const sid = state.currentUser.staffId || state.currentUser.id || '';
+      badge.textContent = `${sid} • ${state.currentUser.name}`;
     }
   }
 
@@ -1613,11 +1619,17 @@
       // 4. Submit to configured Netlify server function
       const API_ENDPOINT = window.MMS_BACKEND_URL || '/.netlify/functions/submit-breakdown';
 
+      const token = sessionStorage.getItem('mmsAuthToken') || '';
+      const requestHeaders = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: requestHeaders,
         body: JSON.stringify(payload)
       });
 
@@ -2058,6 +2070,16 @@
     const assignTechForm = document.getElementById('assignTechForm');
     if (assignTechForm) assignTechForm.addEventListener('submit', submitAssignTechnician);
 
+    // Login Form Submission & Toggle
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+      loginForm.addEventListener('submit', handleLogin);
+    }
+    initLoginPasswordToggle();
+
+    // Verify Active Authentication Session on Startup
+    verifyAuthSession();
+
     // Global Modal Closes
     document.querySelectorAll('.modal-close-btn, .modal-cancel-btn').forEach(btn => {
       btn.addEventListener('click', closeAllModals);
@@ -2107,5 +2129,718 @@
       window.location.reload();
     }, 1200);
   };
+
+  // =========================================================================
+  // 13. PASSWORD POLICY & USER MANAGEMENT
+  // =========================================================================
+
+  /**
+   * MMS Password Policy — applied to ALL users (ADMIN and TECHNICIAN).
+   * Minimum 8 characters, at least one letter (A-Z or a-z), at least one number (0-9).
+   * Special characters are optional. Uppercase is optional.
+   * Plaintext passwords are never stored or logged.
+   */
+  const MMS_PASSWORD_POLICY_MSG =
+    'Password must be at least 8 characters and contain at least one letter (A-Z or a-z) and one number (0-9).';
+
+  function isValidPassword(password) {
+    return (
+      typeof password === 'string' &&
+      password.length >= 8 &&
+      /[A-Za-z]/.test(password) &&
+      /[0-9]/.test(password)
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Utility: toggle password field visibility
+  // -------------------------------------------------------------------------
+  function togglePasswordField(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (icon) {
+        icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+      }
+    } else {
+      input.type = 'password';
+      if (icon) {
+        icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+      }
+    }
+  }
+  window.togglePasswordField = togglePasswordField;
+
+  // -------------------------------------------------------------------------
+  // Utility: show inline alert in a manage-users panel
+  // -------------------------------------------------------------------------
+  function showPanelAlert(alertId, message, type) {
+    const el = document.getElementById(alertId);
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = 'block';
+    if (type === 'error') {
+      el.style.background = '#FEE2E2';
+      el.style.color = '#991B1B';
+      el.style.border = '1px solid #FCA5A5';
+    } else if (type === 'success') {
+      el.style.background = '#D1FAE5';
+      el.style.color = '#065F46';
+      el.style.border = '1px solid #6EE7B7';
+    } else {
+      el.style.background = '#EFF6FF';
+      el.style.color = '#1D4ED8';
+      el.style.border = '1px solid #BFDBFE';
+    }
+  }
+
+  function hidePanelAlert(alertId) {
+    const el = document.getElementById(alertId);
+    if (el) el.style.display = 'none';
+  }
+
+  // -------------------------------------------------------------------------
+  // Modal: Manage Staff Accounts (ADMIN only)
+  // -------------------------------------------------------------------------
+  function openManageUsersModal() {
+    const modal = document.getElementById('manageUsersModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    switchManageUsersTab('view');
+    populateUserAccountsTable();
+  }
+
+  function switchManageUsersTab(tab) {
+    const tabs = { view: 'muTabViewUsers', create: 'muTabCreateUser', 'change-password': 'muTabChangePassword' };
+    const panels = { view: 'muPanelViewUsers', create: 'muPanelCreateUser', 'change-password': 'muPanelChangePassword' };
+    const footer = document.getElementById('muPanelViewUsersFooter');
+
+    Object.keys(tabs).forEach(key => {
+      const btn = document.getElementById(tabs[key]);
+      const panel = document.getElementById(panels[key]);
+      if (btn) {
+        if (key === tab) {
+          btn.style.fontWeight = '600';
+          btn.style.color = 'var(--accent-primary)';
+          btn.style.borderBottom = '2px solid var(--accent-primary)';
+        } else {
+          btn.style.fontWeight = '500';
+          btn.style.color = 'var(--text-muted)';
+          btn.style.borderBottom = '2px solid transparent';
+        }
+      }
+      if (panel) {
+        panel.style.display = key === tab ? '' : 'none';
+      }
+    });
+
+    // Show footer close button only on view tab
+    if (footer) footer.style.display = tab === 'view' ? '' : 'none';
+
+    // Clear alerts when switching tabs
+    hidePanelAlert('muCreateUserAlert');
+    hidePanelAlert('muChangePasswordAlert');
+  }
+  window.switchManageUsersTab = switchManageUsersTab;
+
+  function populateUserAccountsTable() {
+    const tbody = document.getElementById('userAccountsTableBody');
+    if (!tbody) return;
+    const domain = 'mms.internal';
+    tbody.innerHTML = state.usersList.map(u => {
+      const staffId = u.id || '';
+      const email = `${staffId.toLowerCase()}@${domain}`;
+      const roleLabel = u.role === 'Administrator' ? 'ADMIN' : (u.role === 'Technician' ? 'TECHNICIAN' : u.role);
+      const badgeColor = u.role === 'Administrator' ? '#EF4444' : '#3B82F6';
+      return `<tr>
+        <td><code>${escapeHtml(staffId)}</code></td>
+        <td>${escapeHtml(u.name)}</td>
+        <td><span style="background:${badgeColor}1A; color:${badgeColor}; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;">${escapeHtml(roleLabel)}</span></td>
+        <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(email)}</td>
+        <td><span style="background:#D1FAE5; color:#065F46; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600;">Active</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // -------------------------------------------------------------------------
+  // Action: Create User (Admin only — frontend validation + backend call)
+  // -------------------------------------------------------------------------
+  function submitCreateUser() {
+    hidePanelAlert('muCreateUserAlert');
+
+    const staffId = (document.getElementById('newUserStaffId') || {}).value || '';
+    const displayName = (document.getElementById('newUserDisplayName') || {}).value || '';
+    const role = (document.getElementById('newUserRole') || {}).value || 'TECHNICIAN';
+    const password = (document.getElementById('newUserPassword') || {}).value || '';
+    const confirmPassword = (document.getElementById('newUserConfirmPassword') || {}).value || '';
+
+    if (!staffId.trim()) {
+      showPanelAlert('muCreateUserAlert', 'Staff ID is required.', 'error');
+      return;
+    }
+
+    // Frontend: enforce MMS password policy
+    if (!isValidPassword(password)) {
+      showPanelAlert('muCreateUserAlert', MMS_PASSWORD_POLICY_MSG, 'error');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showPanelAlert('muCreateUserAlert', 'Passwords do not match. Please re-enter.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('createUserSubmitBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
+
+    const token = sessionStorage.getItem('mmsAuthToken') || '';
+
+    fetch('/.netlify/functions/manage-users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({
+        action: 'create',
+        staffId: staffId.trim().toUpperCase(),
+        displayName: displayName.trim(),
+        role,
+        password
+      })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          showPanelAlert('muCreateUserAlert', `Account created for ${data.staffId} (${data.email}). ${data.note || ''}`, 'success');
+          document.getElementById('createUserForm').reset();
+          showToast(`User ${data.staffId} created successfully.`, 'success');
+        } else {
+          showPanelAlert('muCreateUserAlert', data.error || 'Failed to create user account.', 'error');
+        }
+      })
+      .catch(() => {
+        showPanelAlert('muCreateUserAlert', 'Network error. Check your connection and try again.', 'error');
+      })
+      .finally(() => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+      });
+  }
+  window.submitCreateUser = submitCreateUser;
+
+  // -------------------------------------------------------------------------
+  // Action: Change Password for another user (Admin only — validation + backend)
+  // -------------------------------------------------------------------------
+  function submitChangePassword() {
+    hidePanelAlert('muChangePasswordAlert');
+
+    const targetStaffId = (document.getElementById('cpTargetStaffId') || {}).value || '';
+    const newPassword = (document.getElementById('cpNewPassword') || {}).value || '';
+    const confirmPassword = (document.getElementById('cpConfirmPassword') || {}).value || '';
+
+    if (!targetStaffId.trim()) {
+      showPanelAlert('muChangePasswordAlert', 'Target Staff ID is required.', 'error');
+      return;
+    }
+
+    // Frontend: enforce MMS password policy
+    if (!isValidPassword(newPassword)) {
+      showPanelAlert('muChangePasswordAlert', MMS_PASSWORD_POLICY_MSG, 'error');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showPanelAlert('muChangePasswordAlert', 'Passwords do not match. Please re-enter.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('changePasswordSubmitBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Validating...'; }
+
+    const token = sessionStorage.getItem('mmsAuthToken') || '';
+
+    fetch('/.netlify/functions/manage-users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({
+        action: 'change-password',
+        targetStaffId: targetStaffId.trim().toUpperCase(),
+        newPassword
+      })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          showPanelAlert(
+            'muChangePasswordAlert',
+            `Password policy validated for ${data.staffId}. ${data.note || 'Apply via Firebase Admin SDK.'}`,
+            'success'
+          );
+          document.getElementById('changePasswordForm').reset();
+          showToast(`Password change validated for ${data.staffId}. Use Admin SDK to apply.`, 'info');
+        } else {
+          showPanelAlert('muChangePasswordAlert', data.error || 'Password change failed.', 'error');
+        }
+      })
+      .catch(() => {
+        showPanelAlert('muChangePasswordAlert', 'Network error. Check your connection and try again.', 'error');
+      })
+      .finally(() => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Validate & Change Password'; }
+      });
+  }
+  window.submitChangePassword = submitChangePassword;
+
+  // -------------------------------------------------------------------------
+  // Modal: Change My Password (self-service for all users)
+  // -------------------------------------------------------------------------
+  function openChangeMyPasswordModal() {
+    const modal = document.getElementById('changeMyPasswordModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    hidePanelAlert('changeMyPasswordAlert');
+    const form = document.getElementById('changeMyPasswordForm');
+    if (form) form.reset();
+    // Close dropdown
+    const wrapper = document.getElementById('userAccountWrapper');
+    if (wrapper) wrapper.classList.remove('open');
+  }
+  window.openChangeMyPasswordModal = openChangeMyPasswordModal;
+
+  function submitMyPasswordChange() {
+    hidePanelAlert('changeMyPasswordAlert');
+
+    const newPassword = (document.getElementById('myNewPassword') || {}).value || '';
+    const confirmPassword = (document.getElementById('myConfirmPassword') || {}).value || '';
+
+    // Frontend: enforce MMS password policy
+    if (!isValidPassword(newPassword)) {
+      showPanelAlert('changeMyPasswordAlert', MMS_PASSWORD_POLICY_MSG, 'error');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showPanelAlert('changeMyPasswordAlert', 'Passwords do not match. Please re-enter.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('changeMyPasswordSubmitBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }
+
+    const token = sessionStorage.getItem('mmsAuthToken') || '';
+
+    fetch('/.netlify/functions/manage-users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({
+        action: 'reset-password',
+        newPassword
+      })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          // Update stored token if a new one was issued
+          if (data.newIdToken) {
+            sessionStorage.setItem('mmsAuthToken', data.newIdToken);
+          }
+          showPanelAlert('changeMyPasswordAlert', 'Password updated successfully. Your session remains active.', 'success');
+          document.getElementById('changeMyPasswordForm').reset();
+          showToast('Password updated successfully.', 'success');
+        } else {
+          showPanelAlert('changeMyPasswordAlert', data.error || 'Password update failed. Please try again.', 'error');
+        }
+      })
+      .catch(() => {
+        showPanelAlert('changeMyPasswordAlert', 'Network error. Check your connection and try again.', 'error');
+      })
+      .finally(() => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Update Password'; }
+      });
+  }
+  window.submitMyPasswordChange = submitMyPasswordChange;
+
+  // -------------------------------------------------------------------------
+  // Modal: User Profile
+  // -------------------------------------------------------------------------
+  function openUserProfileModal() {
+    const modal = document.getElementById('userProfileModal');
+    if (!modal) return;
+
+    const user = state.currentUser;
+    const isAdmin = user.role === 'Administrator' || user.roleCode === 'ADMIN';
+
+    const avatarEl = document.getElementById('modalUserAvatar');
+    if (avatarEl) avatarEl.textContent = user.initials || 'MM';
+
+    const nameEl = document.getElementById('modalUserName');
+    if (nameEl) nameEl.textContent = user.name || 'Staff User';
+
+    const roleBadgeEl = document.getElementById('modalUserRoleBadge');
+    if (roleBadgeEl) {
+      roleBadgeEl.textContent = user.role || (isAdmin ? 'Administrator' : 'Technician');
+      roleBadgeEl.className = 'user-profile-badge ' + (isAdmin ? 'badge-admin' : 'badge-tech');
+    }
+
+    const staffIdEl = document.getElementById('modalStaffId');
+    if (staffIdEl) staffIdEl.textContent = user.staffId || user.id || '-';
+
+    const roleNameEl = document.getElementById('modalRoleName');
+    if (roleNameEl) roleNameEl.textContent = user.role || (isAdmin ? 'Administrator' : 'Technician');
+
+    const emailEl = document.getElementById('modalUserEmail');
+    if (emailEl) emailEl.textContent = user.email || '-';
+
+    const permListEl = document.getElementById('modalPermissionsList');
+    if (permListEl) {
+      if (isAdmin) {
+        permListEl.innerHTML = `
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Full Plant Operations Read &amp; Write Access</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Staff User &amp; Password Administration (Firebase Custom Claims)</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Spare Parts Inventory Management &amp; Approvals</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Breakdown Resolution &amp; KPI Analytics Authorization</li>
+        `;
+      } else {
+        permListEl.innerHTML = `
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> View Breakdown &amp; Maintenance Work Orders</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Submit Machine Breakdown Reports to BD DATABASE</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Spare Parts Stock Requests</li>
+          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Personal Password Management</li>
+        `;
+      }
+    }
+
+    modal.classList.add('active');
+    const wrapper = document.getElementById('userAccountWrapper');
+    if (wrapper) wrapper.classList.remove('open');
+  }
+  window.openUserProfileModal = openUserProfileModal;
+
+  // -------------------------------------------------------------------------
+  // Modal: Firebase Setup Guide
+  // -------------------------------------------------------------------------
+  function openSetupGuideModal() {
+    const modal = document.getElementById('setupGuideModal');
+    if (modal) modal.classList.add('active');
+  }
+  window.openSetupGuideModal = openSetupGuideModal;
+
+  // -------------------------------------------------------------------------
+  // Modal: Forgot Password (redirect to admin contact modal)
+  // -------------------------------------------------------------------------
+  function openForgotPasswordModal() {
+    const modal = document.getElementById('forgotPasswordModal');
+    if (modal) modal.classList.add('active');
+  }
+  window.openForgotPasswordModal = openForgotPasswordModal;
+
+  // -------------------------------------------------------------------------
+  // Manage Users Modal expose
+  // -------------------------------------------------------------------------
+  window.openManageUsersModal = openManageUsersModal;
+
+  // -------------------------------------------------------------------------
+  // Logout handler
+  // -------------------------------------------------------------------------
+  function handleLogout() {
+    clearAuthSession();
+    showToast('Logged out of system. Session ended.', 'info');
+    showLoginScreen();
+    setTimeout(() => {
+      window.location.reload();
+    }, 600);
+  }
+  window.handleLogout = handleLogout;
+  window.simulateLogout = handleLogout;
+
+  // =========================================================================
+  // 14. AUTHENTICATION & LOGIN FLOW (NETLIFY FUNCTION + FIREBASE AUTH)
+  // =========================================================================
+
+  function getStoredAuthToken() {
+    return sessionStorage.getItem('mmsAuthToken') || '';
+  }
+
+  function clearAuthSession() {
+    sessionStorage.removeItem('mmsAuthToken');
+    sessionStorage.removeItem('mmsRefreshToken');
+    sessionStorage.removeItem('mmsUserProfile');
+  }
+
+  function showLoginScreen(errorMessage = null) {
+    const loginScreen = document.getElementById('loginScreen');
+    const appShell = document.getElementById('appShell') || document.querySelector('.app-shell');
+    if (loginScreen) {
+      loginScreen.classList.remove('hidden');
+      loginScreen.style.display = 'flex';
+    }
+    if (appShell) {
+      appShell.classList.add('hidden');
+    }
+    const errBanner = document.getElementById('loginErrorBanner');
+    const errMsgEl = document.getElementById('loginErrorMessage');
+    if (errBanner && errMsgEl) {
+      if (errorMessage) {
+        errMsgEl.textContent = errorMessage;
+        errBanner.style.display = 'flex';
+      } else {
+        errBanner.style.display = 'none';
+      }
+    }
+  }
+
+  function hideLoginScreen() {
+    const loginScreen = document.getElementById('loginScreen');
+    const appShell = document.getElementById('appShell') || document.querySelector('.app-shell');
+    if (loginScreen) {
+      loginScreen.classList.add('hidden');
+      loginScreen.style.display = 'none';
+    }
+    if (appShell) {
+      appShell.classList.remove('hidden');
+    }
+    const errBanner = document.getElementById('loginErrorBanner');
+    if (errBanner) {
+      errBanner.style.display = 'none';
+    }
+  }
+
+  async function checkAuthStatus() {
+    try {
+      const res = await fetch('/.netlify/functions/auth-status');
+      if (res.ok) {
+        const data = await res.json();
+        const banner = document.getElementById('loginSetupBanner');
+        const desc = document.getElementById('loginSetupDesc');
+        if (banner) {
+          if (data && data.configured === false) {
+            banner.style.display = 'flex';
+            if (desc && data.message) {
+              desc.textContent = data.message;
+            }
+          } else {
+            banner.style.display = 'none';
+          }
+        }
+      }
+    } catch (err) {
+      // Non-blocking status check
+    }
+  }
+
+  async function verifyAuthSession() {
+    const token = getStoredAuthToken();
+    if (!token) {
+      showLoginScreen();
+      checkAuthStatus();
+      return false;
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/auth-verify', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        clearAuthSession();
+        showLoginScreen(errData.error || 'Your session has expired. Please log in again.');
+        checkAuthStatus();
+        return false;
+      }
+
+      const data = await res.json();
+      if (data && data.valid && data.user) {
+        const u = data.user;
+        state.currentUser = {
+          id: u.staffId,
+          staffId: u.staffId,
+          name: u.name,
+          initials: u.initials || 'MM',
+          role: u.role,
+          roleCode: u.roleCode,
+          email: u.email,
+          department: u.role === 'Administrator' ? 'Central Maintenance Engineering' : 'Plant Maintenance Crew'
+        };
+        sessionStorage.setItem('mmsUserProfile', JSON.stringify(u));
+        hideLoginScreen();
+        renderAll();
+        populateStaffIdFromProfile();
+        return true;
+      } else {
+        clearAuthSession();
+        showLoginScreen('Invalid session. Please log in again.');
+        checkAuthStatus();
+        return false;
+      }
+    } catch (netErr) {
+      const storedProfile = sessionStorage.getItem('mmsUserProfile');
+      if (storedProfile) {
+        try {
+          const u = JSON.parse(storedProfile);
+          state.currentUser = {
+            id: u.staffId,
+            staffId: u.staffId,
+            name: u.name,
+            initials: u.initials || 'MM',
+            role: u.role,
+            roleCode: u.roleCode,
+            email: u.email,
+            department: u.role === 'Administrator' ? 'Central Maintenance Engineering' : 'Plant Maintenance Crew'
+          };
+          hideLoginScreen();
+          renderAll();
+          populateStaffIdFromProfile();
+          return true;
+        } catch (e) {
+          // parse error
+        }
+      }
+      clearAuthSession();
+      showLoginScreen('Connection error verifying session. Please log in.');
+      return false;
+    }
+  }
+
+  async function handleLogin(e) {
+    if (e) e.preventDefault();
+
+    const staffIdInput = document.getElementById('loginStaffId');
+    const pwdInput = document.getElementById('loginPassword');
+    const submitBtn = document.getElementById('loginSubmitBtn');
+    const spinner = document.getElementById('loginBtnSpinner');
+    const btnText = document.getElementById('loginBtnText');
+    const errBanner = document.getElementById('loginErrorBanner');
+    const errMsgEl = document.getElementById('loginErrorMessage');
+
+    if (errBanner) errBanner.style.display = 'none';
+
+    const rawStaffId = staffIdInput ? staffIdInput.value.trim() : '';
+    const password = pwdInput ? pwdInput.value : '';
+
+    // Frontend validation
+    if (!rawStaffId) {
+      if (errBanner && errMsgEl) {
+        errMsgEl.textContent = 'Please enter your Staff ID (e.g. PN001).';
+        errBanner.style.display = 'flex';
+      }
+      if (staffIdInput) staffIdInput.focus();
+      return;
+    }
+
+    if (!password) {
+      if (errBanner && errMsgEl) {
+        errMsgEl.textContent = 'Please enter your Password.';
+        errBanner.style.display = 'flex';
+      }
+      if (pwdInput) pwdInput.focus();
+      return;
+    }
+
+    // Set Loading State
+    if (submitBtn) submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    if (btnText) btnText.textContent = 'AUTHENTICATING...';
+
+    try {
+      const response = await fetch('/.netlify/functions/auth-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          staffId: rawStaffId.toUpperCase(),
+          password: password
+        })
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (response.ok && data && data.success && data.token) {
+        // Store session tokens securely in sessionStorage (never LocalStorage)
+        sessionStorage.setItem('mmsAuthToken', data.token);
+        sessionStorage.setItem('mmsRefreshToken', data.refreshToken || '');
+        sessionStorage.setItem('mmsUserProfile', JSON.stringify(data.user));
+
+        // Update state with verified server identity & role
+        const u = data.user;
+        state.currentUser = {
+          id: u.staffId,
+          staffId: u.staffId,
+          name: u.name,
+          initials: u.initials || 'MM',
+          role: u.role,
+          roleCode: u.roleCode,
+          email: u.email,
+          department: u.role === 'Administrator' ? 'Central Maintenance Engineering' : 'Plant Maintenance Crew'
+        };
+
+        // Clear password from memory and input field
+        if (pwdInput) pwdInput.value = '';
+
+        // Open Dashboard
+        hideLoginScreen();
+        renderAll();
+        populateStaffIdFromProfile();
+
+        showToast(`Welcome back, ${u.name} (${u.role})`, 'success');
+      } else {
+        const errorMsg = (data && data.error) || 'Invalid Staff ID or Password. Please try again.';
+        if (errBanner && errMsgEl) {
+          errMsgEl.textContent = errorMsg;
+          errBanner.style.display = 'flex';
+        }
+
+        if (data && data.code === 'FIREBASE_CONFIG_MISSING') {
+          const setupBanner = document.getElementById('loginSetupBanner');
+          if (setupBanner) setupBanner.style.display = 'flex';
+        }
+
+        if (pwdInput) {
+          pwdInput.focus();
+          pwdInput.select();
+        }
+      }
+    } catch (netErr) {
+      if (errBanner && errMsgEl) {
+        errMsgEl.textContent = 'Network error connecting to authentication server. Please check your connection.';
+        errBanner.style.display = 'flex';
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+      if (btnText) btnText.textContent = 'LOGIN';
+    }
+  }
+  window.handleLogin = handleLogin;
+
+  function initLoginPasswordToggle() {
+    const toggleBtn = document.getElementById('loginTogglePassword');
+    const pwdInput = document.getElementById('loginPassword');
+    const eyeOpen = document.getElementById('eyeIconOpen');
+    const eyeClosed = document.getElementById('eyeIconClosed');
+
+    if (toggleBtn && pwdInput) {
+      toggleBtn.addEventListener('click', () => {
+        const isPassword = pwdInput.type === 'password';
+        pwdInput.type = isPassword ? 'text' : 'password';
+        if (eyeOpen && eyeClosed) {
+          eyeOpen.style.display = isPassword ? 'none' : '';
+          eyeClosed.style.display = isPassword ? '' : 'none';
+        }
+      });
+    }
+  }
 
 })();
