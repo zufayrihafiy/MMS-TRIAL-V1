@@ -633,10 +633,12 @@
   // 3. KPI CALCULATION ENGINE
   // =========================================================================
   function updateKPICounters() {
-    // 1. Open Breakdown = count of breakdowns where status !== 'Resolved'
-    const openBreakdowns = state.breakdowns.filter(b => b.status !== 'Resolved').length;
+    // 1. Open Breakdown = count of breakdowns where status !== 'Resolved' && status !== 'Completed'
+    const openBreakdowns = state.breakdowns.filter(b => b.status !== 'Resolved' && b.status !== 'Completed').length;
     const kpiBreakdownEl = document.getElementById('kpiOpenBreakdown');
     if (kpiBreakdownEl) kpiBreakdownEl.textContent = openBreakdowns;
+    const activeJobsBadge = document.getElementById('activeJobsCountBadge');
+    if (activeJobsBadge) activeJobsBadge.textContent = `${openBreakdowns} Open`;
 
     // 2. PM Due This Week = count of preventive maintenance items where status === 'Due This Week'
     const pmDueThisWeek = state.preventiveMaintenance.filter(pm => pm.status === 'Due This Week').length;
@@ -722,11 +724,11 @@
     const isSupervisor = role === 'Supervisor / Engineer';
     const isAdmin = role === 'Administrator' || roleCode === 'ADMIN';
 
-    // BD Dashboard restricted indicator
+    // BD Dashboard restricted indicator (strictly Administrator only)
     const bdDashboardLock = document.getElementById('bdDashboardLockNotice');
     const bdDashboardContent = document.getElementById('bdDashboardMainContent');
     if (bdDashboardLock && bdDashboardContent) {
-      if (isTech) {
+      if (!isAdmin) {
         bdDashboardLock.style.display = 'block';
         bdDashboardContent.style.display = 'none';
       } else {
@@ -806,12 +808,93 @@
   }
 
   // =========================================================================
-  // 6. MODULE 1: BREAKDOWN RECORD RENDERING & ACTIONS
+  // 6. MODULE 1: BREAKDOWN RECORD RENDERING, DASHBOARD & ACTIONS
   // =========================================================================
   let activeBreakdownTab = 'active-jobs';
+  let chartTrendInstance = null;
+  let chartCategoryInstance = null;
+  let chartDowntimeInstance = null;
+
+  const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  /**
+   * Helper: Parse dates in diverse formats safely (ISO, SQL, or custom)
+   */
+  function parseDateSafe(val) {
+    if (!val) return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    const str = String(val).trim();
+    let d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
+    d = new Date(str.replace(' ', 'T'));
+    if (!isNaN(d.getTime())) return d;
+    const m = str.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (m) {
+      let hour = parseInt(m[4], 10);
+      const min = parseInt(m[5], 10);
+      if (m[6] && m[6].toUpperCase() === 'PM' && hour < 12) hour += 12;
+      if (m[6] && m[6].toUpperCase() === 'AM' && hour === 12) hour = 0;
+      d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10), hour, min);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return null;
+  }
+
+  /**
+   * Format date & time to DD/MM/YYYY HH:mm in Asia/Kuala_Lumpur timezone
+   */
+  function formatTimeReportedKL(dateVal) {
+    if (!dateVal) return '—';
+    const str = String(dateVal).trim();
+    if (/^\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}$/.test(str)) return str;
+    const d = parseDateSafe(dateVal);
+    if (!d) return str;
+    try {
+      const formatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      return formatter.format(d).replace(',', '');
+    } catch (e) {
+      return str;
+    }
+  }
+
+  /**
+   * Format date to DD/MM/YYYY in Asia/Kuala_Lumpur timezone
+   */
+  function formatDateKL(dateVal) {
+    if (!dateVal) return '—';
+    const str = String(dateVal).trim();
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str;
+    const d = parseDateSafe(dateVal);
+    if (!d) return str;
+    try {
+      const formatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      return formatter.format(d);
+    } catch (e) {
+      return str;
+    }
+  }
 
   function renderBreakdownView() {
     renderBreakdownTables();
+    if (activeBreakdownTab === 'bd-dashboard') {
+      updateBDDashboard();
+    }
   }
 
   function switchBreakdownTab(tabName) {
@@ -832,100 +915,832 @@
     if (targetTab) targetTab.style.display = 'block';
 
     applyRolePermissions();
+
+    if (tabName === 'active-jobs') {
+      renderBreakdownTables();
+    } else if (tabName === 'resolved-history') {
+      filterResolvedHistory();
+    } else if (tabName === 'bd-dashboard') {
+      updateBDDashboard();
+    }
   }
 
+  /**
+   * Render Active Jobs Table & Resolved History
+   */
   function renderBreakdownTables() {
-    // 1. Active Jobs Table
-    const activeList = state.breakdowns.filter(b => b.status === 'Active');
+    // 1. ACTIVE JOBS TABLE: All open / unresolved breakdowns
+    // Includes statuses: Repair, Active, Pending, Awaiting Part (anything not Completed or Resolved)
+    const activeList = state.breakdowns.filter(b => b.status !== 'Completed' && b.status !== 'Resolved');
     const activeTbody = document.getElementById('activeBreakdownTbody');
+    const activeCountBadge = document.getElementById('activeJobsCountBadge');
+
+    if (activeCountBadge) {
+      activeCountBadge.textContent = `${activeList.length} Open`;
+    }
+
     if (activeTbody) {
       if (activeList.length === 0) {
-        activeTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No active breakdown jobs currently in progress.</td></tr>`;
+        activeTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted);">No active breakdown jobs currently in progress.</td></tr>`;
       } else {
-        activeTbody.innerHTML = activeList.map(item => `
-          <tr>
-            <td><strong>${item.id}</strong></td>
-            <td>
-              <div style="font-weight:600; color:var(--navy-darkest);">${escapeHtml(item.machine)}</div>
-              <div style="font-size:11.5px; color:var(--text-muted);">${escapeHtml(item.line)}</div>
-            </td>
-            <td>${escapeHtml(item.issue)}</td>
-            <td>
-              <span class="status-badge ${getPriorityBadgeClass(item.priority)}">
-                ${item.priority}
-              </span>
-            </td>
-            <td>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="width:7px; height:7px; border-radius:50%; background:#0078E7;"></span>
-                <span>${escapeHtml(item.assignedTech)}</span>
-              </div>
-            </td>
-            <td><strong style="color:var(--red-primary);">${item.downtimeMin} min</strong></td>
-            <td>
-              <div class="action-btn-group">
-                <button class="btn-table-action success" onclick="window.resolveBreakdown('${item.id}')">
+        activeTbody.innerHTML = activeList.map(item => {
+          const timeReported = formatTimeReportedKL(item.startTime || item.reportedAt || item.time);
+          const machineName = item.machine || 'Unknown Machine';
+          const descriptionText = item.description || item.issue || 'No description provided';
+          const priorityText = item.priority && String(item.priority).trim() !== '' ? item.priority : 'Not Assigned';
+          const priorityBadgeClass = getPriorityBadgeClass(priorityText);
+
+          return `
+            <tr>
+              <td><strong>${escapeHtml(item.id)}</strong></td>
+              <td style="white-space:nowrap; font-variant-numeric:tabular-nums; font-size:12.5px;">
+                ${escapeHtml(timeReported)}
+              </td>
+              <td>
+                <div style="font-weight:700; color:var(--navy-darkest);">${escapeHtml(machineName)}</div>
+              </td>
+              <td>
+                <div class="table-desc-cell">${escapeHtml(descriptionText)}</div>
+              </td>
+              <td>
+                <span class="status-badge ${priorityBadgeClass}">
+                  ${escapeHtml(priorityText)}
+                </span>
+              </td>
+              <td>
+                <button class="btn-table-action success" onclick="window.openResolveBreakdownModal('${escapeHtml(item.id)}')">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   Resolve
                 </button>
-                <button class="btn-table-action" onclick="window.viewBreakdownDetails('${item.id}')">
-                  Details
+              </td>
+              <td>
+                <button class="btn-table-action" onclick="window.openBreakdownDetailModal('${escapeHtml(item.id)}')">
+                  View
                 </button>
-              </div>
-            </td>
-          </tr>
-        `).join('');
+              </td>
+            </tr>
+          `;
+        }).join('');
       }
     }
 
-    // 2. Pending Jobs Table
-    const pendingList = state.breakdowns.filter(b => b.status === 'Pending');
-    const pendingTbody = document.getElementById('pendingBreakdownTbody');
-    if (pendingTbody) {
-      if (pendingList.length === 0) {
-        pendingTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No pending breakdowns waiting for technician assignment.</td></tr>`;
-      } else {
-        pendingTbody.innerHTML = pendingList.map(item => `
-          <tr>
-            <td><strong>${item.id}</strong></td>
-            <td>
-              <div style="font-weight:600; color:var(--navy-darkest);">${escapeHtml(item.machine)}</div>
-              <div style="font-size:11.5px; color:var(--text-muted);">${escapeHtml(item.line)}</div>
-            </td>
-            <td>${escapeHtml(item.issue)}</td>
-            <td>
-              <span class="status-badge ${getPriorityBadgeClass(item.priority)}">
-                ${item.priority}
-              </span>
-            </td>
-            <td><span class="status-badge status-badge-amber">Awaiting Assignment</span></td>
-            <td>${escapeHtml(item.reportedBy)}</td>
-            <td>
-              <button class="btn-table-action" onclick="window.openAssignTechnicianModal('${item.id}')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-                Assign Tech
-              </button>
-            </td>
-          </tr>
-        `).join('');
-      }
-    }
+    // Initialize & render Resolved History table
+    filterResolvedHistory();
+  }
 
-    // 3. Resolved Breakdown History
-    const resolvedList = state.breakdowns.filter(b => b.status === 'Resolved');
+  /**
+   * Filter Resolved Breakdown History by selected Month and Year
+   */
+  function filterResolvedHistory() {
+    const monthSelect = document.getElementById('resolvedMonthFilter');
+    const yearSelect = document.getElementById('resolvedYearFilter');
     const resolvedTbody = document.getElementById('resolvedBreakdownTbody');
-    if (resolvedTbody) {
-      resolvedTbody.innerHTML = resolvedList.map(item => `
+
+    if (!resolvedTbody) return;
+
+    const now = new Date();
+    const selectedMonth = monthSelect ? parseInt(monthSelect.value, 10) : now.getMonth();
+    const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : now.getFullYear();
+
+    // Filter only completed breakdown records
+    const completedList = state.breakdowns.filter(b => b.status === 'Completed' || b.status === 'Resolved');
+
+    // Filter by completion date month and year
+    const filteredList = completedList.filter(item => {
+      const completionDateVal = item.endTime || item.reportedAt || item.time || item.startTime;
+      const d = parseDateSafe(completionDateVal);
+      if (!d) return false;
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    });
+
+    if (filteredList.length === 0) {
+      resolvedTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:32px; color:var(--text-muted);">No records found for ${MONTH_NAMES[selectedMonth]} ${selectedYear}.</td></tr>`;
+      return;
+    }
+
+    resolvedTbody.innerHTML = filteredList.map(item => {
+      const completionDateVal = item.endTime || item.reportedAt || item.time || item.startTime;
+      const dateStr = formatDateKL(completionDateVal);
+      const machineName = item.machine || 'Unknown Machine';
+      const descriptionText = item.description || item.issue || 'No description provided';
+      const assignedTech = item.assignedTech && String(item.assignedTech).trim() !== '' ? item.assignedTech : 'Unassigned';
+
+      return `
         <tr>
-          <td><strong>${item.id}</strong></td>
-          <td>${escapeHtml(item.machine)}</td>
-          <td>${escapeHtml(item.issue)}</td>
-          <td><span class="status-badge status-badge-green">Resolved</span></td>
-          <td>${escapeHtml(item.assignedTech)}</td>
-          <td>${item.downtimeMin} min</td>
-          <td>${item.reportedAt}</td>
+          <td><strong>${escapeHtml(item.id)}</strong></td>
+          <td style="white-space:nowrap; font-variant-numeric:tabular-nums; font-size:12.5px;">${escapeHtml(dateStr)}</td>
+          <td><strong>${escapeHtml(machineName)}</strong></td>
+          <td><div class="table-desc-cell">${escapeHtml(descriptionText)}</div></td>
+          <td>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="width:7px; height:7px; border-radius:50%; background:${assignedTech === 'Unassigned' ? '#94A3B8' : '#0078E7'};"></span>
+              <span>${escapeHtml(assignedTech)}</span>
+            </div>
+          </td>
         </tr>
-      `).join('');
+      `;
+    }).join('');
+  }
+
+  /**
+   * DETAIL MODAL: View breakdown details & Before/After photos
+   */
+  function openBreakdownDetailModal(bdId) {
+    const item = state.breakdowns.find(b => b.id === bdId);
+    if (!item) {
+      showToast(`Breakdown record ${bdId} not found.`, 'error');
+      return;
+    }
+
+    const modal = document.getElementById('breakdownDetailModal');
+    if (!modal) return;
+
+    // Populate metadata
+    const idEl = document.getElementById('detailBreakdownId');
+    const machineEl = document.getElementById('detailMachine');
+    const timeEl = document.getElementById('detailTimeReported');
+    const priorityEl = document.getElementById('detailPriority');
+    const categoryEl = document.getElementById('detailCategory');
+    const statusEl = document.getElementById('detailStatus');
+    const descEl = document.getElementById('detailDescription');
+
+    if (idEl) idEl.textContent = item.id;
+    if (machineEl) machineEl.textContent = item.machine;
+    if (timeEl) timeEl.textContent = formatTimeReportedKL(item.startTime || item.reportedAt || item.time);
+
+    const priorityText = item.priority && String(item.priority).trim() !== '' ? item.priority : 'Not Assigned';
+    if (priorityEl) {
+      priorityEl.innerHTML = `<span class="status-badge ${getPriorityBadgeClass(priorityText)}">${escapeHtml(priorityText)}</span>`;
+    }
+
+    if (categoryEl) categoryEl.textContent = item.category || 'Mechanical';
+
+    const isResolved = item.status === 'Completed' || item.status === 'Resolved';
+    if (statusEl) {
+      statusEl.innerHTML = `<span class="status-badge ${isResolved ? 'status-badge-green' : 'status-badge-red'}">${escapeHtml(item.status || 'Repair')}</span>`;
+    }
+
+    if (descEl) descEl.textContent = item.description || item.issue || 'No problem description recorded.';
+
+    // Populate photos
+    const beforeContainer = document.getElementById('detailBeforePhotoContainer');
+    const afterContainer = document.getElementById('detailAfterPhotoContainer');
+
+    if (beforeContainer) {
+      beforeContainer.innerHTML = renderPhotoElement(item.beforePhoto, `Before Repair - ${item.machine}`);
+    }
+    if (afterContainer) {
+      afterContainer.innerHTML = renderPhotoElement(item.afterPhoto, `After Repair - ${item.machine}`);
+    }
+
+    modal.classList.add('active');
+  }
+
+  function renderPhotoElement(photoRef, altText) {
+    if (!photoRef || String(photoRef).trim() === '') {
+      return `
+        <div class="no-photo-banner">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <div>No photo attached</div>
+        </div>
+      `;
+    }
+
+    const refStr = String(photoRef).trim();
+    let imgUrl = refStr;
+    const driveMatch = refStr.match(/[-\w]{25,}/);
+    if (refStr.includes('drive.google.com') && driveMatch) {
+      const fileId = driveMatch[0];
+      imgUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+    }
+
+    return `
+      <div class="photo-preview-wrapper">
+        <img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(altText)}" class="photo-preview-img" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <div style="display:none;" class="no-photo-banner">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Photo reference recorded:</div>
+          <a href="${escapeHtml(refStr)}" target="_blank" rel="noopener noreferrer" class="photo-preview-link">
+            Open Stored Photo &rarr;
+          </a>
+        </div>
+        <a href="${escapeHtml(refStr)}" target="_blank" rel="noopener noreferrer" class="photo-preview-link">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          View Full Photo
+        </a>
+      </div>
+    `;
+  }
+
+  /**
+   * RESOLVE MODAL: Require Breakdown End Time before completing
+   */
+  function openResolveBreakdownModal(bdId) {
+    const item = state.breakdowns.find(b => b.id === bdId);
+    if (!item) {
+      showToast(`Breakdown record ${bdId} not found.`, 'error');
+      return;
+    }
+
+    const modal = document.getElementById('resolveBreakdownModal');
+    if (!modal) return;
+
+    // Reset alert
+    const alertEl = document.getElementById('resolveFormAlert');
+    if (alertEl) {
+      alertEl.style.display = 'none';
+      alertEl.textContent = '';
+    }
+
+    document.getElementById('resolveTargetId').value = item.id;
+    document.getElementById('resolveModalBdId').textContent = item.id;
+    document.getElementById('resolveModalMachine').textContent = item.machine;
+    document.getElementById('resolveModalDescription').textContent = item.description || item.issue || '';
+
+    // Start Time Reference
+    const startTimeVal = item.startTime || item.reportedAt || item.time || new Date().toISOString();
+    document.getElementById('resolveStartTimeHidden').value = startTimeVal;
+    document.getElementById('resolveStartTimeDisplay').value = formatTimeReportedKL(startTimeVal);
+
+    // End Time: default to current local time
+    const now = new Date();
+    const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const endInput = document.getElementById('resolveEndTimeInput');
+    if (endInput) {
+      endInput.value = localIso;
+    }
+
+    // Reset After Photo input preview
+    const afterPhotoInput = document.getElementById('resolveAfterPhotoInput');
+    const afterPhotoName = document.getElementById('resolveAfterPhotoName');
+    if (afterPhotoInput) afterPhotoInput.value = '';
+    if (afterPhotoName) afterPhotoName.textContent = 'Supported: JPG, JPEG, PNG';
+
+    updateResolveDowntimePreview();
+    modal.classList.add('active');
+  }
+
+  function updateResolveDowntimePreview() {
+    const startVal = document.getElementById('resolveStartTimeHidden')?.value;
+    const endVal = document.getElementById('resolveEndTimeInput')?.value;
+    const displayEl = document.getElementById('resolveDowntimeDisplay');
+
+    if (!displayEl) return;
+
+    if (!startVal || !endVal) {
+      displayEl.textContent = '—';
+      return;
+    }
+
+    const startDate = parseDateSafe(startVal);
+    const endDate = new Date(endVal);
+
+    if (!startDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      displayEl.textContent = 'Invalid date';
+      return;
+    }
+
+    const diffMin = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+    if (diffMin < 0) {
+      displayEl.innerHTML = '<span style="color:var(--red-primary); font-size:12px;">End Time is earlier than Start Time</span>';
+    } else {
+      displayEl.textContent = `${diffMin.toLocaleString()} minutes`;
+    }
+  }
+
+  /**
+   * Submit Resolve Breakdown Action to Authorized Backend
+   */
+  async function submitResolveBreakdown(e) {
+    if (e) e.preventDefault();
+
+    const bdId = document.getElementById('resolveTargetId')?.value;
+    const startVal = document.getElementById('resolveStartTimeHidden')?.value;
+    const endInput = document.getElementById('resolveEndTimeInput');
+    const endTime = endInput ? endInput.value : '';
+    const alertEl = document.getElementById('resolveFormAlert');
+    const submitBtn = document.getElementById('resolveSubmitBtn');
+    const spinner = document.getElementById('resolveSubmitSpinner');
+    const icon = document.getElementById('resolveSubmitIcon');
+    const btnText = document.getElementById('resolveSubmitText');
+
+    if (!bdId) return;
+
+    // Validate Breakdown End Time
+    if (!endTime) {
+      if (alertEl) {
+        alertEl.style.display = 'block';
+        alertEl.className = 'login-alert-banner alert-danger';
+        alertEl.textContent = 'Breakdown End Time is strictly required before marking a breakdown as completed.';
+      }
+      if (endInput) endInput.focus();
+      return;
+    }
+
+    const startDate = parseDateSafe(startVal);
+    const endDate = new Date(endTime);
+
+    if (startDate && endDate < startDate) {
+      if (alertEl) {
+        alertEl.style.display = 'block';
+        alertEl.className = 'login-alert-banner alert-danger';
+        alertEl.textContent = 'Breakdown End Time cannot be earlier than Breakdown Start Time.';
+      }
+      if (endInput) endInput.focus();
+      return;
+    }
+
+    // Set Loading State
+    if (submitBtn) submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    if (icon) icon.style.display = 'none';
+    if (btnText) btnText.textContent = 'Updating Backend...';
+
+    const token = getStoredAuthToken() || '';
+    const reqHeaders = { 'Content-Type': 'application/json' };
+    if (token) reqHeaders['Authorization'] = `Bearer ${token}`;
+
+    const diffMin = startDate ? Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000)) : 0;
+
+    // Process optional after photo
+    const afterFileInput = document.getElementById('resolveAfterPhotoInput');
+    let afterPhotoObj = null;
+    if (afterFileInput?.files?.[0]) {
+      afterPhotoObj = await fileToBase64(afterFileInput.files[0]).catch(() => null);
+    }
+
+    const targetItem = state.breakdowns.find(b => b.id === bdId);
+
+    const payload = {
+      id: bdId,
+      machine: targetItem ? targetItem.machine : '',
+      startTime: startVal,
+      endTime: endTime,
+      staffId: targetItem ? (targetItem.reportedBy || targetItem.staffId || '') : '',
+      downtime: diffMin,
+      afterPhoto: afterPhotoObj ? afterPhotoObj.name : '',
+      photoFiles: afterPhotoObj ? { after: afterPhotoObj } : null
+    };
+
+    try {
+      const response = await fetch('/.netlify/functions/resolve-breakdown', {
+        method: 'POST',
+        headers: reqHeaders,
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (response.ok && result && result.success) {
+        // Update local state record
+        const item = targetItem || state.breakdowns.find(b => b.id === bdId);
+        if (item) {
+          item.status = 'Completed';
+          item.endTime = endTime;
+          item.downtimeMin = (result.downtime !== undefined && result.downtime !== null) ? result.downtime : diffMin;
+          item.downtime = item.downtimeMin;
+          if (afterPhotoObj) {
+            item.afterPhoto = afterPhotoObj.name;
+          }
+        }
+
+        addNotification('Breakdown Completed', `Breakdown ${bdId} on ${item ? item.machine : 'machine'} marked as Completed (${diffMin} min downtime).`, 'breakdown', bdId);
+        saveState();
+        closeAllModals();
+        renderAll();
+        showToast(`Breakdown ${bdId} marked as Completed and updated in Google Sheets!`, 'success');
+      } else {
+        const errMsg = (result && (result.error || result.message)) || `Server returned error (${response.status})`;
+        if (alertEl) {
+          alertEl.style.display = 'block';
+          alertEl.className = 'login-alert-banner alert-danger';
+          alertEl.innerHTML = `<strong>Backend Update Failed:</strong> ${escapeHtml(errMsg)}<br><small>Data was NOT changed.</small>`;
+        }
+        showToast('Resolve rejected: ' + errMsg, 'error');
+      }
+    } catch (netErr) {
+      if (alertEl) {
+        alertEl.style.display = 'block';
+        alertEl.className = 'login-alert-banner alert-danger';
+        alertEl.innerHTML = `<strong>Connection Error:</strong> Unable to connect to backend server function (<code>resolve-breakdown</code>).<br><small>Breakdown status was NOT changed.</small>`;
+      }
+      showToast('Network error: Unable to update breakdown on server.', 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+      if (icon) icon.style.display = 'inline-block';
+      if (btnText) btnText.textContent = 'Confirm Resolve & Complete';
+    }
+  }
+
+  /**
+   * BD DASHBOARD: KPI Calculations & Chart Engine
+   */
+  async function updateBDDashboard() {
+    const monthSelect = document.getElementById('bdDashboardMonth');
+    const yearSelect = document.getElementById('bdDashboardYear');
+    const lockNotice = document.getElementById('bdDashboardLockNotice');
+    const mainContent = document.getElementById('bdDashboardMainContent');
+
+    const now = new Date();
+    const selectedMonth = monthSelect ? parseInt(monthSelect.value, 10) : now.getMonth();
+    const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : now.getFullYear();
+
+    // Verify Server-Side Authorization for Admin
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+
+    if (!isAdmin) {
+      if (lockNotice) lockNotice.style.display = 'block';
+      if (mainContent) mainContent.style.display = 'none';
+      return;
+    } else {
+      if (lockNotice) lockNotice.style.display = 'none';
+      if (mainContent) mainContent.style.display = 'block';
+    }
+
+    // 1. Breakdowns occurring in selected period (based on Breakdown Start Time)
+    const monthBreakdowns = state.breakdowns.filter(b => {
+      const d = parseDateSafe(b.startTime || b.reportedAt || b.time);
+      if (!d) return false;
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    });
+
+    // 2. Completed repairs attributed to selected period (based on completion date / End Time)
+    const completedInMonth = state.breakdowns.filter(b => {
+      if (b.status !== 'Completed' && b.status !== 'Resolved') return false;
+      const d = parseDateSafe(b.endTime || b.reportedAt || b.time);
+      if (!d) return false;
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+    });
+
+    // KPI 1: TOTAL BREAKDOWN
+    const totalBreakdowns = monthBreakdowns.length;
+    const kpiTotalEl = document.getElementById('bdKpiTotalBreakdown');
+    if (kpiTotalEl) kpiTotalEl.textContent = totalBreakdowns.toLocaleString();
+
+    // KPI 2: TOTAL DOWNTIME (Minutes)
+    let totalDowntimeMin = 0;
+    let completedWithValidDowntimeCount = 0;
+
+    completedInMonth.forEach(b => {
+      const dtVal = b.downtime !== undefined && b.downtime !== '' && b.downtime !== null
+        ? Number(b.downtime)
+        : (b.downtimeMin !== undefined ? Number(b.downtimeMin) : null);
+
+      if (dtVal !== null && !isNaN(dtVal) && dtVal >= 0) {
+        totalDowntimeMin += dtVal;
+        completedWithValidDowntimeCount++;
+      }
+    });
+
+    const kpiDownEl = document.getElementById('bdKpiTotalDowntime');
+    if (kpiDownEl) kpiDownEl.textContent = totalDowntimeMin.toLocaleString();
+
+    // KPI 3: MTTR (Mean Time To Repair in minutes)
+    // Formula: Total Repair Downtime / Number of Completed Repairs
+    const kpiMttrEl = document.getElementById('bdKpiMTTR');
+    if (kpiMttrEl) {
+      if (completedWithValidDowntimeCount > 0) {
+        const mttrVal = (totalDowntimeMin / completedWithValidDowntimeCount).toFixed(1);
+        kpiMttrEl.textContent = mttrVal;
+      } else {
+        kpiMttrEl.textContent = 'N/A';
+      }
+    }
+
+    // KPI 4: MTBF (Mean Time Between Failures)
+    // Formula: Total Operating Time / Number of Failures
+    // Database schema does not track machine operating running hours
+    const kpiMtbfEl = document.getElementById('bdKpiMTBF');
+    const kpiMtbfSub = document.getElementById('bdKpiMTBFSub');
+    if (kpiMtbfEl) kpiMtbfEl.textContent = 'N/A';
+    if (kpiMtbfSub) kpiMtbfSub.textContent = 'Operating hours required';
+
+    // =========================================================================
+    // CHART PREPARATION (Days of Month)
+    // =========================================================================
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    const monthShort = MONTH_NAMES[selectedMonth].substring(0, 3);
+    const dayLabels = [];
+    const dailyBreakdownCounts = new Array(daysInMonth).fill(0);
+    const dailyDowntimeTotals = new Array(daysInMonth).fill(0);
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      dayLabels.push(`${String(day).padStart(2, '0')} ${monthShort}`);
+    }
+
+    // Populate daily breakdown counts based on Breakdown Start Time
+    monthBreakdowns.forEach(b => {
+      const d = parseDateSafe(b.startTime || b.reportedAt || b.time);
+      if (d) {
+        const dayIdx = d.getDate() - 1;
+        if (dayIdx >= 0 && dayIdx < daysInMonth) {
+          dailyBreakdownCounts[dayIdx]++;
+        }
+      }
+    });
+
+    // Populate daily downtime totals based on completion date
+    completedInMonth.forEach(b => {
+      const d = parseDateSafe(b.endTime || b.reportedAt || b.time);
+      if (d) {
+        const dayIdx = d.getDate() - 1;
+        const dtVal = b.downtime !== undefined && b.downtime !== '' && b.downtime !== null
+          ? Number(b.downtime)
+          : (b.downtimeMin !== undefined ? Number(b.downtimeMin) : 0);
+        if (dayIdx >= 0 && dayIdx < daysInMonth && dtVal > 0) {
+          dailyDowntimeTotals[dayIdx] += dtVal;
+        }
+      }
+    });
+
+    // Populate Category Distribution from database records
+    const categoryMap = {
+      'Mechanical': 0,
+      'Electrical': 0,
+      'Hydraulic': 0,
+      'Pneumatic': 0,
+      'Sensor': 0,
+      'Software': 0,
+      'Others': 0
+    };
+
+    monthBreakdowns.forEach(b => {
+      const cat = b.category || 'Mechanical';
+      if (categoryMap.hasOwnProperty(cat)) {
+        categoryMap[cat]++;
+      } else {
+        categoryMap['Others'] = (categoryMap['Others'] || 0) + 1;
+      }
+    });
+
+    const categoryLabels = Object.keys(categoryMap);
+    const categoryCounts = Object.values(categoryMap);
+
+    // Render Charts
+    renderBDCharts(dayLabels, dailyBreakdownCounts, categoryLabels, categoryCounts, dailyDowntimeTotals);
+  }
+
+  /**
+   * Render Chart.js interactive charts
+   */
+  function renderBDCharts(dayLabels, dailyBreakdownCounts, categoryLabels, categoryCounts, dailyDowntimeTotals) {
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js library is not loaded. Fallback notice rendered.');
+      return;
+    }
+
+    // 1. CHART 1: BREAKDOWN TREND (Line Chart)
+    const trendCanvas = document.getElementById('chartBreakdownTrend');
+    if (trendCanvas) {
+      if (chartTrendInstance) {
+        chartTrendInstance.destroy();
+        chartTrendInstance = null;
+      }
+
+      const ctxTrend = trendCanvas.getContext('2d');
+      const maxCount = Math.max(...dailyBreakdownCounts, 3);
+
+      chartTrendInstance = new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+          labels: dayLabels,
+          datasets: [{
+            label: 'Breakdown Reports',
+            data: dailyBreakdownCounts,
+            borderColor: '#0078E7',
+            backgroundColor: 'rgba(0, 120, 231, 0.08)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 2.5,
+            pointBackgroundColor: '#0078E7',
+            pointBorderColor: '#FFFFFF',
+            pointBorderWidth: 1.5,
+            pointRadius: 3,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#062641',
+              titleFont: { size: 12, weight: '700' },
+              bodyFont: { size: 12 },
+              padding: 10,
+              cornerRadius: 6,
+              callbacks: {
+                label: (ctx) => `Breakdowns: ${ctx.parsed.y}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 16, font: { size: 10.5 } }
+            },
+            y: {
+              beginAtZero: true,
+              suggestedMax: maxCount,
+              ticks: {
+                stepSize: 1,
+                precision: 0,
+                font: { size: 11 }
+              },
+              grid: { color: '#EDF2F7' }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. CHART 2: BREAKDOWN PROBLEM BY CATEGORY (Pie Chart)
+    const catCanvas = document.getElementById('chartBreakdownCategory');
+    if (catCanvas) {
+      if (chartCategoryInstance) {
+        chartCategoryInstance.destroy();
+        chartCategoryInstance = null;
+      }
+
+      const ctxCat = catCanvas.getContext('2d');
+      const hasData = categoryCounts.some(c => c > 0);
+      const totalInCategories = categoryCounts.reduce((a, b) => a + b, 0);
+
+      const chartData = hasData ? categoryCounts : [1];
+      const chartLabels = hasData ? categoryLabels : ['No Breakdowns'];
+      const chartColors = hasData
+        ? ['#0078E7', '#E50920', '#D97706', '#009E49', '#7C3AED', '#06B6D4', '#64748B']
+        : ['#E2E8F0'];
+
+      chartCategoryInstance = new Chart(ctxCat, {
+        type: 'pie',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            data: chartData,
+            backgroundColor: chartColors,
+            borderColor: '#FFFFFF',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                boxWidth: 12,
+                padding: 10,
+                font: { size: 11, weight: '600' }
+              }
+            },
+            tooltip: {
+              backgroundColor: '#062641',
+              titleFont: { size: 12, weight: '700' },
+              bodyFont: { size: 12 },
+              padding: 10,
+              cornerRadius: 6,
+              callbacks: {
+                label: (ctx) => {
+                  if (!hasData) return 'No records recorded';
+                  const val = ctx.parsed;
+                  const pct = totalInCategories > 0 ? ((val / totalInCategories) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: ${val} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 3. CHART 3: DOWNTIME TREND (Line Chart)
+    const downCanvas = document.getElementById('chartDowntimeTrend');
+    if (downCanvas) {
+      if (chartDowntimeInstance) {
+        chartDowntimeInstance.destroy();
+        chartDowntimeInstance = null;
+      }
+
+      const ctxDown = downCanvas.getContext('2d');
+
+      chartDowntimeInstance = new Chart(ctxDown, {
+        type: 'line',
+        data: {
+          labels: dayLabels,
+          datasets: [{
+            label: 'Downtime (Minutes)',
+            data: dailyDowntimeTotals,
+            borderColor: '#E50920',
+            backgroundColor: 'rgba(229, 9, 32, 0.08)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 2.5,
+            pointBackgroundColor: '#E50920',
+            pointBorderColor: '#FFFFFF',
+            pointBorderWidth: 1.5,
+            pointRadius: 3,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#062641',
+              titleFont: { size: 12, weight: '700' },
+              bodyFont: { size: 12 },
+              padding: 10,
+              cornerRadius: 6,
+              callbacks: {
+                label: (ctx) => `Downtime: ${ctx.parsed.y} minutes`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 16, font: { size: 10.5 } }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                font: { size: 11 },
+                callback: (val) => `${val}m`
+              },
+              grid: { color: '#EDF2F7' }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * Fetch live records from Google Sheets BD DATABASE via Netlify Function
+   */
+  async function fetchBreakdownsFromBackend() {
+    const token = getStoredAuthToken() || '';
+    if (!token) return;
+
+    try {
+      const res = await fetch('/.netlify/functions/get-breakdowns', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
+          // Merge records with state.breakdowns
+          result.data.forEach(remoteItem => {
+            const existingIdx = state.breakdowns.findIndex(b => b.id === remoteItem.id);
+            const formattedItem = {
+              id: remoteItem.id,
+              machine: remoteItem.machine,
+              issue: remoteItem.description,
+              description: remoteItem.description,
+              category: remoteItem.category || 'Mechanical',
+              priority: remoteItem.priority || 'Not Assigned',
+              status: remoteItem.status || 'Repair',
+              reportedBy: remoteItem.staffId || 'Staff',
+              assignedTech: remoteItem.assignedTech || 'Unassigned',
+              startTime: remoteItem.startTime,
+              endTime: remoteItem.endTime,
+              time: remoteItem.time,
+              reportedAt: remoteItem.startTime || remoteItem.time,
+              downtimeMin: remoteItem.downtime !== '' ? Number(remoteItem.downtime) : 0,
+              downtime: remoteItem.downtime !== '' ? Number(remoteItem.downtime) : 0,
+              beforePhoto: remoteItem.beforePhoto,
+              afterPhoto: remoteItem.afterPhoto
+            };
+
+            if (existingIdx >= 0) {
+              state.breakdowns[existingIdx] = Object.assign({}, state.breakdowns[existingIdx], formattedItem);
+            } else {
+              state.breakdowns.unshift(formattedItem);
+            }
+          });
+
+          saveState();
+          renderBreakdownTables();
+          updateKPICounters();
+          if (activeBreakdownTab === 'bd-dashboard') {
+            updateBDDashboard();
+          }
+          showToast('Breakdown records synced with Google Sheets BD DATABASE.', 'success');
+        }
+      }
+    } catch (e) {
+      // Backend unavailable or offline - preserve local state
     }
   }
 
@@ -1787,16 +2602,9 @@
     }
   }
 
-  // Resolve Breakdown Action
+  // Resolve Breakdown Action: opens modal requiring Breakdown End Time
   function resolveBreakdown(bdId) {
-    const item = state.breakdowns.find(b => b.id === bdId);
-    if (item) {
-      item.status = 'Resolved';
-      addNotification('Breakdown Resolved', `Machine ${item.machine} has returned to operation.`, 'breakdown', bdId);
-      saveState();
-      renderAll();
-      showToast(`Breakdown ${bdId} marked as Resolved!`, 'success');
-    }
+    openResolveBreakdownModal(bdId);
   }
 
   // Complete PM Task Action
@@ -2070,6 +2878,29 @@
     const assignTechForm = document.getElementById('assignTechForm');
     if (assignTechForm) assignTechForm.addEventListener('submit', submitAssignTechnician);
 
+    // Resolve Breakdown Form Submission
+    const resolveBreakdownForm = document.getElementById('resolveBreakdownForm');
+    if (resolveBreakdownForm) {
+      resolveBreakdownForm.addEventListener('submit', submitResolveBreakdown);
+    }
+    const resolveEndTimeInput = document.getElementById('resolveEndTimeInput');
+    if (resolveEndTimeInput) {
+      resolveEndTimeInput.addEventListener('input', updateResolveDowntimePreview);
+    }
+
+    // Set Default Month & Year on Filters
+    const currentMonthNum = new Date().getMonth();
+    const currentYearNum = new Date().getFullYear();
+    const resMonthSel = document.getElementById('resolvedMonthFilter');
+    const resYearSel = document.getElementById('resolvedYearFilter');
+    const bdDashMonthSel = document.getElementById('bdDashboardMonth');
+    const bdDashYearSel = document.getElementById('bdDashboardYear');
+
+    if (resMonthSel) resMonthSel.value = String(currentMonthNum);
+    if (resYearSel) resYearSel.value = String(currentYearNum);
+    if (bdDashMonthSel) bdDashMonthSel.value = String(currentMonthNum);
+    if (bdDashYearSel) bdDashYearSel.value = String(currentYearNum);
+
     // Login Form Submission & Toggle
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
@@ -2113,16 +2944,20 @@
   window.markAllNotificationsRead = markAllNotificationsRead;
   window.handleNotificationClick = handleNotificationClick;
   window.openReportBreakdownModal = openReportBreakdownModal;
-  window.resolveBreakdown = resolveBreakdown;
+  window.resolveBreakdown = openResolveBreakdownModal;
+  window.openResolveBreakdownModal = openResolveBreakdownModal;
+  window.submitResolveBreakdown = submitResolveBreakdown;
+  window.openBreakdownDetailModal = openBreakdownDetailModal;
+  window.filterResolvedHistory = filterResolvedHistory;
+  window.updateBDDashboard = updateBDDashboard;
+  window.fetchBreakdownsFromBackend = fetchBreakdownsFromBackend;
   window.completePMTask = completePMTask;
   window.openEditStockModal = openEditStockModal;
   window.openRequestStockModal = openRequestStockModal;
   window.openAssignTechnicianModal = openAssignTechnicianModal;
   window.resetState = resetState;
   window.showToast = showToast;
-  window.viewBreakdownDetails = (id) => {
-    showToast(`Breakdown record ${id} details inspected`, 'info');
-  };
+  window.viewBreakdownDetails = openBreakdownDetailModal;
   window.simulateLogout = () => {
     showToast('Logged out of system. Session ended.', 'info');
     setTimeout(() => {

@@ -1,4 +1,4 @@
-﻿/* ===================================================================
+/* ===================================================================
    MAINTENANCE MANAGEMENT SYSTEM (MMS) - DESIGN SYSTEM & STYLES
    Industrial Manufacturing Dashboard
    Theme: Dark Navy Blue + White + Light Blue + Pastels
@@ -2611,4 +2611,83 @@ body {
   border-radius: 6px;
   margin-top: 6px;
   word-break: break-all;
+}
+
+/* ===================================================================
+   BREAKDOWN MODULE REDESIGN & DASHBOARD STYLES
+   =================================================================== */
+
+.status-badge-grey {
+  background: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+.table-desc-cell {
+  max-width: 340px;
+  white-space: normal !important;
+  word-break: break-word;
+  line-height: 1.45;
+  color: var(--text-body);
+}
+
+.photo-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.photo-preview-img {
+  max-width: 100%;
+  max-height: 190px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  background: #FFFFFF;
+}
+
+.photo-preview-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.photo-preview-link:hover {
+  text-decoration: underline;
+}
+
+.no-photo-banner {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  background: #FFFFFF;
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+  width: 100%;
+}
+
+.no-photo-banner svg {
+  margin-bottom: 6px;
+  color: #94A3B8;
+}
+
+@media (max-width: 992px) {
+  .bd-charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .bd-dashboard-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
 }

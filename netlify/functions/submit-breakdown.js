@@ -1,4 +1,4 @@
-﻿/**
+/**
  * NETLIFY SERVER FUNCTION: submit-breakdown
  *
  * Secure authenticated backend handler connecting MMS Breakdown Reporting
@@ -158,6 +158,19 @@ exports.handler = async function (event, context) {
     };
   }
 
+  const mmsApiKey = process.env.MMS_API_KEY;
+  if (!mmsApiKey) {
+    return {
+      statusCode: 503,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        configured: false,
+        error: 'Backend API key is not configured in Netlify environment variables (MMS_API_KEY).'
+      })
+    };
+  }
+
   // =========================================================================
   // 3. PARSE AND VALIDATE PAYLOAD
   // =========================================================================
@@ -220,9 +233,10 @@ exports.handler = async function (event, context) {
   // =========================================================================
   try {
     const gasPayload = {
+      action: 'create',
       sheetName: 'BD DATABASE',
       spreadsheetName: 'MMS DATABASE',
-      apiKey: process.env.MMS_API_KEY || '',
+      apiKey: mmsApiKey,
       columns: {
         time: data.time || new Date().toISOString(),         // Column A: Time
         month: data.month || '',                             // Column B: Month
@@ -248,7 +262,8 @@ exports.handler = async function (event, context) {
     const gasResponse = await fetch(GAS_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify(gasPayload)
     });
@@ -258,16 +273,16 @@ exports.handler = async function (event, context) {
     try {
       gasResult = JSON.parse(gasText);
     } catch (e) {
-      gasResult = { success: gasResponse.ok, message: gasText };
+      gasResult = { success: false, error: 'Invalid response from Google Apps Script' };
     }
 
-    if (!gasResponse.ok || (gasResult && gasResult.success === false)) {
+    if (!gasResponse.ok || !gasResult || gasResult.success !== true) {
       return {
         statusCode: 502,
         headers,
         body: JSON.stringify({
           success: false,
-          error: gasResult.error || gasResult.message || 'Google Apps Script failed to append row to BD DATABASE.'
+          error: (gasResult && (gasResult.error || gasResult.message)) || 'Google Apps Script failed to append row to BD DATABASE.'
         })
       };
     }
