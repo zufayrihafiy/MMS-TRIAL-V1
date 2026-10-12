@@ -1027,7 +1027,7 @@
    * RESOLVED HISTORY DETAIL MODAL: View completed breakdown details & Before/After photos
    */
   function openResolvedDetailModal(bdId) {
-    const item = state.breakdowns.find(b => b.id === bdId);
+    const item = state.breakdowns.find(b => b.id === bdId || String(b.id) === String(bdId));
     if (!item) {
       showToast(`Resolved breakdown record ${bdId} not found.`, 'error');
       return;
@@ -1036,25 +1036,31 @@
     const modal = document.getElementById('resolvedDetailModal');
     if (!modal) return;
 
-    // Populate metadata
-    const idEl = document.getElementById('resolvedDetailBreakdownId');
-    const machineEl = document.getElementById('resolvedDetailMachine');
-    const timeEl = document.getElementById('resolvedDetailTimeReported');
-    const startEl = document.getElementById('resolvedDetailStartTime');
-    const endEl = document.getElementById('resolvedDetailEndTime');
-    const downtimeEl = document.getElementById('resolvedDetailDowntime');
-    const priorityEl = document.getElementById('resolvedDetailPriority');
-    const categoryEl = document.getElementById('resolvedDetailCategory');
-    const statusEl = document.getElementById('resolvedDetailStatus');
-    const descEl = document.getElementById('resolvedDetailDescription');
-    const techEl = document.getElementById('resolvedDetailAssignedTech');
+    // Populate metadata matching the HTML IDs
+    const idEl = document.getElementById('resDetailId');
+    const machineEl = document.getElementById('resDetailMachine');
+    const timeEl = document.getElementById('resDetailTimeReported');
+    const startEl = document.getElementById('resDetailStartTime');
+    const endEl = document.getElementById('resDetailEndTime');
+    const downtimeEl = document.getElementById('resDetailDowntime');
+    const priorityEl = document.getElementById('resDetailPriority');
+    const categoryEl = document.getElementById('resDetailCategory');
+    const statusEl = document.getElementById('resDetailStatus');
+    const descEl = document.getElementById('resDetailDescription');
+    const techEl = document.getElementById('resDetailTech');
 
-    if (idEl) idEl.textContent = item.id;
-    if (machineEl) machineEl.textContent = item.machine;
-    if (timeEl) timeEl.textContent = formatTimeReportedKL(item.startTime || item.reportedAt || item.time);
-    if (startEl) startEl.textContent = formatTimeReportedKL(item.startTime) || 'Not recorded';
-    if (endEl) endEl.textContent = formatTimeReportedKL(item.endTime) || 'Not recorded';
-    if (downtimeEl) downtimeEl.textContent = `${item.downtime || item.downtimeMin || 0} mins`;
+    if (idEl) idEl.textContent = item.id || '—';
+    if (machineEl) machineEl.textContent = item.machine || '—';
+    if (timeEl) timeEl.textContent = formatTimeReportedKL(item.time || item.reportedAt || item.startTime);
+    if (startEl) startEl.textContent = formatTimeReportedKL(item.startTime);
+    if (endEl) endEl.textContent = formatTimeReportedKL(item.endTime);
+
+    const dtVal = item.downtime !== undefined && item.downtime !== '' && item.downtime !== null
+      ? Number(item.downtime)
+      : (item.downtimeMin !== undefined ? Number(item.downtimeMin) : null);
+    if (downtimeEl) {
+      downtimeEl.textContent = (dtVal !== null && !isNaN(dtVal)) ? `${dtVal} minutes` : '—';
+    }
 
     if (priorityEl) {
       priorityEl.innerHTML = renderPriorityBadge(item.priority);
@@ -1068,19 +1074,22 @@
 
     if (descEl) descEl.textContent = item.description || item.issue || 'No problem description recorded.';
 
+    const techStr = item.assignedTech && String(item.assignedTech).trim() !== '' && item.assignedTech !== 'Unassigned'
+      ? String(item.assignedTech).trim()
+      : 'Unassigned';
     if (techEl) {
-      techEl.textContent = (item.assignedTech && String(item.assignedTech).trim() !== '') ? item.assignedTech : 'Unassigned';
+      techEl.textContent = techStr;
     }
 
     // Populate Before and After photos for resolved history
-    const beforeContainer = document.getElementById('resolvedDetailBeforePhotoContainer');
-    const afterContainer = document.getElementById('resolvedDetailAfterPhotoContainer');
+    const beforeContainer = document.getElementById('resDetailBeforePhotoContainer');
+    const afterContainer = document.getElementById('resDetailAfterPhotoContainer');
 
     if (beforeContainer) {
-      beforeContainer.innerHTML = renderPhotoElement(item.beforePhoto, `Before Repair - ${item.machine}`);
+      beforeContainer.innerHTML = renderPhotoElement(item.beforePhoto, `Before Repair - ${item.machine || ''}`);
     }
     if (afterContainer) {
-      afterContainer.innerHTML = renderPhotoElement(item.afterPhoto, `After Repair - ${item.machine}`);
+      afterContainer.innerHTML = renderPhotoElement(item.afterPhoto, `After Repair - ${item.machine || ''}`);
     }
 
     modal.classList.add('active');
@@ -1100,7 +1109,7 @@
             <circle cx="8.5" cy="8.5" r="1.5"></circle>
             <polyline points="21 15 16 10 5 21"></polyline>
           </svg>
-          <div>No photo attached</div>
+          <div>No photo available</div>
         </div>
       `;
     }
@@ -1193,16 +1202,20 @@
     if (endErrorEl) endErrorEl.style.display = 'none';
 
     // Populate Read-Only Identifiers
-    document.getElementById('resolveTargetId').value = item.id;
-    document.getElementById('resolveModalBdId').textContent = item.id;
+    const targetIdInput = document.getElementById('resolveTargetId');
+    if (targetIdInput) targetIdInput.value = item.id;
     const bdIdDisplay = document.getElementById('resolveBdIdDisplay');
     if (bdIdDisplay) bdIdDisplay.value = item.id;
 
-    document.getElementById('resolveModalMachine').textContent = item.machine;
     const machineDisplay = document.getElementById('resolveMachineDisplay');
     if (machineDisplay) machineDisplay.value = item.machine;
 
-    document.getElementById('resolveModalDescription').textContent = item.description || item.issue || '';
+    const summaryBd = document.getElementById('resolveModalBdId');
+    if (summaryBd) summaryBd.textContent = item.id;
+    const summaryMach = document.getElementById('resolveModalMachine');
+    if (summaryMach) summaryMach.textContent = item.machine;
+    const summaryDesc = document.getElementById('resolveModalDescription');
+    if (summaryDesc) summaryDesc.textContent = item.description || item.issue || '';
 
     // Start Time Reference (Recorded)
     const startTimeVal = item.startTime || item.reportedAt || item.time || new Date().toISOString();
@@ -1600,12 +1613,28 @@
     }
 
     // KPI 4: MTBF (Mean Time Between Failures)
-    // Formula: Total Operating Time / Number of Failures
-    // Database schema does not track machine operating running hours
+    // Formula: Total Operating Hours / Number of Breakdowns
+    // Configured Operating Schedule: 10 operating hours/day on Monday–Friday working days
+    // For current month: excludes future operating days
+    // When no breakdowns in period: display No Breakdowns (or N/A)
+    const operatingDays = calculateOperatingDays(selectedYear, selectedMonth);
+    const totalOperatingHours = operatingDays * 10;
     const kpiMtbfEl = document.getElementById('bdKpiMTBF');
     const kpiMtbfSub = document.getElementById('bdKpiMTBFSub');
-    if (kpiMtbfEl) kpiMtbfEl.textContent = 'N/A';
-    if (kpiMtbfSub) kpiMtbfSub.textContent = 'Operating hours required';
+
+    if (kpiMtbfEl) {
+      if (totalBreakdowns > 0 && totalOperatingHours > 0) {
+        const mtbfVal = (totalOperatingHours / totalBreakdowns).toFixed(1);
+        kpiMtbfEl.textContent = `${mtbfVal} Hours`;
+      } else if (totalBreakdowns === 0) {
+        kpiMtbfEl.textContent = 'No Breakdowns';
+      } else {
+        kpiMtbfEl.textContent = 'N/A';
+      }
+    }
+    if (kpiMtbfSub) {
+      kpiMtbfSub.textContent = 'Mean Time Between Failures';
+    }
 
     // =========================================================================
     // CHART PREPARATION (Days of Month)
@@ -1646,36 +1675,74 @@
     });
 
     // Populate Category Distribution from database records
-    const categoryMap = {
+    // Official categories: Mechanical, Electrical, Hydraulic, Pneumatic, Parametic
+    const categoryCountsMap = {
       'Mechanical': 0,
       'Electrical': 0,
       'Hydraulic': 0,
       'Pneumatic': 0,
-      'Sensor': 0,
-      'Software': 0,
-      'Others': 0
+      'Parametic': 0
     };
+    let legacyOtherCount = 0;
 
     monthBreakdowns.forEach(b => {
-      const cat = b.category || 'Mechanical';
-      if (categoryMap.hasOwnProperty(cat)) {
-        categoryMap[cat]++;
-      } else {
-        categoryMap['Others'] = (categoryMap['Others'] || 0) + 1;
+      const cat = b.category ? String(b.category).trim() : '';
+      if (categoryCountsMap.hasOwnProperty(cat)) {
+        categoryCountsMap[cat]++;
+      } else if (cat) {
+        legacyOtherCount++;
       }
     });
 
-    const categoryLabels = Object.keys(categoryMap);
-    const categoryCounts = Object.values(categoryMap);
+    const categoryLabels = ['Mechanical', 'Electrical', 'Hydraulic', 'Pneumatic', 'Parametic'];
+    const categoryCounts = categoryLabels.map(cat => categoryCountsMap[cat]);
+    const categoryColors = ['#0078E7', '#E50920', '#D97706', '#009E49', '#7C3AED'];
+
+    if (legacyOtherCount > 0) {
+      categoryLabels.push('Legacy / Other');
+      categoryCounts.push(legacyOtherCount);
+      categoryColors.push('#64748B');
+    }
 
     // Render Charts
-    renderBDCharts(dayLabels, dailyBreakdownCounts, categoryLabels, categoryCounts, dailyDowntimeTotals);
+    renderBDCharts(dayLabels, dailyBreakdownCounts, categoryLabels, categoryCounts, dailyDowntimeTotals, categoryColors);
+  }
+
+  /**
+   * Calculate operating days (Monday-Friday) for a selected reporting month and year.
+   * Assumes 10 operating hours/day schedule.
+   * For the current active month, excludes future calendar days.
+   */
+  function calculateOperatingDays(year, month) {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentDay = now.getDate();
+
+    if (year > currentYear || (year === currentYear && month > currentMonth)) {
+      return 0;
+    }
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const maxDay = (year === currentYear && month === currentMonth)
+      ? Math.min(daysInMonth, currentDay)
+      : daysInMonth;
+
+    let operatingDays = 0;
+    for (let d = 1; d <= maxDay; d++) {
+      const dateObj = new Date(year, month, d);
+      const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        operatingDays++;
+      }
+    }
+    return operatingDays;
   }
 
   /**
    * Render Chart.js interactive charts
    */
-  function renderBDCharts(dayLabels, dailyBreakdownCounts, categoryLabels, categoryCounts, dailyDowntimeTotals) {
+  function renderBDCharts(dayLabels, dailyBreakdownCounts, categoryLabels, categoryCounts, dailyDowntimeTotals, categoryColors) {
     if (typeof Chart === 'undefined') {
       console.warn('Chart.js library is not loaded. Fallback notice rendered.');
       return;
@@ -1756,14 +1823,12 @@
       }
 
       const ctxCat = catCanvas.getContext('2d');
-      const hasData = categoryCounts.some(c => c > 0);
       const totalInCategories = categoryCounts.reduce((a, b) => a + b, 0);
+      const hasData = totalInCategories > 0;
 
       const chartData = hasData ? categoryCounts : [1];
       const chartLabels = hasData ? categoryLabels : ['No Breakdowns'];
-      const chartColors = hasData
-        ? ['#0078E7', '#E50920', '#D97706', '#009E49', '#7C3AED', '#06B6D4', '#64748B']
-        : ['#E2E8F0'];
+      const chartColors = hasData ? (categoryColors || ['#0078E7', '#E50920', '#D97706', '#009E49', '#7C3AED']) : ['#E2E8F0'];
 
       chartCategoryInstance = new Chart(ctxCat, {
         type: 'pie',
@@ -1796,9 +1861,9 @@
               cornerRadius: 6,
               callbacks: {
                 label: (ctx) => {
-                  if (!hasData) return 'No records recorded';
-                  const val = ctx.parsed;
-                  const pct = totalInCategories > 0 ? ((val / totalInCategories) * 100).toFixed(1) : 0;
+                  if (!hasData) return ' No breakdowns in selected period';
+                  const val = ctx.parsed || 0;
+                  const pct = totalInCategories > 0 ? ((val / totalInCategories) * 100).toFixed(1) : '0.0';
                   return ` ${ctx.label}: ${val} (${pct}%)`;
                 }
               }

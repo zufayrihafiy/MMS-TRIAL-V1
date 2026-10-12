@@ -814,15 +814,15 @@
                 </div>
 
                 <!-- KPI 4: MTBF -->
-                <div class="kpi-card" style="cursor:default; border-left:4px solid #64748B;">
+                <div class="kpi-card" style="cursor:default; border-left:4px solid var(--blue-primary);">
                   <div class="kpi-content">
                     <div class="kpi-title" style="font-size:12.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">MTBF</div>
                     <div class="kpi-value-row" style="display:flex; align-items:baseline; gap:6px; margin:6px 0 4px 0;">
-                      <div class="kpi-value" id="bdKpiMTBF" style="font-size:22px; font-weight:800; color:var(--navy-darkest); font-family:'Poppins','Inter',sans-serif;">N/A</div>
+                      <div class="kpi-value" id="bdKpiMTBF" style="font-size:24px; font-weight:800; color:var(--navy-darkest); font-family:'Poppins','Inter',sans-serif;">N/A</div>
                     </div>
-                    <div class="kpi-subtitle" id="bdKpiMTBFSub" style="font-size:11.5px; color:#64748B;">Operating hours required</div>
+                    <div class="kpi-subtitle" id="bdKpiMTBFSub" style="font-size:12px; color:var(--text-muted);">Mean Time Between Failures</div>
                   </div>
-                  <div class="kpi-icon-wrapper" style="width:44px; height:44px; border-radius:10px; background:#F1F5F9; display:flex; align-items:center; justify-content:center; color:#64748B;">
+                  <div class="kpi-icon-wrapper" style="width:44px; height:44px; border-radius:10px; background:var(--blue-soft-bg); display:flex; align-items:center; justify-content:center; color:var(--blue-primary);">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                   </div>
                 </div>
@@ -878,7 +878,7 @@
                 <strong style="color:var(--navy-darkest);">Period Attribution Rules:</strong>
                 Breakdown frequency and category analysis are attributed to the month of <em>Breakdown Start Time</em>.
                 Downtime and MTTR calculations are attributed to the completion period of completed breakdown records. Ongoing repairs without Breakdown End Time are excluded from downtime totals.
-                MTBF displays <em>N/A - Operating hours required</em> because machine operating schedule hours are not stored in the database.
+                MTBF calculation assumes 10 operating hours/day across working days (Monday–Friday), excluding future days in the current month.
               </div>
 
             </div>
@@ -1502,16 +1502,6 @@
           <!-- Alert Box for Errors -->
           <div id="resolveFormAlert" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:8px; font-size:13px;"></div>
 
-          <!-- Breakdown Summary Header -->
-          <div style="background:#F8FAFC; border:1px solid var(--border-light); border-radius:10px; padding:12px 14px; margin-bottom:16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span id="resolveModalBdId" style="font-size:15px; font-weight:800; color:var(--navy-darkest);">BD-ID</span>
-              <span class="status-badge status-badge-red">In Progress</span>
-            </div>
-            <div id="resolveModalMachine" style="font-size:13.5px; font-weight:700; color:var(--blue-primary); margin-bottom:4px;">Machine Name</div>
-            <div id="resolveModalDescription" style="font-size:12.5px; color:var(--text-body); line-height:1.45;">Problem Description</div>
-          </div>
-
           <input type="hidden" id="resolveTargetId" value="">
           <input type="hidden" id="resolveStartTimeHidden" value="">
 
@@ -1545,9 +1535,6 @@
               Breakdown End Time <span class="required-star">*</span>
             </label>
             <input type="datetime-local" id="resolveEndTimeInput" class="form-control" required style="font-weight:600;">
-            <small class="form-hint" style="color:var(--navy-base); font-weight:500;">
-              Breakdown End Time is strictly required before marking a breakdown as completed.
-            </small>
             <div id="resolveEndTimeError" style="display:none; color:var(--red-primary); font-size:12px; font-weight:600; margin-top:4px;">Please enter a valid Breakdown End Time.</div>
           </div>
 
@@ -1559,22 +1546,13 @@
             <select id="resolveAssignedTechSelect" class="form-control" required style="font-weight:600;">
               <option value="">Select Technician</option>
             </select>
-            <small class="form-hint" style="color:var(--navy-base); font-weight:500;">
-              Assigned Technician is strictly required before resolving the breakdown.
-            </small>
             <div id="resolveTechError" style="display:none; color:var(--red-primary); font-size:12px; font-weight:600; margin-top:4px;">Please select an assigned technician from the list.</div>
           </div>
 
-          <!-- Downtime Calculation Live Indicator -->
-          <div class="calc-preview-strip" style="margin-bottom:16px;">
-            <div class="calc-item">
-              <span class="calc-label">⏱️ Total Repair Downtime:</span>
-              <span id="resolveDowntimeDisplay" class="calc-value" style="font-weight:800; color:var(--red-primary); font-size:15px;">—</span>
-            </div>
-            <div class="calc-item">
-              <span class="calc-label">📋 New Status:</span>
-              <span class="status-badge status-badge-green" style="margin-left:4px;">Completed</span>
-            </div>
+          <!-- Total Repair Downtime Clean Box -->
+          <div class="downtime-info-box" style="background:#F8FAFC; border:1px solid var(--border-light); border-radius:8px; padding:10px 14px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:13px; font-weight:600; color:var(--navy-darkest);">Total Repair Downtime:</span>
+            <span id="resolveDowntimeDisplay" style="font-size:14px; font-weight:800; color:var(--blue-primary);">—</span>
           </div>
 
           <!-- Optional Post-Repair After Photo -->
