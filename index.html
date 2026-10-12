@@ -699,6 +699,7 @@
                       <th style="min-width:160px;">Machine</th>
                       <th style="min-width:280px;">Description</th>
                       <th style="min-width:160px;">Assigned Technician</th>
+                      <th style="min-width:80px;">Detail</th>
                     </tr>
                   </thead>
                   <tbody id="resolvedBreakdownTbody">
@@ -1189,52 +1190,67 @@
           <!-- Alert Banner for Inline Validation & Backend Feedback -->
           <div id="rbAlertBanner" class="form-alert-banner" style="display:none;" role="alert"></div>
 
-          <!-- ROW 1: STAFF ID & MACHINE / EQUIPMENT NAME -->
+          <!-- Hidden input: Staff ID captured automatically from authenticated Firebase user -->
+          <input type="hidden" id="rbStaffId">
+
+          <!-- ROW 1: MACHINE / EQUIPMENT & BREAKDOWN START TIME -->
           <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="rbStaffId">
-                Staff ID <span class="required-star">*</span>
-                <span class="label-badge-info" id="rbStaffIdBadge">Authenticated</span>
-              </label>
-              <input type="text" id="rbStaffId" class="form-control" placeholder="e.g. USR-01" readonly required style="background:#F8FAFC; font-weight:600; color:var(--navy-darkest); cursor:not-allowed;">
-              <small class="form-hint">Locked to authenticated staff identity (anti-impersonation protected)</small>
-            </div>
             <div class="form-group">
               <label class="form-label" for="rbMachine">
                 Machine / Equipment Name <span class="required-star">*</span>
               </label>
               <select id="rbMachine" class="form-control" required>
                 <option value="" disabled selected>-- Select Machine / Equipment --</option>
-                <optgroup label="VIM Equipment">
+                <optgroup label="Injection Moulding Machines">
                   <option value="VIM 01">VIM 01</option>
                   <option value="VIM 02">VIM 02</option>
                   <option value="VIM 03">VIM 03</option>
+                  <option value="VIM 04">VIM 04</option>
+                  <option value="VIM 05">VIM 05</option>
+                  <option value="VIM 06">VIM 06</option>
+                  <option value="VIM 07">VIM 07</option>
+                  <option value="VIM 08">VIM 08</option>
+                  <option value="VIM 09">VIM 09</option>
+                  <option value="VIM 10">VIM 10</option>
+                  <option value="VIM 11">VIM 11</option>
+                  <option value="VIM 12">VIM 12</option>
+                  <option value="VIM 13">VIM 13</option>
+                  <option value="VIM 14">VIM 14</option>
+                  <option value="VIM 15">VIM 15</option>
                 </optgroup>
-                <optgroup label="Plant Machinery">
-                  <option value="CNC Milling Center 04">CNC Milling Center 04</option>
-                  <option value="Stamping Press Line 02">Stamping Press Line 02</option>
-                  <option value="Robotic Welding Station A">Robotic Welding Station A</option>
-                  <option value="Injection Molding Machine 03">Injection Molding Machine 03</option>
-                  <option value="Conveyor Line C Drive Motor">Conveyor Line C Drive Motor</option>
-                  <option value="Air Compressor Unit 01">Air Compressor Unit 01</option>
+                <optgroup label="Robotic &amp; Automation">
+                  <option value="Turn Table + KUKA">Turn Table + KUKA</option>
+                  <option value="Robot Arm 1">Robot Arm 1</option>
+                  <option value="Robot Arm 2">Robot Arm 2</option>
                 </optgroup>
-                <optgroup label="Custom Unit">
-                  <option value="__OTHER__">Other (Enter custom name...)</option>
+                <optgroup label="Other Equipment">
+                  <option value="Oven">Oven</option>
+                  <option value="Compressor">Compressor</option>
+                  <option value="Cooling Tower">Cooling Tower</option>
+                  <option value="Crane">Crane</option>
                 </optgroup>
               </select>
-              <input type="text" id="rbMachineCustom" class="form-control" placeholder="Enter custom machine name (e.g. VIM 04)..." style="display:none; margin-top:8px;">
-              <small class="form-hint">Select failing machine unit or specify custom ID</small>
             </div>
-          </div>
-
-          <!-- ROW 2: BREAKDOWN START TIME & PROBLEM CATEGORY -->
-          <div class="form-row">
             <div class="form-group">
               <label class="form-label" for="rbStartTime">
                 Breakdown Start Time <span class="required-star">*</span>
               </label>
               <input type="datetime-local" id="rbStartTime" class="form-control" required>
-              <small class="form-hint">Occurrence date &amp; time of breakdown</small>
+            </div>
+          </div>
+
+          <!-- ROW 2: PRIORITY & PROBLEM CATEGORY -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="rbPriority">
+                Priority <span class="required-star">*</span>
+              </label>
+              <select id="rbPriority" class="form-control" required onchange="window.updatePrioritySelectStyle(this)">
+                <option value="" disabled selected>-- Select Priority --</option>
+                <option value="Critical" style="background:#FEE2E2; color:#B91C1C; font-weight:600;">Critical</option>
+                <option value="Medium" style="background:#FEF3C7; color:#92400E; font-weight:600;">Medium</option>
+                <option value="Low" style="background:#DCFCE7; color:#166534; font-weight:600;">Low</option>
+              </select>
             </div>
             <div class="form-group">
               <label class="form-label" for="rbCategory">
@@ -1246,34 +1262,29 @@
                 <option value="Electrical">Electrical</option>
                 <option value="Hydraulic">Hydraulic</option>
                 <option value="Pneumatic">Pneumatic</option>
-                <option value="Sensor">Sensor</option>
-                <option value="Software">Software</option>
-                <option value="Others">Others</option>
+                <option value="Parametic">Parametic</option>
               </select>
-              <small class="form-hint">Primary classification of breakdown</small>
             </div>
           </div>
 
-          <!-- ROW 3: PROBLEM DESCRIPTION -->
+          <!-- ROW 3: PROBLEM DESCRIPTION (FULL WIDTH) -->
           <div class="form-group">
             <label class="form-label" for="rbDescription">
               Problem Description <span class="required-star">*</span>
             </label>
             <textarea id="rbDescription" class="form-control" rows="3" placeholder="Describe the machine problem, observed failure symptoms, abnormal noise, error codes, etc." required></textarea>
-            <small class="form-hint">Provide detailed description for maintenance log</small>
           </div>
 
-          <!-- ROW 4: BEFORE PHOTO -->
+          <!-- ROW 4: BEFORE PHOTO (FULL WIDTH, OPTIONAL) -->
           <div class="form-group">
             <label class="form-label" for="rbBeforePhoto">
               Before Photo
-              <span class="label-badge-optional">Optional (JPG, PNG)</span>
+              <span class="label-badge-optional">Optional</span>
             </label>
             <div class="file-upload-wrapper">
               <input type="file" id="rbBeforePhoto" class="form-control file-input-control" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
-              <div class="file-name-preview" id="rbBeforePhotoName">Supported: JPG, JPEG, PNG</div>
+              <div class="file-name-preview" id="rbBeforePhotoName">Choose file (JPG, PNG)</div>
             </div>
-            <small class="form-hint">Attach photo of observed machine breakdown / damage if available</small>
           </div>
         </div>
         <div class="modal-footer">
@@ -1345,7 +1356,98 @@
           </div>
         </div>
 
-        <!-- Photos Section -->
+        <!-- Photos Section (Active Job: Before Photo Only) -->
+        <div>
+          <label style="font-size:12px; font-weight:700; color:var(--navy-darkest); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:10px;">
+            Photo Documentation
+          </label>
+          <div style="background:#F8FAFC; border:1px solid var(--border-light); border-radius:10px; padding:12px; display:flex; flex-direction:column; min-height:180px;">
+            <div style="font-size:12px; font-weight:700; color:var(--navy-darkest); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--red-primary);"></span>
+              Before Photo
+            </div>
+            <div id="detailBeforePhotoContainer" style="flex:1; display:flex; align-items:center; justify-content:center;">
+              <!-- Populated by JS: Image preview or clear message -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: RESOLVED BREAKDOWN DETAILS (RESOLVED HISTORY DETAIL)
+       =================================================================== -->
+  <div id="resolvedDetailModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:720px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Resolved Breakdown Details</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Completed Restoration &amp; Verification Record (Read-Only)</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding-top:14px;">
+        <!-- Meta Details Summary Grid -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; background:#F8FAFC; border:1px solid var(--border-light); border-radius:10px; padding:14px 16px; margin-bottom:18px;">
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Breakdown ID</div>
+            <div id="resDetailId" style="font-size:15px; font-weight:800; color:var(--navy-darkest); margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Machine</div>
+            <div id="resDetailMachine" style="font-size:14px; font-weight:700; color:var(--navy-darkest); margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Time Reported</div>
+            <div id="resDetailTimeReported" style="font-size:13px; font-weight:600; color:var(--text-body); margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Start Time</div>
+            <div id="resDetailStartTime" style="font-size:13px; font-weight:600; color:var(--text-body); margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">End Time</div>
+            <div id="resDetailEndTime" style="font-size:13px; font-weight:600; color:var(--text-body); margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Total Downtime</div>
+            <div id="resDetailDowntime" style="font-size:14px; font-weight:700; color:var(--navy-darkest); margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Priority</div>
+            <div id="resDetailPriority" style="margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Category</div>
+            <div id="resDetailCategory" style="font-size:13px; font-weight:600; color:var(--text-body); margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Status</div>
+            <div id="resDetailStatus" style="margin-top:2px;">—</div>
+          </div>
+          <div style="grid-column: span 3;">
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Assigned Technician</div>
+            <div id="resDetailTech" style="font-size:13.5px; font-weight:700; color:var(--navy-darkest); margin-top:2px;">Unassigned</div>
+          </div>
+        </div>
+
+        <!-- Problem Description Card -->
+        <div style="margin-bottom:20px;">
+          <label style="font-size:12px; font-weight:700; color:var(--navy-darkest); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">
+            Problem Description
+          </label>
+          <div id="resDetailDescription" style="background:#FFFFFF; border:1px solid var(--border-light); border-radius:8px; padding:12px 14px; font-size:13.5px; color:var(--text-body); line-height:1.6; word-break:break-word; white-space:pre-wrap;">
+            —
+          </div>
+        </div>
+
+        <!-- Photo Documentation: Two Cards (Before and After) -->
         <div>
           <label style="font-size:12px; font-weight:700; color:var(--navy-darkest); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:10px;">
             Photo Documentation
@@ -1357,8 +1459,8 @@
                 <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--red-primary);"></span>
                 Before Photo
               </div>
-              <div id="detailBeforePhotoContainer" style="flex:1; display:flex; align-items:center; justify-content:center;">
-                <!-- Populated by JS: Image preview or clear message -->
+              <div id="resDetailBeforePhotoContainer" style="flex:1; display:flex; align-items:center; justify-content:center;">
+                <!-- Populated by JS -->
               </div>
             </div>
 
@@ -1368,8 +1470,8 @@
                 <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green-primary);"></span>
                 After Photo
               </div>
-              <div id="detailAfterPhotoContainer" style="flex:1; display:flex; align-items:center; justify-content:center;">
-                <!-- Populated by JS: Image preview or clear message -->
+              <div id="resDetailAfterPhotoContainer" style="flex:1; display:flex; align-items:center; justify-content:center;">
+                <!-- Populated by JS -->
               </div>
             </div>
           </div>

@@ -278,23 +278,81 @@ exports.handler = async function (event, context) {
     };
   }
 
+  // Allowed validation constants
+  const ALLOWED_MACHINES = [
+    'VIM 01', 'VIM 02', 'VIM 03', 'VIM 04', 'VIM 05',
+    'VIM 06', 'VIM 07', 'VIM 08', 'VIM 09', 'VIM 10',
+    'VIM 11', 'VIM 12', 'VIM 13', 'VIM 14', 'VIM 15',
+    'Turn Table + KUKA', 'Robot Arm 1', 'Robot Arm 2',
+    'Oven', 'Compressor', 'Cooling Tower', 'Crane'
+  ];
+  const ALLOWED_PRIORITIES = ['Critical', 'Medium', 'Low'];
+  const ALLOWED_CATEGORIES = ['Mechanical', 'Electrical', 'Hydraulic', 'Pneumatic', 'Parametic'];
+
   // Mandatory fields
-  const { staffId, machine, startTime, category, description } = data;
-  if (!staffId || !machine || !startTime || !category || !description) {
+  const { staffId, machine, startTime, priority, category, description } = data;
+  if (!machine || !startTime || !priority || !category || !description) {
     return {
       statusCode: 422,
       headers,
       body: JSON.stringify({
         success: false,
-        error: 'Validation failed: staffId, machine, startTime, category, and description are required.'
+        error: 'Validation failed: machine, startTime, priority, category, and description are required.'
+      })
+    };
+  }
+
+  const validatedMachine = String(machine).trim();
+  if (!ALLOWED_MACHINES.includes(validatedMachine)) {
+    return {
+      statusCode: 422,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: `Validation failed: Machine "${validatedMachine}" is not a recognized machine.`
+      })
+    };
+  }
+
+  const validatedPriority = String(priority).trim();
+  if (!ALLOWED_PRIORITIES.includes(validatedPriority)) {
+    return {
+      statusCode: 422,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: `Validation failed: Priority "${validatedPriority}" is invalid. Must be Critical, Medium, or Low.`
+      })
+    };
+  }
+
+  const validatedCategory = String(category).trim();
+  if (!ALLOWED_CATEGORIES.includes(validatedCategory)) {
+    return {
+      statusCode: 422,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: `Validation failed: Problem Category "${validatedCategory}" is invalid. Must be Mechanical, Electrical, Hydraulic, Pneumatic, or Parametic.`
       })
     };
   }
 
   // ANTI-IMPERSONATION SECURITY CHECK:
   // A technician can NEVER submit a report under another Staff ID.
-  // The submitted staffId must match the authenticated user's Staff ID.
-  const submittedStaffId = String(staffId).trim().toUpperCase();
+  // The verified Staff ID must come directly from the authenticated Firebase identity.
+  if (!authenticatedStaffId) {
+    return {
+      statusCode: 403,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: 'Forbidden: Could not resolve a verified Staff ID from your authenticated user account.'
+      })
+    };
+  }
+
+  const submittedStaffId = staffId ? String(staffId).trim().toUpperCase() : authenticatedStaffId;
   if (authenticatedRole !== 'ADMIN' && submittedStaffId !== authenticatedStaffId) {
     return {
       statusCode: 403,
@@ -306,14 +364,17 @@ exports.handler = async function (event, context) {
     };
   }
 
+  const finalStaffId = authenticatedRole === 'ADMIN' ? submittedStaffId : authenticatedStaffId;
+
   // ENFORCE SERVER-SIDE DEFAULT VALUES FOR NEW BREAKDOWN:
   const ENFORCED_STATUS = 'Repair';
   const ENFORCED_END_TIME = '';
   const ENFORCED_DOWNTIME = '';
   const ENFORCED_AFTER_PHOTO = '';
+  const ENFORCED_ASSIGNED_TECH = '';
 
   // =========================================================================
-  // 4. FORWARD SECURELY TO GOOGLE SHEETS (COLUMNS A TO L)
+  // 4. FORWARD SECURELY TO GOOGLE SHEETS (COLUMNS A TO N)
   // =========================================================================
   try {
     const gasPayload = {
@@ -324,16 +385,18 @@ exports.handler = async function (event, context) {
       columns: {
         time: data.time || new Date().toISOString(),         // Column A: Time
         month: data.month || '',                             // Column B: Month
-        staffId: submittedStaffId,                           // Column C: Verified Staff ID
-        machine: String(data.machine).trim(),                // Column D: Machine
+        staffId: finalStaffId,                               // Column C: Verified Staff ID
+        machine: validatedMachine,                           // Column D: Machine
         startTime: data.startTime,                           // Column E: Breakdown Start Time
         endTime: ENFORCED_END_TIME,                          // Column F: Breakdown End Time (Enforced empty)
         downtime: ENFORCED_DOWNTIME,                         // Column G: Downtime (Enforced empty)
-        category: String(data.category).trim(),              // Column H: Problem Category
+        category: validatedCategory,                         // Column H: Problem Category
         beforePhoto: data.beforePhoto || '',                 // Column I: Before Photo Ref / URL
         afterPhoto: ENFORCED_AFTER_PHOTO,                    // Column J: After Photo (Enforced empty)
         description: String(data.description).trim(),        // Column K: Problem Description
-        status: ENFORCED_STATUS                              // Column L: Status (Enforced 'Repair')
+        status: ENFORCED_STATUS,                             // Column L: Status (Enforced 'Repair')
+        priority: validatedPriority,                         // Column M: Priority (Enforced Critical, Medium, Low)
+        assignedTech: ENFORCED_ASSIGNED_TECH                 // Column N: Assigned Technician (Enforced empty on creation)
       },
       photoFiles: {
         before: data.photoFiles?.before || null,
@@ -382,8 +445,9 @@ exports.handler = async function (event, context) {
         message: 'Breakdown report successfully recorded in Google Sheets MMS DATABASE (BD DATABASE).',
         rowId: gasResult.rowId || gasResult.id || null,
         data: {
-          staffId: submittedStaffId,
-          machine: data.machine,
+          staffId: finalStaffId,
+          machine: validatedMachine,
+          priority: validatedPriority,
           status: ENFORCED_STATUS,
           time: data.time
         }

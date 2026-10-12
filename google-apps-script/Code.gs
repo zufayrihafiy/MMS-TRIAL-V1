@@ -203,7 +203,7 @@ function handleGetBreakdowns() {
 }
 
 /**
- * Create a new breakdown record in BD DATABASE (Columns A to L)
+ * Create a new breakdown record in BD DATABASE (Columns A to N)
  */
 function handleCreateBreakdown(payload) {
   const cols = payload.columns || payload;
@@ -213,6 +213,7 @@ function handleCreateBreakdown(payload) {
     'staffId',
     'machine',
     'startTime',
+    'priority',
     'category',
     'description'
   ];
@@ -228,6 +229,16 @@ function handleCreateBreakdown(payload) {
         error: `Missing required field: ${field}`
       }, 422);
     }
+  }
+
+  // Validate priority strictly (Critical, Medium, Low)
+  const validPriorities = ['Critical', 'Medium', 'Low'];
+  const priorityVal = String(cols.priority || '').trim();
+  if (!validPriorities.includes(priorityVal)) {
+    return createJsonResponse({
+      success: false,
+      error: 'Invalid or missing Priority. Must be Critical, Medium, or Low.'
+    }, 422);
   }
 
   // Validate breakdown start date
@@ -266,6 +277,18 @@ function handleCreateBreakdown(payload) {
     sheet.setFrozenRows(1);
   }
 
+  // Ensure worksheet has at least 14 columns for Columns M (Priority) and N (Assigned Technician)
+  const maxCols = sheet.getMaxColumns();
+  if (maxCols < 14) {
+    sheet.insertColumnsAfter(maxCols, 14 - maxCols);
+  }
+
+  // Ensure header labels for Columns M & N exist
+  const headerRange = sheet.getRange(1, 13, 1, 2);
+  const headerVals = headerRange.getValues()[0];
+  if (!headerVals[0]) headerRange.getCell(1, 1).setValue('Priority');
+  if (!headerVals[1]) headerRange.getCell(1, 2).setValue('Assigned Technician');
+
   // 1. Process Automatic Date Generation
   const now = new Date();
   const timeFormatted = cols.time || Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
@@ -279,12 +302,14 @@ function handleCreateBreakdown(payload) {
     beforePhotoUrl = savePhotoToDrive(payload.photoFiles.before, cols.machine, 'BEFORE');
   }
 
-  // 3. Assemble Database Row: STRICTLY COLUMNS A TO L
+  // 3. Assemble Database Row: STRICTLY COLUMNS A TO N (14 COLUMNS)
   // Enforce server-side defaults for new breakdown:
   // - Col F (Breakdown End Time): empty
   // - Col G (Downtime): empty
   // - Col J (After Photo): empty
   // - Col L (Status): 'Repair'
+  // - Col M (Priority): Selected Priority (Critical / Medium / Low)
+  // - Col N (Assigned Technician): strictly empty on creation
   const rowData = [
     timeFormatted,                           // Column A: Time
     monthFormatted,                          // Column B: Month
@@ -297,14 +322,10 @@ function handleCreateBreakdown(payload) {
     beforePhotoUrl,                          // Column I: Before Photo
     '',                                      // Column J: After Photo (Enforced empty)
     cols.description || '',                  // Column K: Problem Description
-    'Repair'                                 // Column L: Status (Enforced 'Repair')
+    'Repair',                                // Column L: Status (Enforced 'Repair')
+    priorityVal,                             // Column M: Priority
+    ''                                       // Column N: Assigned Technician (Enforced empty)
   ];
-
-  // Optional backward-compatible columns M & N if present
-  if (cols.priority || cols.assignedTech) {
-    rowData.push(cols.priority || 'Not Assigned');
-    rowData.push(cols.assignedTech || 'Unassigned');
-  }
 
   sheet.appendRow(rowData);
   const rowId = sheet.getLastRow();

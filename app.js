@@ -874,8 +874,6 @@
           const timeReported = formatTimeReportedKL(item.startTime || item.reportedAt || item.time);
           const machineName = item.machine || 'Unknown Machine';
           const descriptionText = item.description || item.issue || 'No description provided';
-          const priorityText = item.priority && String(item.priority).trim() !== '' ? item.priority : 'Not Assigned';
-          const priorityBadgeClass = getPriorityBadgeClass(priorityText);
 
           return `
             <tr>
@@ -890,9 +888,7 @@
                 <div class="table-desc-cell">${escapeHtml(descriptionText)}</div>
               </td>
               <td>
-                <span class="status-badge ${priorityBadgeClass}">
-                  ${escapeHtml(priorityText)}
-                </span>
+                ${renderPriorityBadge(item.priority)}
               </td>
               <td>
                 <button class="btn-table-action success" onclick="window.openResolveBreakdownModal('${escapeHtml(item.id)}')">
@@ -941,7 +937,7 @@
     });
 
     if (filteredList.length === 0) {
-      resolvedTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:32px; color:var(--text-muted);">No records found for ${MONTH_NAMES[selectedMonth]} ${selectedYear}.</td></tr>`;
+      resolvedTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--text-muted);">No records found for ${MONTH_NAMES[selectedMonth]} ${selectedYear}.</td></tr>`;
       return;
     }
 
@@ -964,13 +960,18 @@
               <span>${escapeHtml(assignedTech)}</span>
             </div>
           </td>
+          <td>
+            <button class="btn-table-action" onclick="window.openResolvedDetailModal('${escapeHtml(item.id)}')">
+              View
+            </button>
+          </td>
         </tr>
       `;
     }).join('');
   }
 
   /**
-   * DETAIL MODAL: View breakdown details & Before/After photos
+   * ACTIVE JOB DETAIL MODAL: View breakdown details & Before photo only
    */
   function openBreakdownDetailModal(bdId) {
     const item = state.breakdowns.find(b => b.id === bdId);
@@ -995,9 +996,8 @@
     if (machineEl) machineEl.textContent = item.machine;
     if (timeEl) timeEl.textContent = formatTimeReportedKL(item.startTime || item.reportedAt || item.time);
 
-    const priorityText = item.priority && String(item.priority).trim() !== '' ? item.priority : 'Not Assigned';
     if (priorityEl) {
-      priorityEl.innerHTML = `<span class="status-badge ${getPriorityBadgeClass(priorityText)}">${escapeHtml(priorityText)}</span>`;
+      priorityEl.innerHTML = renderPriorityBadge(item.priority);
     }
 
     if (categoryEl) categoryEl.textContent = item.category || 'Mechanical';
@@ -1014,9 +1014,67 @@
       techEl.textContent = (item.assignedTech && String(item.assignedTech).trim() !== '') ? item.assignedTech : 'Unassigned';
     }
 
-    // Populate photos
+    // Active Jobs show Before Photo only
     const beforeContainer = document.getElementById('detailBeforePhotoContainer');
-    const afterContainer = document.getElementById('detailAfterPhotoContainer');
+    if (beforeContainer) {
+      beforeContainer.innerHTML = renderPhotoElement(item.beforePhoto, `Before Repair - ${item.machine}`);
+    }
+
+    modal.classList.add('active');
+  }
+
+  /**
+   * RESOLVED HISTORY DETAIL MODAL: View completed breakdown details & Before/After photos
+   */
+  function openResolvedDetailModal(bdId) {
+    const item = state.breakdowns.find(b => b.id === bdId);
+    if (!item) {
+      showToast(`Resolved breakdown record ${bdId} not found.`, 'error');
+      return;
+    }
+
+    const modal = document.getElementById('resolvedDetailModal');
+    if (!modal) return;
+
+    // Populate metadata
+    const idEl = document.getElementById('resolvedDetailBreakdownId');
+    const machineEl = document.getElementById('resolvedDetailMachine');
+    const timeEl = document.getElementById('resolvedDetailTimeReported');
+    const startEl = document.getElementById('resolvedDetailStartTime');
+    const endEl = document.getElementById('resolvedDetailEndTime');
+    const downtimeEl = document.getElementById('resolvedDetailDowntime');
+    const priorityEl = document.getElementById('resolvedDetailPriority');
+    const categoryEl = document.getElementById('resolvedDetailCategory');
+    const statusEl = document.getElementById('resolvedDetailStatus');
+    const descEl = document.getElementById('resolvedDetailDescription');
+    const techEl = document.getElementById('resolvedDetailAssignedTech');
+
+    if (idEl) idEl.textContent = item.id;
+    if (machineEl) machineEl.textContent = item.machine;
+    if (timeEl) timeEl.textContent = formatTimeReportedKL(item.startTime || item.reportedAt || item.time);
+    if (startEl) startEl.textContent = formatTimeReportedKL(item.startTime) || 'Not recorded';
+    if (endEl) endEl.textContent = formatTimeReportedKL(item.endTime) || 'Not recorded';
+    if (downtimeEl) downtimeEl.textContent = `${item.downtime || item.downtimeMin || 0} mins`;
+
+    if (priorityEl) {
+      priorityEl.innerHTML = renderPriorityBadge(item.priority);
+    }
+
+    if (categoryEl) categoryEl.textContent = item.category || 'Mechanical';
+
+    if (statusEl) {
+      statusEl.innerHTML = `<span class="status-badge status-badge-green">${escapeHtml(item.status || 'Completed')}</span>`;
+    }
+
+    if (descEl) descEl.textContent = item.description || item.issue || 'No problem description recorded.';
+
+    if (techEl) {
+      techEl.textContent = (item.assignedTech && String(item.assignedTech).trim() !== '') ? item.assignedTech : 'Unassigned';
+    }
+
+    // Populate Before and After photos for resolved history
+    const beforeContainer = document.getElementById('resolvedDetailBeforePhotoContainer');
+    const afterContainer = document.getElementById('resolvedDetailAfterPhotoContainer');
 
     if (beforeContainer) {
       beforeContainer.innerHTML = renderPhotoElement(item.beforePhoto, `Before Repair - ${item.machine}`);
@@ -1026,6 +1084,11 @@
     }
 
     modal.classList.add('active');
+  }
+
+  function closeResolvedDetailModal() {
+    const modal = document.getElementById('resolvedDetailModal');
+    if (modal) modal.classList.remove('active');
   }
 
   function renderPhotoElement(photoRef, altText) {
@@ -1839,7 +1902,7 @@
           issue: remoteItem.description || '',
           description: remoteItem.description || '',
           category: remoteItem.category || 'Mechanical',
-          priority: remoteItem.priority || 'Not Assigned',
+          priority: (remoteItem.priority && String(remoteItem.priority).trim()) || '',
           status: remoteItem.status || 'Repair',
           reportedBy: remoteItem.staffId || 'Staff',
           assignedTech: remoteItem.assignedTech && String(remoteItem.assignedTech).trim() !== '' ? String(remoteItem.assignedTech).trim() : 'Unassigned',
@@ -1875,6 +1938,32 @@
         updateBDDashboard();
       }
       showToast('Network error: Unable to connect to Google Sheets backend.', 'error');
+    }
+  }
+
+  function renderPriorityBadge(priority) {
+    const p = priority ? String(priority).trim().toLowerCase() : '';
+    if (p === 'critical') {
+      return `<span class="priority-badge priority-badge-critical">Critical</span>`;
+    }
+    if (p === 'medium') {
+      return `<span class="priority-badge priority-badge-medium">Medium</span>`;
+    }
+    if (p === 'low') {
+      return `<span class="priority-badge priority-badge-low">Low</span>`;
+    }
+    return `<span class="priority-badge priority-badge-notset">Not Set</span>`;
+  }
+
+  function updatePrioritySelectStyle(selectEl) {
+    if (!selectEl) return;
+    selectEl.classList.remove('priority-select-critical', 'priority-select-medium', 'priority-select-low');
+    if (selectEl.value === 'Critical') {
+      selectEl.classList.add('priority-select-critical');
+    } else if (selectEl.value === 'Medium') {
+      selectEl.classList.add('priority-select-medium');
+    } else if (selectEl.value === 'Low') {
+      selectEl.classList.add('priority-select-low');
     }
   }
 
@@ -2269,6 +2358,16 @@
     });
   }
 
+  const ALLOWED_MACHINES = [
+    'VIM 01', 'VIM 02', 'VIM 03', 'VIM 04', 'VIM 05',
+    'VIM 06', 'VIM 07', 'VIM 08', 'VIM 09', 'VIM 10',
+    'VIM 11', 'VIM 12', 'VIM 13', 'VIM 14', 'VIM 15',
+    'Turn Table + KUKA', 'Robot Arm 1', 'Robot Arm 2',
+    'Oven', 'Compressor', 'Cooling Tower', 'Crane'
+  ];
+  const ALLOWED_PRIORITIES = ['Critical', 'Medium', 'Low'];
+  const ALLOWED_CATEGORIES = ['Mechanical', 'Electrical', 'Hydraulic', 'Pneumatic', 'Parametic'];
+
   function resetBreakdownForm() {
     const form = document.getElementById('reportBreakdownForm');
     if (form) form.reset();
@@ -2278,17 +2377,20 @@
     const machineSelect = document.getElementById('rbMachine');
     if (machineSelect) machineSelect.value = '';
 
-    const customMachine = document.getElementById('rbMachineCustom');
-    if (customMachine) {
-      customMachine.value = '';
-      customMachine.style.display = 'none';
+    const prioritySelect = document.getElementById('rbPriority');
+    if (prioritySelect) {
+      prioritySelect.value = '';
+      updatePrioritySelectStyle(prioritySelect);
     }
+
+    const categorySelect = document.getElementById('rbCategory');
+    if (categorySelect) categorySelect.value = '';
 
     const startInput = document.getElementById('rbStartTime');
     if (startInput) startInput.value = formatInputDateTime(new Date());
 
     const beforePhotoName = document.getElementById('rbBeforePhotoName');
-    if (beforePhotoName) beforePhotoName.textContent = 'Supported: JPG, JPEG, PNG';
+    if (beforePhotoName) beforePhotoName.textContent = 'Upload image (Optional)';
 
     document.querySelectorAll('#reportBreakdownForm .input-error').forEach(el => el.classList.remove('input-error'));
     clearBreakdownFormAlert();
@@ -2336,30 +2438,20 @@
 
   function validateBreakdownForm() {
     const errors = [];
-    const staffId = document.getElementById('rbStaffId')?.value?.trim();
-    const machineSelect = document.getElementById('rbMachine')?.value;
-    const machineCustom = document.getElementById('rbMachineCustom')?.value?.trim();
-    const machine = (machineSelect === '__OTHER__') ? machineCustom : machineSelect;
-    const startTime = document.getElementById('rbStartTime')?.value;
-    const category = document.getElementById('rbCategory')?.value;
+    const staffId = document.getElementById('rbStaffId')?.value?.trim() || (state.currentUser?.staffId || state.currentUser?.id || '');
+    const machine = document.getElementById('rbMachine')?.value?.trim();
+    const startTime = document.getElementById('rbStartTime')?.value?.trim();
+    const priority = document.getElementById('rbPriority')?.value?.trim();
+    const category = document.getElementById('rbCategory')?.value?.trim();
     const description = document.getElementById('rbDescription')?.value?.trim();
     const beforePhotoInput = document.getElementById('rbBeforePhoto');
 
     // Remove previous input-error marks
     document.querySelectorAll('#reportBreakdownForm .input-error').forEach(el => el.classList.remove('input-error'));
 
-    if (!staffId) {
-      errors.push('Staff ID is required (must be populated from profile or entered).');
-      document.getElementById('rbStaffId')?.classList.add('input-error');
-    }
-
-    if (!machine) {
-      errors.push('Machine / Equipment Name is required.');
-      if (machineSelect === '__OTHER__') {
-        document.getElementById('rbMachineCustom')?.classList.add('input-error');
-      } else {
-        document.getElementById('rbMachine')?.classList.add('input-error');
-      }
+    if (!machine || !ALLOWED_MACHINES.includes(machine)) {
+      errors.push('Please select a valid Machine / Equipment Name from the list.');
+      document.getElementById('rbMachine')?.classList.add('input-error');
     }
 
     if (!startTime) {
@@ -2367,14 +2459,23 @@
       document.getElementById('rbStartTime')?.classList.add('input-error');
     }
 
-    if (!category) {
-      errors.push('Problem Category is required.');
+    if (!priority || !ALLOWED_PRIORITIES.includes(priority)) {
+      errors.push('Priority is required. Must be Critical, Medium, or Low.');
+      document.getElementById('rbPriority')?.classList.add('input-error');
+    }
+
+    if (!category || !ALLOWED_CATEGORIES.includes(category)) {
+      errors.push('Problem Category is required. Must be Mechanical, Electrical, Hydraulic, Pneumatic, or Parametic.');
       document.getElementById('rbCategory')?.classList.add('input-error');
     }
 
     if (!description) {
       errors.push('Problem Description is required.');
       document.getElementById('rbDescription')?.classList.add('input-error');
+    }
+
+    if (!staffId) {
+      errors.push('Staff ID could not be identified from active authenticated session. Please log in again.');
     }
 
     // Photo file format validation (JPG, JPEG, PNG)
@@ -2395,6 +2496,7 @@
         staffId,
         machine,
         startTime,
+        priority,
         category,
         description
       }
@@ -2418,7 +2520,7 @@
     }
 
     // 2. Prepare the breakdown data object matching Google Sheets database structure
-    // Database: MMS DATABASE | Worksheet: BD DATABASE (Columns A to L)
+    // Database: MMS DATABASE | Worksheet: BD DATABASE (Columns A to N)
     // A newly reported breakdown is ALWAYS in 'Repair' status with no end time, downtime, or after photo.
     const now = new Date();
     const timeStr = formatSubmissionTime(now);
@@ -2435,7 +2537,7 @@
       // Database Columns Mapping:
       // Column A: Time
       // Column B: Month
-      // Column C: Staff ID
+      // Column C: Staff ID (Authenticated)
       // Column D: Machine
       // Column E: Breakdown Start Time
       // Column F: Breakdown End Time (Enforced empty for new active breakdown)
@@ -2445,6 +2547,8 @@
       // Column J: After Photo (Enforced empty for new active breakdown)
       // Column K: Problem Description
       // Column L: Status (Enforced 'Repair' for new active breakdown)
+      // Column M: Priority (Enforced Critical, Medium, or Low)
+      // Column N: Assigned Technician (Enforced empty on creation)
       const payload = {
         time: timeStr,                                           // Column A
         month: monthStr,                                         // Column B
@@ -2458,6 +2562,8 @@
         afterPhoto: '',                                          // Column J: strictly empty on creation
         description: validation.values.description,              // Column K
         status: 'Repair',                                        // Column L: strictly Repair on creation
+        priority: validation.values.priority,                    // Column M: strictly Critical, Medium, or Low
+        assignedTech: '',                                        // Column N: strictly empty on creation
         photoFiles: {
           before: beforePhotoObj,
           after: null
@@ -2502,7 +2608,7 @@
           issue: validation.values.description,
           description: validation.values.description,
           category: validation.values.category,
-          priority: 'Not Assigned',
+          priority: validation.values.priority,
           status: 'Repair',
           reportedBy: `${validation.values.staffId} (${state.currentUser ? state.currentUser.name : 'Technician'})`,
           assignedTech: 'Unassigned',
@@ -2556,21 +2662,24 @@
 
   function initBreakdownModalHandlers() {
     const machineSelect = document.getElementById('rbMachine');
-    const machineCustom = document.getElementById('rbMachineCustom');
     if (machineSelect) {
       machineSelect.addEventListener('change', () => {
-        if (machineSelect.value === '__OTHER__') {
-          if (machineCustom) {
-            machineCustom.style.display = 'block';
-            machineCustom.focus();
-          }
-        } else {
-          if (machineCustom) {
-            machineCustom.style.display = 'none';
-            machineCustom.value = '';
-          }
-        }
         machineSelect.classList.remove('input-error');
+      });
+    }
+
+    const prioritySelect = document.getElementById('rbPriority');
+    if (prioritySelect) {
+      prioritySelect.addEventListener('change', () => {
+        updatePrioritySelectStyle(prioritySelect);
+        prioritySelect.classList.remove('input-error');
+      });
+    }
+
+    const categorySelect = document.getElementById('rbCategory');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', () => {
+        categorySelect.classList.remove('input-error');
       });
     }
 
@@ -2583,7 +2692,7 @@
           const kb = Math.round(file.size / 1024);
           if (beforePhotoName) beforePhotoName.textContent = `📎 ${file.name} (${kb} KB)`;
         } else {
-          if (beforePhotoName) beforePhotoName.textContent = 'Supported: JPG, JPEG, PNG';
+          if (beforePhotoName) beforePhotoName.textContent = 'Upload image (Optional)';
         }
         beforePhoto.classList.remove('input-error');
       });
@@ -2946,6 +3055,8 @@
   window.openResolveBreakdownModal = openResolveBreakdownModal;
   window.submitResolveBreakdown = submitResolveBreakdown;
   window.openBreakdownDetailModal = openBreakdownDetailModal;
+  window.openResolvedDetailModal = openResolvedDetailModal;
+  window.closeResolvedDetailModal = closeResolvedDetailModal;
   window.filterResolvedHistory = filterResolvedHistory;
   window.updateBDDashboard = updateBDDashboard;
   window.fetchBreakdownsFromBackend = fetchBreakdownsFromBackend;
