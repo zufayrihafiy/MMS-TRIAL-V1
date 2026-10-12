@@ -1,4 +1,4 @@
-﻿/**
+/**
  * NETLIFY SERVER FUNCTION: auth-login
  *
  * Secure server-side Staff ID + Password authentication mapped to Firebase Authentication.
@@ -151,14 +151,24 @@ exports.handler = async function (event, context) {
       }
     }
 
-    // Determine user role from trusted Firebase custom claims only.
-    // Never assign administrator privileges based on Staff ID.
+    // Determine user role strictly from trusted Firebase custom claims.
+    // Allowed roles: ADMIN, TECHNICIAN.
+    // Reject users with missing, empty, or unauthorized roles (STAFF, GUEST, OPERATOR, etc.).
+    const rawRole = customClaims.role;
+    if (!rawRole || (rawRole !== 'ADMIN' && rawRole !== 'TECHNICIAN')) {
+      console.warn(`[auth-login] Login rejected for Staff ID ${normalizedStaffId}: Missing or unauthorized MMS role claim "${rawRole}".`);
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Access Denied: Your account does not have an authorized MMS role (ADMIN or TECHNICIAN). Please contact an administrator.',
+          code: 'ROLE_UNAUTHORIZED'
+        })
+      };
+    }
 
-    const roleCode =
-      customClaims.role === 'ADMIN'
-        ? 'ADMIN'
-        : 'TECHNICIAN';
-
+    const roleCode = rawRole;
     const resolvedRole = roleCode === 'ADMIN' ? 'Administrator' : 'Technician';
     const resolvedName = (userRecord && userRecord.displayName) || customClaims.name || signInData.displayName || `Staff ${normalizedStaffId}`;
     const initials = getInitials(resolvedName);
@@ -186,12 +196,13 @@ exports.handler = async function (event, context) {
     };
 
   } catch (err) {
+    console.error('[auth-login] Server error:', err);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: 'Authentication server error: ' + err.message
+        error: 'An unexpected server error occurred during authentication.'
       })
     };
   }

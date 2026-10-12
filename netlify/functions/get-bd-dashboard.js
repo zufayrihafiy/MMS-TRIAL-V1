@@ -4,12 +4,85 @@
  * Secure server-side endpoint for the Breakdown Management Dashboard.
  *
  * ACCESS CONTROL SPECIFICATION:
- * - Only authenticated ADMIN users can access this endpoint.
- * - Verifies ADMIN permissions strictly using Firebase Custom Claims.
- * - TECHNICIAN users receive HTTP 403 Forbidden.
+ * - Strictly restricted to authenticated ADMIN users.
+ * - Authenticated via Firebase Admin SDK with revocation checking:
+ *   auth.verifyIdToken(idToken, true).
+ * - Enforces ADMIN role claim on the server; TECHNICIAN users receive HTTP 403 Forbidden.
  * - Queries Google Apps Script via authenticated POST containing server-side MMS_API_KEY.
  * - Validates the 'success' flag from Google Apps Script response.
+ * - Generic server errors returned to frontend; detailed errors in server logs only.
  */
+
+const { initializeApp, applicationDefault, cert, getApps } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+
+/**
+ * Initialize or reuse Firebase Admin Auth instance using established pattern.
+ */
+function getFirebaseAdminAuth() {
+  if (getApps().length === 0) {
+    let credential;
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      try {
+        const sa = typeof process.env.FIREBASE_SERVICE_ACCOUNT_KEY === 'string'
+          ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+          : process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+        credential = cert(sa);
+      } catch (err) {
+        console.warn('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY JSON:', err.message);
+      }
+    }
+    if (!credential) {
+      try {
+        credential = applicationDefault();
+      } catch (credErr) {
+        console.warn('applicationDefault() fallback used:', credErr.message);
+      }
+    }
+    initializeApp({
+      credential,
+      projectId: process.env.FIREBASE_PROJECT_ID || 'mms-maintenance'
+    });
+  }
+  return getAuth();
+}
+
+/**
+ * Verify caller identity token via Firebase Admin SDK with revocation checking.
+ */
+async function verifyCallerToken(idToken, authInstance) {
+  try {
+    const decoded = await authInstance.verifyIdToken(idToken, true);
+    if (!decoded || !decoded.uid) {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Invalid token payload.' };
+    }
+
+    const caller = await authInstance.getUser(decoded.uid);
+    if (!caller) {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: User account not found.' };
+    }
+    if (caller.disabled) {
+      return { ok: false, statusCode: 403, error: 'Forbidden: User account is disabled.' };
+    }
+
+    return { ok: true, uid: decoded.uid, caller };
+  } catch (err) {
+    console.error('[get-bd-dashboard] Token verification failed:', err.message);
+    if (err.code === 'auth/id-token-revoked') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Authentication token has been revoked. Please log in again.' };
+    }
+    if (err.code === 'auth/id-token-expired') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Authentication token has expired. Please log in again.' };
+    }
+    if (err.code === 'auth/user-disabled') {
+      return { ok: false, statusCode: 403, error: 'Forbidden: User account is disabled.' };
+    }
+    if (err.code === 'auth/user-not-found') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: User account not found.' };
+    }
+    return { ok: false, statusCode: 401, error: 'Unauthorized: Token verification failed.' };
+  }
+}
 
 exports.handler = async function (event, context) {
   const headers = {
@@ -46,70 +119,52 @@ exports.handler = async function (event, context) {
   }
 
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const apiKey = process.env.FIREBASE_WEB_API_KEY;
-
-  if (!apiKey) {
+  if (!idToken) {
     return {
-      statusCode: 503,
+      statusCode: 401,
       headers,
       body: JSON.stringify({
         success: false,
-        configured: false,
-        error: 'Firebase Authentication is not configured on this server.'
+        unauthenticated: true,
+        error: 'Unauthorized: Missing authentication token.'
       })
     };
   }
 
-  let callerRole = 'TECHNICIAN';
-  let callerStaffId = '';
-
+  // 2. Fail-Closed Authentication via Firebase Admin SDK
+  let auth;
   try {
-    const lookupUrl = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`;
-    const verifyRes = await fetch(lookupUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken })
-    });
-
-    const verifyData = await verifyRes.json();
-    if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
-      return {
-        statusCode: 401,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          unauthenticated: true,
-          error: 'Unauthorized: Invalid or expired token.'
-        })
-      };
-    }
-
-    const caller = verifyData.users[0];
-    let customClaims = {};
-    if (caller.customAttributes) {
-      try {
-        customClaims = JSON.parse(caller.customAttributes);
-      } catch (e) {
-        customClaims = {};
-      }
-    }
-
-    callerRole = customClaims.role === 'ADMIN' ? 'ADMIN' : 'TECHNICIAN';
-    callerStaffId = (customClaims.staffId || caller.email.split('@')[0]).toUpperCase();
-  } catch (verifyErr) {
+    auth = getFirebaseAdminAuth();
+  } catch (adminInitErr) {
+    console.error('[get-bd-dashboard] Firebase Admin initialization error:', adminInitErr);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: 'Token verification error: ' + verifyErr.message
+        error: 'Authentication service is temporarily unavailable.'
       })
     };
   }
 
-  // STRICT SERVER-SIDE AUTHORIZATION CHECK
-  // TECHNICIAN users MUST receive HTTP 403 Forbidden!
-  if (callerRole !== 'ADMIN') {
+  const callerAuth = await verifyCallerToken(idToken, auth);
+  if (!callerAuth.ok) {
+    return {
+      statusCode: callerAuth.statusCode || 401,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        unauthenticated: callerAuth.statusCode !== 403,
+        error: callerAuth.error
+      })
+    };
+  }
+
+  // 3. Strict Server-Side Role Authorization: ADMIN ONLY
+  const claims = callerAuth.caller.customClaims || {};
+  const isAdmin = claims.role === 'ADMIN';
+
+  if (!isAdmin) {
     return {
       statusCode: 403,
       headers,
@@ -121,7 +176,7 @@ exports.handler = async function (event, context) {
     };
   }
 
-  // 2. Fetch Live Breakdown Records from Google Sheets Backend via Authenticated POST
+  // 4. Fetch Live Breakdown Records from Google Sheets Backend via Authenticated POST
   const monthParam = event.queryStringParameters?.month;
   const yearParam = event.queryStringParameters?.year;
 
@@ -151,21 +206,17 @@ exports.handler = async function (event, context) {
     };
   }
 
-  let records = [];
-
   try {
-    const gasPayload = {
-      action: 'getBreakdowns',
-      apiKey: mmsApiKey
-    };
-
     const gasResponse = await fetch(GAS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify(gasPayload)
+      body: JSON.stringify({
+        action: 'getBreakdowns',
+        apiKey: mmsApiKey
+      })
     });
 
     const gasText = await gasResponse.text();
@@ -173,44 +224,53 @@ exports.handler = async function (event, context) {
     try {
       gasResult = JSON.parse(gasText);
     } catch (e) {
-      gasResult = { success: false, error: 'Invalid response from Google Apps Script BD DATABASE.' };
+      gasResult = { success: false, error: 'Invalid response from Google Apps Script' };
     }
 
-    // STRICT CHECK: Check gasResult.success field explicitly
+    // STRICT CHECK: Do not treat HTTP 200 alone as success!
     if (!gasResponse.ok || !gasResult || gasResult.success !== true) {
       return {
         statusCode: 502,
         headers,
         body: JSON.stringify({
           success: false,
-          error: (gasResult && gasResult.error) || 'Failed to fetch breakdown records from Google Apps Script BD DATABASE.'
+          error: (gasResult && gasResult.error) || 'Google Apps Script BD DATABASE returned an error.'
         })
       };
     }
 
-    records = Array.isArray(gasResult.data) ? gasResult.data : [];
-  } catch (gasErr) {
+    const allRecords = Array.isArray(gasResult.data) ? gasResult.data : [];
+
+    // Filter by requested month/year if specified
+    const filteredRecords = allRecords.filter(item => {
+      const dateStr = item.startTime || item.reportedAt || item.time;
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return false;
+      if (yearParam !== undefined && d.getFullYear() !== parseInt(yearParam, 10)) return false;
+      if (monthParam !== undefined && d.getMonth() !== parseInt(monthParam, 10)) return false;
+      return true;
+    });
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        source: 'Google Sheets BD DATABASE (Live)',
+        totalBreakdowns: filteredRecords.length,
+        data: filteredRecords
+      })
+    };
+  } catch (err) {
+    console.error('[get-bd-dashboard] Backend request error:', err);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: 'Error connecting to Google Apps Script backend: ' + gasErr.message
+        error: 'An unexpected server error occurred while retrieving dashboard metrics.'
       })
     };
   }
-
-  return {
-    statusCode: 200,
-    headers,
-    body: JSON.stringify({
-      success: true,
-      authorizedAs: 'ADMIN',
-      staffId: callerStaffId,
-      month: monthParam,
-      year: yearParam,
-      hasGasConfigured: Boolean(GAS_URL && mmsApiKey),
-      records: records
-    })
-  };
 };

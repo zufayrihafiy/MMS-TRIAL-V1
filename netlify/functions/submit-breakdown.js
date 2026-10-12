@@ -5,10 +5,14 @@
  * to Google Apps Script (Google Sheets: MMS DATABASE -> Worksheet: BD DATABASE).
  *
  * Security & Identity Enforcement:
- * 1. Requires valid Firebase Authentication Bearer token.
- * 2. Authenticates identity and resolves Staff ID & Role.
- * 3. Enforces that reports cannot be submitted under an impersonated Staff ID.
- * 4. Checks Google Apps Script backend configuration.
+ * 1. Requires valid Firebase Authentication Bearer ID token verified via Firebase Admin SDK
+ *    with revocation checking: auth.verifyIdToken(idToken, true).
+ * 2. Strict fail-closed design: Never skips authentication.
+ * 3. Confirms caller account exists and is not disabled.
+ * 4. Resolves authenticated Staff ID strictly from customClaims.staffId or internal domain email.
+ * 5. Enforces that reports cannot be submitted under an impersonated Staff ID.
+ * 6. Keeps MMS_API_KEY secure on server; communicates via authenticated POST to Google Apps Script.
+ * 7. Generic server errors returned to frontend; detailed errors in server logs only.
  *
  * Columns Mapping:
  * Column A: Time
@@ -24,6 +28,105 @@
  * Column K: Problem Description
  * Column L: Status
  */
+
+const { initializeApp, applicationDefault, cert, getApps } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+
+/**
+ * Initialize or reuse Firebase Admin Auth instance using established pattern.
+ */
+function getFirebaseAdminAuth() {
+  if (getApps().length === 0) {
+    let credential;
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      try {
+        const sa = typeof process.env.FIREBASE_SERVICE_ACCOUNT_KEY === 'string'
+          ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+          : process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+        credential = cert(sa);
+      } catch (err) {
+        console.warn('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY JSON:', err.message);
+      }
+    }
+    if (!credential) {
+      try {
+        credential = applicationDefault();
+      } catch (credErr) {
+        console.warn('applicationDefault() fallback used:', credErr.message);
+      }
+    }
+    initializeApp({
+      credential,
+      projectId: process.env.FIREBASE_PROJECT_ID || 'mms-maintenance'
+    });
+  }
+  return getAuth();
+}
+
+/**
+ * Verify caller identity token via Firebase Admin SDK with revocation checking.
+ */
+async function verifyCallerToken(idToken, authInstance) {
+  try {
+    const decoded = await authInstance.verifyIdToken(idToken, true);
+    if (!decoded || !decoded.uid) {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Invalid token payload.' };
+    }
+
+    const caller = await authInstance.getUser(decoded.uid);
+    if (!caller) {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: User account not found.' };
+    }
+    if (caller.disabled) {
+      return { ok: false, statusCode: 403, error: 'Forbidden: User account is disabled.' };
+    }
+
+    return { ok: true, uid: decoded.uid, caller };
+  } catch (err) {
+    console.error('[submit-breakdown] Token verification failed:', err.message);
+    if (err.code === 'auth/id-token-revoked') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Authentication token has been revoked. Please log in again.' };
+    }
+    if (err.code === 'auth/id-token-expired') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Authentication token has expired. Please log in again.' };
+    }
+    if (err.code === 'auth/user-disabled') {
+      return { ok: false, statusCode: 403, error: 'Forbidden: User account is disabled.' };
+    }
+    if (err.code === 'auth/user-not-found') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: User account not found.' };
+    }
+    return { ok: false, statusCode: 401, error: 'Unauthorized: Token verification failed.' };
+  }
+}
+
+/**
+ * Resolve Staff ID strictly from customClaims.staffId or internal domain email prefix.
+ */
+function resolveStaffId(userRecord) {
+  if (!userRecord) return '';
+  const claims = userRecord.customClaims || {};
+
+  if (claims.staffId && typeof claims.staffId === 'string' && claims.staffId.trim()) {
+    return claims.staffId.trim().toUpperCase();
+  }
+
+  const staffDomain = (process.env.FIREBASE_STAFF_DOMAIN || 'mms.internal').trim().toLowerCase();
+  const email = (userRecord.email || '').trim().toLowerCase();
+
+  if (email) {
+    const atIndex = email.lastIndexOf('@');
+    if (atIndex > 0) {
+      const domain = email.slice(atIndex + 1);
+      const prefix = email.slice(0, atIndex);
+      if (domain === staffDomain && prefix) {
+        return prefix.toUpperCase();
+      }
+    }
+  }
+
+  return '';
+}
 
 exports.handler = async function (event, context) {
   const headers = {
@@ -67,80 +170,67 @@ exports.handler = async function (event, context) {
   }
 
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const apiKey = process.env.FIREBASE_WEB_API_KEY;
-
-  if (!apiKey) {
+  if (!idToken) {
     return {
-      statusCode: 503,
+      statusCode: 401,
       headers,
       body: JSON.stringify({
         success: false,
-        configured: false,
-        error: 'Authentication backend is not configured in Netlify environment variables (FIREBASE_WEB_API_KEY).'
+        unauthenticated: true,
+        error: 'Unauthorized: Missing authentication token.'
       })
     };
   }
 
-  let authenticatedStaffId = '';
-  let authenticatedRole = 'TECHNICIAN';
-  let authenticatedName = '';
-
+  let auth;
   try {
-    const lookupUrl = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`;
-    const verifyRes = await fetch(lookupUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken })
-    });
-
-    const verifyData = await verifyRes.json();
-    if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
-      return {
-        statusCode: 401,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          unauthenticated: true,
-          error: 'Unauthorized: Invalid or expired authentication token. Please log in again.'
-        })
-      };
-    }
-
-    const user = verifyData.users[0];
-    const email = user.email || '';
-    const staffFromEmail = email.split('@')[0].toUpperCase();
-
-    let customClaims = {};
-    if (user.customAttributes) {
-      try {
-        customClaims = JSON.parse(user.customAttributes);
-      } catch (e) {
-        customClaims = {};
-      }
-    }
-
-    authenticatedStaffId = (customClaims.staffId || staffFromEmail).toUpperCase();
-
-    // Determine role strictly from Firebase Custom Claims.
-    // Never assign ADMIN access based on Staff ID.
-
-    authenticatedRole =
-      customClaims.role === 'ADMIN'
-        ? 'ADMIN'
-        : 'TECHNICIAN';
-
-    authenticatedName = user.displayName || customClaims.name || authenticatedStaffId;
-
-  } catch (verifyErr) {
+    auth = getFirebaseAdminAuth();
+  } catch (adminInitErr) {
+    console.error('[submit-breakdown] Firebase Admin initialization error:', adminInitErr);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: 'Token verification failed: ' + verifyErr.message
+        error: 'Authentication service is temporarily unavailable.'
       })
     };
   }
+
+  const callerAuth = await verifyCallerToken(idToken, auth);
+  if (!callerAuth.ok) {
+    return {
+      statusCode: callerAuth.statusCode || 401,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        unauthenticated: callerAuth.statusCode !== 403,
+        error: callerAuth.error
+      })
+    };
+  }
+
+  const user = callerAuth.caller;
+  const customClaims = user.customClaims || {};
+  const callerRole = customClaims.role;
+
+  // Strict role authorization: Only ADMIN and TECHNICIAN are permitted to report breakdowns
+  if (!callerRole || (callerRole !== 'ADMIN' && callerRole !== 'TECHNICIAN')) {
+    console.warn(`[submit-breakdown] Authorization rejected for caller ${user.uid}: Role "${callerRole}" is not authorized.`);
+    return {
+      statusCode: 403,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        forbidden: true,
+        error: 'Forbidden: Reporting breakdowns is restricted to authorized TECHNICIAN or ADMIN accounts.'
+      })
+    };
+  }
+
+  const authenticatedRole = callerRole;
+  const authenticatedStaffId = resolveStaffId(user);
+  const authenticatedName = user.displayName || authenticatedStaffId;
 
   // =========================================================================
   // 2. VERIFY GOOGLE APPS SCRIPT BACKEND CONFIGURATION
@@ -153,7 +243,7 @@ exports.handler = async function (event, context) {
       body: JSON.stringify({
         success: false,
         configured: false,
-        error: 'Google Apps Script backend URL is not configured in Netlify environment variables (GOOGLE_APPS_SCRIPT_URL). Sheet: MMS DATABASE -> Worksheet: BD DATABASE.'
+        error: 'Google Apps Script backend URL is not configured (GOOGLE_APPS_SCRIPT_URL).'
       })
     };
   }
@@ -166,7 +256,7 @@ exports.handler = async function (event, context) {
       body: JSON.stringify({
         success: false,
         configured: false,
-        error: 'Backend API key is not configured in Netlify environment variables (MMS_API_KEY).'
+        error: 'Backend API key is not configured (MMS_API_KEY).'
       })
     };
   }
@@ -176,7 +266,7 @@ exports.handler = async function (event, context) {
   // =========================================================================
   let data;
   try {
-    data = JSON.parse(event.body);
+    data = JSON.parse(event.body || '{}');
   } catch (parseErr) {
     return {
       statusCode: 400,
@@ -217,9 +307,6 @@ exports.handler = async function (event, context) {
   }
 
   // ENFORCE SERVER-SIDE DEFAULT VALUES FOR NEW BREAKDOWN:
-  // A newly created breakdown is always in 'Repair' status with no end time,
-  // downtime, or after photo. Breakdown completion is handled solely by the resolve action.
-  // Any client-submitted values for status, endTime, downtime, or afterPhoto are ignored.
   const ENFORCED_STATUS = 'Repair';
   const ENFORCED_END_TIME = '';
   const ENFORCED_DOWNTIME = '';
@@ -303,12 +390,13 @@ exports.handler = async function (event, context) {
       })
     };
   } catch (err) {
+    console.error('[submit-breakdown] Backend request error:', err);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: 'Internal Netlify Server Function Error: ' + err.message
+        error: 'An unexpected server error occurred while submitting breakdown report.'
       })
     };
   }

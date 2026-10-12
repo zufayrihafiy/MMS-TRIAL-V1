@@ -216,7 +216,22 @@ exports.handler = async function (event, context) {
       };
     }
 
-    // 3. List all users and filter for active TECHNICIAN role with valid Staff ID
+    // 3. Strict Role Authorization: ADMIN or TECHNICIAN only
+    const callerClaims = callerAuth.caller.customClaims || {};
+    const callerRole = callerClaims.role;
+    if (!callerRole || (callerRole !== 'ADMIN' && callerRole !== 'TECHNICIAN')) {
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          forbidden: true,
+          error: 'Forbidden: Access to technician directory requires an authorized TECHNICIAN or ADMIN account.'
+        })
+      };
+    }
+
+    // 4. List all users and filter for active TECHNICIAN role with valid Staff ID
     const technicians = [];
     let nextPageToken = undefined;
 

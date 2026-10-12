@@ -5,22 +5,24 @@
  * (Spreadsheet: MMS DATABASE -> Worksheet: BD DATABASE).
  *
  * Security & Integrity Features:
- * 1. Validates Firebase Authentication Bearer token and caller identity.
- * 2. Strictly requires valid Breakdown End Time before marking breakdown as completed.
- * 3. Enforces End Time >= Start Time validation.
- * 4. Validates Assigned Technician server-side via Firebase Admin SDK:
+ * 1. Strict Fail-Closed Caller Authentication: Requires valid Firebase Bearer ID token
+ *    verified via Firebase Admin SDK with revocation checking: auth.verifyIdToken(idToken, true).
+ * 2. Confirms caller account exists and is not disabled.
+ * 3. Strictly requires valid Breakdown End Time before marking breakdown as completed.
+ * 4. Enforces End Time >= Start Time validation.
+ * 5. Validates Assigned Technician server-side via Firebase Admin SDK:
  *      - User exists in Firebase Authentication
  *      - Account is NOT disabled
  *      - Custom claim role === "TECHNICIAN"
- * 5. Resolves technician's stable Staff ID consistently:
+ * 6. Resolves technician's stable Staff ID consistently:
  *      - Preferred: customClaims.staffId
  *      - Fallback: email prefix ONLY when email domain matches FIREBASE_STAFF_DOMAIN
  *      - Never falls back to displayName or Firebase UID
  *      - Rejects technician assignment if a valid Staff ID cannot be determined
- * 6. Authenticates to Google Apps Script using server-side MMS_API_KEY.
- * 7. Passes stable composite keys (Machine, Start Time, ID) to avoid row index shifts.
- * 8. Checks the backend 'success' flag strictly (never treats HTTP 200 alone as success).
- * 9. Generic server errors returned to frontend; detailed errors in server logs only.
+ * 7. Authenticates to Google Apps Script using server-side MMS_API_KEY.
+ * 8. Passes stable composite keys (Machine, Start Time, ID) to avoid row index shifts.
+ * 9. Checks the backend 'success' flag strictly (never treats HTTP 200 alone as success).
+ * 10. Generic server errors returned to frontend; detailed errors in server logs only.
  */
 
 const { initializeApp, applicationDefault, cert, getApps } = require('firebase-admin/app');
@@ -55,6 +57,43 @@ function getFirebaseAdminAuth() {
     });
   }
   return getAuth();
+}
+
+/**
+ * Verify caller identity token via Firebase Admin SDK with revocation checking.
+ */
+async function verifyCallerToken(idToken, authInstance) {
+  try {
+    const decoded = await authInstance.verifyIdToken(idToken, true);
+    if (!decoded || !decoded.uid) {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Invalid token payload.' };
+    }
+
+    const caller = await authInstance.getUser(decoded.uid);
+    if (!caller) {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: User account not found.' };
+    }
+    if (caller.disabled) {
+      return { ok: false, statusCode: 403, error: 'Forbidden: User account is disabled.' };
+    }
+
+    return { ok: true, uid: decoded.uid, caller };
+  } catch (err) {
+    console.error('[resolve-breakdown] Token verification failed:', err.message);
+    if (err.code === 'auth/id-token-revoked') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Authentication token has been revoked. Please log in again.' };
+    }
+    if (err.code === 'auth/id-token-expired') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Authentication token has expired. Please log in again.' };
+    }
+    if (err.code === 'auth/user-disabled') {
+      return { ok: false, statusCode: 403, error: 'Forbidden: User account is disabled.' };
+    }
+    if (err.code === 'auth/user-not-found') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: User account not found.' };
+    }
+    return { ok: false, statusCode: 401, error: 'Unauthorized: Token verification failed.' };
+  }
 }
 
 /**
@@ -111,7 +150,7 @@ exports.handler = async function (event, context) {
     };
   }
 
-  // 1. Verify Firebase Bearer Token
+  // 1. Require Bearer Token
   const authHeader = event.headers.authorization || event.headers.Authorization || '';
   if (!authHeader.startsWith('Bearer ')) {
     return {
@@ -126,62 +165,69 @@ exports.handler = async function (event, context) {
   }
 
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const apiKey = process.env.FIREBASE_WEB_API_KEY;
-
-  let authenticatedStaffId = '';
-  let authenticatedRole = 'TECHNICIAN';
-
-  if (apiKey) {
-    try {
-      const lookupUrl = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`;
-      const verifyRes = await fetch(lookupUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken })
-      });
-
-      const verifyData = await verifyRes.json();
-      if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            unauthenticated: true,
-            error: 'Unauthorized: Invalid or expired authentication token. Please log in again.'
-          })
-        };
-      }
-
-      const user = verifyData.users[0];
-      const email = user.email || '';
-      const staffFromEmail = email.split('@')[0].toUpperCase();
-
-      let customClaims = {};
-      if (user.customAttributes) {
-        try {
-          customClaims = JSON.parse(user.customAttributes);
-        } catch (e) {
-          customClaims = {};
-        }
-      }
-
-      authenticatedStaffId = (customClaims.staffId || staffFromEmail).toUpperCase();
-      authenticatedRole = customClaims.role === 'ADMIN' ? 'ADMIN' : 'TECHNICIAN';
-    } catch (verifyErr) {
-      console.error('[resolve-breakdown] Token verification failed:', verifyErr);
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: 'An internal error occurred during authentication.'
-        })
-      };
-    }
+  if (!idToken) {
+    return {
+      statusCode: 401,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        unauthenticated: true,
+        error: 'Unauthorized: Missing authentication token.'
+      })
+    };
   }
 
-  // 2. Parse & Validate Payload
+  // 2. Fail-Closed Caller Verification via Firebase Admin SDK
+  let adminAuth;
+  try {
+    adminAuth = getFirebaseAdminAuth();
+  } catch (initErr) {
+    console.error('[resolve-breakdown] Firebase Admin initialization error:', initErr);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: 'Authentication service is temporarily unavailable.'
+      })
+    };
+  }
+
+  const callerAuth = await verifyCallerToken(idToken, adminAuth);
+  if (!callerAuth.ok) {
+    return {
+      statusCode: callerAuth.statusCode || 401,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        unauthenticated: callerAuth.statusCode !== 403,
+        error: callerAuth.error
+      })
+    };
+  }
+
+  const callerUser = callerAuth.caller;
+  const callerClaims = callerUser.customClaims || {};
+  const callerRole = callerClaims.role;
+
+  // Strict role authorization: Only ADMIN and TECHNICIAN are permitted to resolve breakdowns
+  if (!callerRole || (callerRole !== 'ADMIN' && callerRole !== 'TECHNICIAN')) {
+    console.warn(`[resolve-breakdown] Authorization rejected for caller ${callerUser.uid}: Role "${callerRole}" is not authorized.`);
+    return {
+      statusCode: 403,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        forbidden: true,
+        error: 'Forbidden: Resolving breakdowns is restricted to authorized TECHNICIAN or ADMIN accounts.'
+      })
+    };
+  }
+
+  const authenticatedRole = callerRole;
+  const authenticatedStaffId = resolveTechnicianStaffId(callerUser) || (callerUser.email ? callerUser.email.split('@')[0].toUpperCase() : callerUser.uid);
+
+  // 3. Parse & Validate Payload
   let data;
   try {
     data = JSON.parse(event.body || '{}');
@@ -241,7 +287,7 @@ exports.handler = async function (event, context) {
     }
   }
 
-  // 3. Strictly require and validate Assigned Technician using Firebase Admin SDK
+  // 4. Strictly require and validate Assigned Technician using Firebase Admin SDK
   const selectedUid = String(technicianUid || assignedTech || '').trim();
   if (!selectedUid || selectedUid.toLowerCase() === 'unassigned') {
     return {
@@ -257,21 +303,6 @@ exports.handler = async function (event, context) {
   let verifiedStaffId = '';
 
   try {
-    let adminAuth;
-    try {
-      adminAuth = getFirebaseAdminAuth();
-    } catch (initErr) {
-      console.error('[resolve-breakdown] Firebase Admin initialization error:', initErr);
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: 'Technician verification service is temporarily unavailable.'
-        })
-      };
-    }
-
     let technicianRecord = null;
     try {
       technicianRecord = await adminAuth.getUser(selectedUid);
@@ -347,7 +378,7 @@ exports.handler = async function (event, context) {
     };
   }
 
-  // 4. Connect to Google Apps Script
+  // 5. Connect to Google Apps Script
   const GAS_URL = process.env.GOOGLE_APPS_SCRIPT_URL;
   if (!GAS_URL) {
     return {

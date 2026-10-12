@@ -16,10 +16,46 @@
  *
  * Security:
  *   - Restricted strictly to the ADMIN role via Firebase Custom Claims.
- *   - Firebase Admin SDK used for privileged operations.
+ *   - Firebase Admin SDK used for privileged token verification with revocation check.
  *   - Plaintext passwords are never stored or logged.
  *   - ADMIN access is never granted based on Staff ID alone.
+ *   - Fails closed on any authentication error or missing configuration.
+ *   - Generic server errors returned to client; detailed logs kept server-side.
  */
+
+const { initializeApp, applicationDefault, cert, getApps } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+
+/**
+ * Initialize or reuse Firebase Admin Auth instance using established pattern.
+ */
+function getFirebaseAdminAuth() {
+  if (getApps().length === 0) {
+    let credential;
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      try {
+        const sa = typeof process.env.FIREBASE_SERVICE_ACCOUNT_KEY === 'string'
+          ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+          : process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+        credential = cert(sa);
+      } catch (err) {
+        console.warn('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY JSON:', err.message);
+      }
+    }
+    if (!credential) {
+      try {
+        credential = applicationDefault();
+      } catch (credErr) {
+        console.warn('applicationDefault() fallback used:', credErr.message);
+      }
+    }
+    initializeApp({
+      credential,
+      projectId: process.env.FIREBASE_PROJECT_ID || 'mms-maintenance'
+    });
+  }
+  return getAuth();
+}
 
 // -------------------------------------------------------------------------
 // Shared password policy
@@ -54,37 +90,45 @@ function validatePassword(password) {
 // -------------------------------------------------------------------------
 // Verify caller token and return admin check result
 // -------------------------------------------------------------------------
-async function verifyAdminCaller(idToken, apiKey) {
-  const lookupUrl = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`;
-  const verifyRes = await fetch(lookupUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken })
-  });
-
-  const verifyData = await verifyRes.json();
-  if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
-    return { ok: false, error: 'Invalid or expired token.' };
-  }
-
-  const caller = verifyData.users[0];
-  let customClaims = {};
-  if (caller.customAttributes) {
-    try {
-      customClaims = JSON.parse(caller.customAttributes);
-    } catch (e) {
-      customClaims = {};
+async function verifyAdminCaller(idToken, authInstance) {
+  try {
+    const decoded = await authInstance.verifyIdToken(idToken, true);
+    if (!decoded || !decoded.uid) {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Invalid token payload.' };
     }
-  }
 
-  // Verify Administrator role using Firebase Custom Claims only.
-  // ADMIN access is never granted based on Staff ID.
-  const isAdmin = customClaims.role === 'ADMIN';
-  if (!isAdmin) {
-    return { ok: false, error: 'Forbidden: User account management is restricted to Administrators only.' };
-  }
+    const caller = await authInstance.getUser(decoded.uid);
+    if (!caller) {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: User account not found.' };
+    }
+    if (caller.disabled) {
+      return { ok: false, statusCode: 403, error: 'Forbidden: User account is disabled.' };
+    }
 
-  return { ok: true, caller };
+    const customClaims = caller.customClaims || {};
+    const isAdmin = customClaims.role === 'ADMIN';
+
+    if (!isAdmin) {
+      return { ok: false, statusCode: 403, error: 'Forbidden: User account management is restricted to Administrators only.' };
+    }
+
+    return { ok: true, caller, uid: decoded.uid };
+  } catch (err) {
+    console.error('[manage-users] Admin verification failed:', err.message);
+    if (err.code === 'auth/id-token-revoked') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Authentication token has been revoked. Please log in again.' };
+    }
+    if (err.code === 'auth/id-token-expired') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: Authentication token has expired. Please log in again.' };
+    }
+    if (err.code === 'auth/user-disabled') {
+      return { ok: false, statusCode: 403, error: 'Forbidden: User account is disabled.' };
+    }
+    if (err.code === 'auth/user-not-found') {
+      return { ok: false, statusCode: 401, error: 'Unauthorized: User account not found.' };
+    }
+    return { ok: false, statusCode: 401, error: 'Unauthorized: Token verification failed.' };
+  }
 }
 
 // -------------------------------------------------------------------------
@@ -113,21 +157,31 @@ exports.handler = async function (event, context) {
   }
 
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const apiKey = process.env.FIREBASE_WEB_API_KEY;
-  const staffDomain = (process.env.FIREBASE_STAFF_DOMAIN || 'mms.internal').trim().toLowerCase();
-
-  if (!apiKey) {
+  if (!idToken) {
     return {
-      statusCode: 503,
+      statusCode: 401,
       headers,
-      body: JSON.stringify({
-        success: false,
-        error: 'Firebase Authentication is not configured in Netlify environment variables.'
-      })
+      body: JSON.stringify({ success: false, error: 'Unauthorized: Missing authentication token.' })
     };
   }
 
-  // 2. Parse request body and determine action
+  const apiKey = process.env.FIREBASE_WEB_API_KEY;
+  const staffDomain = (process.env.FIREBASE_STAFF_DOMAIN || 'mms.internal').trim().toLowerCase();
+
+  // 2. Fail-Closed Admin SDK Initialization
+  let auth;
+  try {
+    auth = getFirebaseAdminAuth();
+  } catch (adminInitErr) {
+    console.error('[manage-users] Firebase Admin initialization error:', adminInitErr);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ success: false, error: 'Authentication service is temporarily unavailable.' })
+    };
+  }
+
+  // 3. Parse request body and determine action
   let payload = {};
   if (event.body) {
     try {
@@ -144,12 +198,11 @@ exports.handler = async function (event, context) {
   const action = (payload.action || 'list').toLowerCase();
 
   try {
-    // 3. Verify caller is ADMIN
-    const adminCheck = await verifyAdminCaller(idToken, apiKey);
+    // 4. Verify caller is ADMIN strictly via Firebase Admin SDK
+    const adminCheck = await verifyAdminCaller(idToken, auth);
     if (!adminCheck.ok) {
-      const status = adminCheck.error.startsWith('Forbidden') ? 403 : 401;
       return {
-        statusCode: status,
+        statusCode: adminCheck.statusCode || 401,
         headers,
         body: JSON.stringify({ success: false, error: adminCheck.error })
       };
@@ -180,6 +233,17 @@ exports.handler = async function (event, context) {
     // ACTION: create — create a new Firebase user account
     // -----------------------------------------------------------------------
     if (action === 'create') {
+      if (!apiKey) {
+        return {
+          statusCode: 503,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'User creation service requires FIREBASE_WEB_API_KEY in environment variables.'
+          })
+        };
+      }
+
       const { staffId, displayName, password, role } = payload;
 
       if (!staffId || !password) {
@@ -190,7 +254,7 @@ exports.handler = async function (event, context) {
         };
       }
 
-      // Enforce password policy — frontend and backend
+      // Enforce password policy
       const pwCheck = validatePassword(password);
       if (!pwCheck.valid) {
         return {
@@ -200,9 +264,21 @@ exports.handler = async function (event, context) {
         };
       }
 
+      const normalizedRole = String(role || '').trim().toUpperCase();
+      if (normalizedRole !== 'ADMIN' && normalizedRole !== 'TECHNICIAN') {
+        return {
+          statusCode: 422,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'Invalid role specified. MMS strictly supports only ADMIN or TECHNICIAN roles.'
+          })
+        };
+      }
+
       const normalizedStaffId = String(staffId).trim().toUpperCase();
       const mappedEmail = `${normalizedStaffId.toLowerCase()}@${staffDomain}`;
-      const assignedRole = (role === 'ADMIN') ? 'ADMIN' : 'TECHNICIAN';
+      const assignedRole = normalizedRole;
       const resolvedName = displayName ? String(displayName).trim() : `Staff ${normalizedStaffId}`;
 
       // Create user via Firebase Auth REST API (signUp)
@@ -237,11 +313,6 @@ exports.handler = async function (event, context) {
         };
       }
 
-      // NOTE: Custom Claims (role) must be set via Firebase Admin SDK.
-      // The Netlify function uses the REST API and cannot set custom claims directly.
-      // After creating the user, the admin must set the role using the Firebase Admin SDK
-      // (firebase-admin-setup/set-admin.js or equivalent) or Firebase Console.
-
       return {
         statusCode: 200,
         headers,
@@ -271,7 +342,6 @@ exports.handler = async function (event, context) {
         };
       }
 
-      // Enforce password policy — backend validation
       const pwCheck = validatePassword(newPassword);
       if (!pwCheck.valid) {
         return {
@@ -284,10 +354,6 @@ exports.handler = async function (event, context) {
       const normalizedTargetId = String(targetStaffId).trim().toUpperCase();
       const targetEmail = `${normalizedTargetId.toLowerCase()}@${staffDomain}`;
 
-      // Look up target user's idToken via admin lookup (requires Admin SDK for production).
-      // Via REST API: get a sign-in token for the target user is not possible without their credentials.
-      // This endpoint requires Firebase Admin SDK to update another user's password securely.
-      // Return a structured response indicating the Admin SDK path required.
       return {
         statusCode: 200,
         headers,
@@ -307,7 +373,18 @@ exports.handler = async function (event, context) {
     // ACTION: reset-password — self-service reset (admin resets own password)
     // -----------------------------------------------------------------------
     if (action === 'reset-password') {
-      const { currentPassword, newPassword, staffId } = payload;
+      if (!apiKey) {
+        return {
+          statusCode: 503,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'Password update service requires FIREBASE_WEB_API_KEY in environment variables.'
+          })
+        };
+      }
+
+      const { newPassword } = payload;
 
       if (!newPassword) {
         return {
@@ -317,7 +394,6 @@ exports.handler = async function (event, context) {
         };
       }
 
-      // Enforce password policy — backend validation
       const pwCheck = validatePassword(newPassword);
       if (!pwCheck.valid) {
         return {
@@ -327,8 +403,6 @@ exports.handler = async function (event, context) {
         };
       }
 
-      // Use Firebase REST API: update password for the currently authenticated user
-      // This works for the caller's own account using their valid idToken.
       const updateUrl = `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${encodeURIComponent(apiKey)}`;
       const updateRes = await fetch(updateUrl, {
         method: 'POST',
@@ -369,7 +443,6 @@ exports.handler = async function (event, context) {
       };
     }
 
-    // Unknown action
     return {
       statusCode: 400,
       headers,
@@ -380,10 +453,11 @@ exports.handler = async function (event, context) {
     };
 
   } catch (err) {
+    console.error('[manage-users] Server error:', err);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ success: false, error: 'Server error: ' + err.message })
+      body: JSON.stringify({ success: false, error: 'An unexpected server error occurred.' })
     };
   }
 };

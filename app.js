@@ -31,7 +31,7 @@
         id: 'USR-02',
         name: 'Ahmad Firdaus',
         initials: 'AF',
-        role: 'Supervisor / Engineer',
+        role: 'Technician',
         email: 'ahmad.firdaus@industrialmms.com',
         department: 'Plant Mechanical Operations'
       },
@@ -632,11 +632,9 @@
   }
 
   function applyRolePermissions() {
-    const role = state.currentUser.role;
-    const roleCode = state.currentUser.roleCode;
-    const isTech = role === 'Technician' || roleCode === 'TECHNICIAN';
-    const isSupervisor = role === 'Supervisor / Engineer';
-    const isAdmin = role === 'Administrator' || roleCode === 'ADMIN';
+    const role = state.currentUser ? state.currentUser.role : '';
+    const roleCode = state.currentUser ? state.currentUser.roleCode : '';
+    const isAdmin = roleCode === 'ADMIN' || role === 'Administrator';
 
     // BD Dashboard restricted indicator (strictly Administrator only)
     const bdDashboardLock = document.getElementById('bdDashboardLockNotice');
@@ -656,9 +654,9 @@
       el.style.display = isAdmin ? '' : 'none';
     });
 
-    // Supervisor & Admin actions
+    // Supervisor & Admin actions (now strictly Admin-only: MMS only supports ADMIN and TECHNICIAN)
     document.querySelectorAll('.supervisor-admin-only').forEach(el => {
-      el.style.display = (isAdmin || isSupervisor) ? '' : 'none';
+      el.style.display = isAdmin ? '' : 'none';
     });
   }
 
@@ -3040,6 +3038,12 @@
   // Modal: Manage Staff Accounts (ADMIN only)
   // -------------------------------------------------------------------------
   function openManageUsersModal() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: User account management is restricted to Administrators only.', 'error');
+      return;
+    }
     const modal = document.getElementById('manageUsersModal');
     if (!modal) return;
     modal.classList.add('active');
@@ -3107,9 +3111,14 @@
 
     const staffId = (document.getElementById('newUserStaffId') || {}).value || '';
     const displayName = (document.getElementById('newUserDisplayName') || {}).value || '';
-    const role = (document.getElementById('newUserRole') || {}).value || 'TECHNICIAN';
+    const role = (document.getElementById('newUserRole') || {}).value || '';
     const password = (document.getElementById('newUserPassword') || {}).value || '';
     const confirmPassword = (document.getElementById('newUserConfirmPassword') || {}).value || '';
+
+    if (role !== 'ADMIN' && role !== 'TECHNICIAN') {
+      showPanelAlert('muCreateUserAlert', 'Role must strictly be Administrator (ADMIN) or Technician (TECHNICIAN).', 'error');
+      return;
+    }
 
     if (!staffId.trim()) {
       showPanelAlert('muCreateUserAlert', 'Staff ID is required.', 'error');
