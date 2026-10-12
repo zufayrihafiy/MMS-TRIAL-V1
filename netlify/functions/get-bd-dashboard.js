@@ -126,40 +126,78 @@ exports.handler = async function (event, context) {
   const yearParam = event.queryStringParameters?.year;
 
   const GAS_URL = process.env.GOOGLE_APPS_SCRIPT_URL;
+  if (!GAS_URL) {
+    return {
+      statusCode: 503,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        configured: false,
+        error: 'Google Apps Script backend URL is not configured (GOOGLE_APPS_SCRIPT_URL).'
+      })
+    };
+  }
+
   const mmsApiKey = process.env.MMS_API_KEY;
+  if (!mmsApiKey) {
+    return {
+      statusCode: 503,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        configured: false,
+        error: 'Backend API key is not configured (MMS_API_KEY).'
+      })
+    };
+  }
+
   let records = [];
 
-  if (GAS_URL && mmsApiKey) {
+  try {
+    const gasPayload = {
+      action: 'getBreakdowns',
+      apiKey: mmsApiKey
+    };
+
+    const gasResponse = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(gasPayload)
+    });
+
+    const gasText = await gasResponse.text();
+    let gasResult;
     try {
-      const gasPayload = {
-        action: 'getBreakdowns',
-        apiKey: mmsApiKey
-      };
-
-      const gasResponse = await fetch(GAS_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(gasPayload)
-      });
-
-      const gasText = await gasResponse.text();
-      let gasResult;
-      try {
-        gasResult = JSON.parse(gasText);
-      } catch (e) {
-        gasResult = null;
-      }
-
-      // Check success field
-      if (gasResponse.ok && gasResult && gasResult.success === true && Array.isArray(gasResult.data)) {
-        records = gasResult.data;
-      }
-    } catch (gasErr) {
-      // Non-fatal: records remains empty
+      gasResult = JSON.parse(gasText);
+    } catch (e) {
+      gasResult = { success: false, error: 'Invalid response from Google Apps Script BD DATABASE.' };
     }
+
+    // STRICT CHECK: Check gasResult.success field explicitly
+    if (!gasResponse.ok || !gasResult || gasResult.success !== true) {
+      return {
+        statusCode: 502,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: (gasResult && gasResult.error) || 'Failed to fetch breakdown records from Google Apps Script BD DATABASE.'
+        })
+      };
+    }
+
+    records = Array.isArray(gasResult.data) ? gasResult.data : [];
+  } catch (gasErr) {
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: 'Error connecting to Google Apps Script backend: ' + gasErr.message
+      })
+    };
   }
 
   return {

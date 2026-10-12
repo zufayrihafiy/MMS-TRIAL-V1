@@ -64,8 +64,8 @@
         role: 'Senior Mechanical Engineer',
         skills: 'Hydraulics, CNC Spindles, Turbines',
         shift: 'Shift A (07:00 - 15:30)',
-        status: 'In Job',
-        activeJob: 'BD-2026-102 (CNC 04)',
+        status: 'Available',
+        activeJob: 'None (Standby)',
         completedJobs: 62,
         contact: '+60 13-441 5521'
       },
@@ -76,8 +76,8 @@
         role: 'Hydraulics Specialist',
         skills: 'Pneumatics, Press Hydraulics, Seals',
         shift: 'Shift B (15:00 - 23:30)',
-        status: 'In Job',
-        activeJob: 'BD-2026-101 (Press 02)',
+        status: 'Available',
+        activeJob: 'None (Standby)',
         completedJobs: 89,
         contact: '+60 19-332 7789'
       },
@@ -124,8 +124,8 @@
         role: 'Instrumentation Engineer',
         skills: 'PID Tuning, Calibrators, Flow Meters',
         shift: 'Shift A (07:00 - 15:30)',
-        status: 'In Job',
-        activeJob: 'BD-2026-105 (Molding 03)',
+        status: 'Available',
+        activeJob: 'None (Standby)',
         completedJobs: 51,
         contact: '+60 18-991 4402'
       },
@@ -142,105 +142,7 @@
         contact: '+60 11-209 8831'
       }
     ],
-    breakdowns: [
-      {
-        id: 'BD-2026-101',
-        machine: 'Stamping Press Line 02',
-        line: 'Press Shop Line 2',
-        issue: 'Hydraulic main cylinder pressure loss below 180 bar.',
-        priority: 'High',
-        status: 'Active', // Active / Pending / Resolved
-        reportedBy: 'Zainal (Line Supervisor)',
-        assignedTech: 'Razak bin Ismail',
-        reportedAt: '2026-10-09 08:45 AM',
-        downtimeMin: 185
-      },
-      {
-        id: 'BD-2026-102',
-        machine: 'CNC Milling Center 04',
-        line: 'Machining Line 1',
-        issue: 'High-speed spindle bearing overheating (>85°C alarm).',
-        priority: 'Critical',
-        status: 'Active',
-        reportedBy: 'Kavitha (Operator)',
-        assignedTech: 'Ahmad Firdaus',
-        reportedAt: '2026-10-09 09:30 AM',
-        downtimeMin: 140
-      },
-      {
-        id: 'BD-2026-103',
-        machine: 'Robotic Welding Station A',
-        line: 'Chassis Assembly',
-        issue: 'Wire feeder jam and servo drive error code E-402.',
-        priority: 'Medium',
-        status: 'Pending',
-        reportedBy: 'Wong (Assembly Lead)',
-        assignedTech: 'Unassigned',
-        reportedAt: '2026-10-09 10:15 AM',
-        downtimeMin: 95
-      },
-      {
-        id: 'BD-2026-104',
-        machine: 'Conveyor Line C Drive Motor',
-        line: 'Body Transfer Line',
-        issue: 'Abnormal high vibration and excessive rattling noise.',
-        priority: 'High',
-        status: 'Pending',
-        reportedBy: 'Arumugam (Material Handler)',
-        assignedTech: 'Unassigned',
-        reportedAt: '2026-10-09 10:50 AM',
-        downtimeMin: 60
-      },
-      {
-        id: 'BD-2026-105',
-        machine: 'Injection Molding Machine 03',
-        line: 'Plastics Molding',
-        issue: 'Zone 4 barrel heater band circuit open, temperature dipping.',
-        priority: 'Medium',
-        status: 'Active',
-        reportedBy: 'Hafiz (Molding Tech)',
-        assignedTech: 'Nurul Huda',
-        reportedAt: '2026-10-09 11:20 AM',
-        downtimeMin: 35
-      },
-      // Resolved Breakdowns for history
-      {
-        id: 'BD-2026-098',
-        machine: 'Air Compressor Unit 01',
-        line: 'Utility Plant Room',
-        issue: 'Inlet air filter clogged causing differential pressure trip.',
-        priority: 'Medium',
-        status: 'Resolved',
-        reportedBy: 'Lim (Facilities)',
-        assignedTech: 'Kumar Sanjeev',
-        reportedAt: '2026-10-08 07:15 AM',
-        downtimeMin: 45
-      },
-      {
-        id: 'BD-2026-099',
-        machine: 'Coolant Chiller Pump 2',
-        line: 'Central Coolant System',
-        issue: 'Flow switch intermittent trip due to impeller debris.',
-        priority: 'Low',
-        status: 'Resolved',
-        reportedBy: 'Daniel Tan',
-        assignedTech: 'Daniel Tan',
-        reportedAt: '2026-10-08 14:00 PM',
-        downtimeMin: 30
-      },
-      {
-        id: 'BD-2026-100',
-        machine: 'Automated Packaging Line',
-        line: 'Final End-of-Line',
-        issue: 'Carton sealer optical photo-eye sensor misaligned.',
-        priority: 'Low',
-        status: 'Resolved',
-        reportedBy: 'Suria (QC Lead)',
-        assignedTech: 'Farhan Azman',
-        reportedAt: '2026-10-08 20:30 PM',
-        downtimeMin: 20
-      }
-    ],
+    breakdowns: [],
     preventiveMaintenance: [
       {
         id: 'PM-801',
@@ -494,7 +396,7 @@
         type: 'Issued',
         qty: -2,
         balance: 2,
-        reference: 'BD-2026-101',
+        reference: 'WO-2026-101',
         handler: 'Razak bin Ismail'
       },
       {
@@ -505,7 +407,7 @@
         type: 'Issued',
         qty: -1,
         balance: 0,
-        reference: 'BD-2026-098',
+        reference: 'WO-2026-098',
         handler: 'Kumar Sanjeev'
       },
       {
@@ -521,15 +423,6 @@
       }
     ],
     notifications: [
-      {
-        id: 'NT-901',
-        title: 'New Breakdown Reported',
-        message: 'CNC Milling Center 04 spindle temperature alarm exceeded 85°C. High urgency reported by Kavitha.',
-        time: '10 mins ago',
-        unread: true,
-        targetView: 'breakdown',
-        recordId: 'BD-2026-102'
-      },
       {
         id: 'NT-902',
         title: 'PM Task Due Soon',
@@ -562,6 +455,11 @@
 
   // State Management with LocalStorage persistence
   const STORAGE_KEY = 'mms_dashboard_state_v1';
+  const KNOWN_DEMO_BD_IDS = [
+    'BD-2026-098', 'BD-2026-099', 'BD-2026-100',
+    'BD-2026-101', 'BD-2026-102', 'BD-2026-103',
+    'BD-2026-104', 'BD-2026-105'
+  ];
   let state = {};
 
   function loadState() {
@@ -569,6 +467,21 @@
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         state = JSON.parse(stored);
+        // Completely purge demo breakdown records from cached local storage
+        if (Array.isArray(state.breakdowns)) {
+          state.breakdowns = state.breakdowns.filter(b => !KNOWN_DEMO_BD_IDS.includes(b.id));
+        } else {
+          state.breakdowns = [];
+        }
+        // Clean any demo activeJobs in technicians list
+        if (Array.isArray(state.technicians)) {
+          state.technicians.forEach(t => {
+            if (t.activeJob && KNOWN_DEMO_BD_IDS.some(id => t.activeJob.includes(id))) {
+              t.activeJob = 'None (Standby)';
+              t.status = 'Available';
+            }
+          });
+        }
       } else {
         state = JSON.parse(JSON.stringify(INITIAL_STATE));
         saveState();
@@ -591,7 +504,8 @@
     state = JSON.parse(JSON.stringify(INITIAL_STATE));
     saveState();
     renderAll();
-    showToast('Database reset to demonstration state', 'info');
+    fetchBreakdownsFromBackend();
+    showToast('Database reset and synced with Google Sheets BD DATABASE', 'info');
   }
 
   // =========================================================================
@@ -786,6 +700,7 @@
       if (filterParam) {
         switchBreakdownTab(filterParam);
       }
+      fetchBreakdownsFromBackend();
     } else if (viewName === 'maintenance') {
       renderMaintenanceView();
       if (filterParam) {
@@ -923,12 +838,26 @@
     } else if (tabName === 'bd-dashboard') {
       updateBDDashboard();
     }
+    fetchBreakdownsFromBackend();
   }
 
   /**
    * Render Active Jobs Table & Resolved History
    */
   function renderBreakdownTables() {
+    // Show backend connection error banner if backend request failed
+    const syncAlertEl = document.getElementById('bdBackendSyncAlert');
+    if (syncAlertEl) {
+      if (lastBackendFetchError) {
+        syncAlertEl.style.display = 'block';
+        syncAlertEl.className = 'login-alert-banner alert-danger';
+        syncAlertEl.innerHTML = `<strong>Backend Sync Warning:</strong> ${escapeHtml(lastBackendFetchError)}<br><small>Unable to retrieve records from Google Sheets BD DATABASE.</small>`;
+      } else {
+        syncAlertEl.style.display = 'none';
+        syncAlertEl.textContent = '';
+      }
+    }
+
     // 1. ACTIVE JOBS TABLE: All open / unresolved breakdowns
     // Includes statuses: Repair, Active, Pending, Awaiting Part (anything not Completed or Resolved)
     const activeList = state.breakdowns.filter(b => b.status !== 'Completed' && b.status !== 'Resolved');
@@ -1082,6 +1011,11 @@
 
     if (descEl) descEl.textContent = item.description || item.issue || 'No problem description recorded.';
 
+    const techEl = document.getElementById('detailAssignedTech');
+    if (techEl) {
+      techEl.textContent = (item.assignedTech && String(item.assignedTech).trim() !== '') ? item.assignedTech : 'Unassigned';
+    }
+
     // Populate photos
     const beforeContainer = document.getElementById('detailBeforePhotoContainer');
     const afterContainer = document.getElementById('detailAfterPhotoContainer');
@@ -1135,10 +1069,48 @@
     `;
   }
 
+  // Cache for registered Firebase technicians loaded from secure endpoint
+  let cachedFirebaseTechnicians = null;
+
   /**
-   * RESOLVE MODAL: Require Breakdown End Time before completing
+   * Fetch registered technicians from Firebase Authentication via Netlify Function.
+   * Returns only verified accounts where custom claim role === "TECHNICIAN".
    */
-  function openResolveBreakdownModal(bdId) {
+  async function fetchRegisteredTechnicians(forceRefresh = false) {
+    if (cachedFirebaseTechnicians && !forceRefresh) {
+      return { ok: true, technicians: cachedFirebaseTechnicians };
+    }
+
+    const token = getStoredAuthToken();
+    if (!token) {
+      return { ok: false, error: 'Authentication required to load technician directory.' };
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/get-technicians', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        const errMsg = data.error || `Server error (${res.status})`;
+        return { ok: false, error: errMsg };
+      }
+
+      cachedFirebaseTechnicians = Array.isArray(data.technicians) ? data.technicians : [];
+      return { ok: true, technicians: cachedFirebaseTechnicians };
+    } catch (netErr) {
+      return { ok: false, error: 'Network error connecting to technician directory.' };
+    }
+  }
+
+  /**
+   * RESOLVE MODAL: Require Breakdown End Time and Assigned Technician from real Firebase directory
+   */
+  async function openResolveBreakdownModal(bdId) {
     const item = state.breakdowns.find(b => b.id === bdId);
     if (!item) {
       showToast(`Breakdown record ${bdId} not found.`, 'error');
@@ -1148,29 +1120,41 @@
     const modal = document.getElementById('resolveBreakdownModal');
     if (!modal) return;
 
-    // Reset alert
+    // Reset alerts and validation styles
     const alertEl = document.getElementById('resolveFormAlert');
     if (alertEl) {
       alertEl.style.display = 'none';
       alertEl.textContent = '';
     }
+    const techErrorEl = document.getElementById('resolveTechError');
+    if (techErrorEl) techErrorEl.style.display = 'none';
+    const endErrorEl = document.getElementById('resolveEndTimeError');
+    if (endErrorEl) endErrorEl.style.display = 'none';
 
+    // Populate Read-Only Identifiers
     document.getElementById('resolveTargetId').value = item.id;
     document.getElementById('resolveModalBdId').textContent = item.id;
+    const bdIdDisplay = document.getElementById('resolveBdIdDisplay');
+    if (bdIdDisplay) bdIdDisplay.value = item.id;
+
     document.getElementById('resolveModalMachine').textContent = item.machine;
+    const machineDisplay = document.getElementById('resolveMachineDisplay');
+    if (machineDisplay) machineDisplay.value = item.machine;
+
     document.getElementById('resolveModalDescription').textContent = item.description || item.issue || '';
 
-    // Start Time Reference
+    // Start Time Reference (Recorded)
     const startTimeVal = item.startTime || item.reportedAt || item.time || new Date().toISOString();
     document.getElementById('resolveStartTimeHidden').value = startTimeVal;
     document.getElementById('resolveStartTimeDisplay').value = formatTimeReportedKL(startTimeVal);
 
-    // End Time: default to current local time
+    // End Time: default to current local time (Asia/Kuala_Lumpur)
     const now = new Date();
     const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     const endInput = document.getElementById('resolveEndTimeInput');
     if (endInput) {
       endInput.value = localIso;
+      endInput.classList.remove('input-error');
     }
 
     // Reset After Photo input preview
@@ -1180,7 +1164,92 @@
     if (afterPhotoName) afterPhotoName.textContent = 'Supported: JPG, JPEG, PNG';
 
     updateResolveDowntimePreview();
+
+    // Prepare Assigned Technician dropdown in loading state
+    const techSelect = document.getElementById('resolveAssignedTechSelect');
+    const submitBtn = document.getElementById('resolveSubmitBtn');
+
+    if (techSelect) {
+      techSelect.classList.remove('input-error');
+      techSelect.disabled = true;
+      techSelect.innerHTML = '<option value="">Loading registered technicians...</option>';
+      if (submitBtn) submitBtn.disabled = true;
+
+      techSelect.onchange = () => {
+        if (techSelect.value) {
+          techSelect.classList.remove('input-error');
+          if (techErrorEl) techErrorEl.style.display = 'none';
+          if (alertEl && alertEl.textContent.includes('Technician')) {
+            alertEl.style.display = 'none';
+          }
+        }
+      };
+    }
+
     modal.classList.add('active');
+
+    // Fetch REAL technicians from /.netlify/functions/get-technicians
+    const dirResult = await fetchRegisteredTechnicians();
+
+    if (techSelect) {
+      if (!dirResult.ok) {
+        // If directory cannot be loaded, show error and disable Resolve submission
+        techSelect.disabled = true;
+        techSelect.classList.add('input-error');
+        techSelect.innerHTML = '<option value="">Error loading technicians</option>';
+        if (submitBtn) submitBtn.disabled = true;
+
+        if (techErrorEl) {
+          techErrorEl.textContent = 'Failed to load technician directory: ' + dirResult.error;
+          techErrorEl.style.display = 'block';
+        }
+        if (alertEl) {
+          alertEl.style.display = 'block';
+          alertEl.className = 'login-alert-banner alert-danger';
+          alertEl.innerHTML = `<strong>Technician Directory Error:</strong> ${escapeHtml(dirResult.error)}<br><small>Resolve submission is disabled until registered technicians can be retrieved.</small>`;
+        }
+      } else if (!dirResult.technicians || dirResult.technicians.length === 0) {
+        // If no registered technicians exist, show "No registered technicians available" and disable Resolve submission
+        techSelect.disabled = true;
+        techSelect.classList.add('input-error');
+        techSelect.innerHTML = '<option value="">No registered technicians available</option>';
+        if (submitBtn) submitBtn.disabled = true;
+
+        if (techErrorEl) {
+          techErrorEl.textContent = 'No registered technicians available';
+          techErrorEl.style.display = 'block';
+        }
+        if (alertEl) {
+          alertEl.style.display = 'block';
+          alertEl.className = 'login-alert-banner alert-danger';
+          alertEl.innerHTML = `<strong>No Registered Technicians:</strong> No accounts with the <code>TECHNICIAN</code> role claim exist.<br><small>Resolve submission is disabled.</small>`;
+        }
+      } else {
+        // Populate dropdown with Display Name (Staff ID) and store UID as value
+        techSelect.disabled = false;
+        let optionsHtml = '<option value="">Select Technician</option>';
+        optionsHtml += dirResult.technicians.map(t => {
+          const label = `${t.displayName} (${t.staffId})`;
+          return `<option value="${escapeHtml(t.uid)}">${escapeHtml(label)}</option>`;
+        }).join('');
+        techSelect.innerHTML = optionsHtml;
+
+        // Enable Resolve submission
+        if (submitBtn) submitBtn.disabled = false;
+
+        // Pre-select if already assigned to a valid technician
+        if (item.assignedTech && item.assignedTech !== 'Unassigned' && item.assignedTech.trim() !== '') {
+          const match = dirResult.technicians.find(t => t.uid === item.assignedTech || t.staffId === item.assignedTech);
+          if (match) {
+            techSelect.value = match.uid;
+          } else {
+            techSelect.value = '';
+          }
+        } else {
+          techSelect.value = '';
+        }
+      }
+    }
   }
 
   function updateResolveDowntimePreview() {
@@ -1221,7 +1290,12 @@
     const startVal = document.getElementById('resolveStartTimeHidden')?.value;
     const endInput = document.getElementById('resolveEndTimeInput');
     const endTime = endInput ? endInput.value : '';
+    const techSelect = document.getElementById('resolveAssignedTechSelect');
+    const selectedTechUid = techSelect ? techSelect.value.trim() : '';
+
     const alertEl = document.getElementById('resolveFormAlert');
+    const techErrorEl = document.getElementById('resolveTechError');
+    const endErrorEl = document.getElementById('resolveEndTimeError');
     const submitBtn = document.getElementById('resolveSubmitBtn');
     const spinner = document.getElementById('resolveSubmitSpinner');
     const icon = document.getElementById('resolveSubmitIcon');
@@ -1229,14 +1303,28 @@
 
     if (!bdId) return;
 
-    // Validate Breakdown End Time
+    // Reset inline field validation states
+    if (techErrorEl) techErrorEl.style.display = 'none';
+    if (endErrorEl) endErrorEl.style.display = 'none';
+    if (endInput) endInput.classList.remove('input-error');
+    if (techSelect) techSelect.classList.remove('input-error');
+    if (alertEl) alertEl.style.display = 'none';
+
+    // 1. Validate Breakdown End Time (MANDATORY REQUIREMENT)
     if (!endTime) {
       if (alertEl) {
         alertEl.style.display = 'block';
         alertEl.className = 'login-alert-banner alert-danger';
         alertEl.textContent = 'Breakdown End Time is strictly required before marking a breakdown as completed.';
       }
-      if (endInput) endInput.focus();
+      if (endErrorEl) {
+        endErrorEl.textContent = 'Breakdown End Time is strictly required.';
+        endErrorEl.style.display = 'block';
+      }
+      if (endInput) {
+        endInput.classList.add('input-error');
+        endInput.focus();
+      }
       return;
     }
 
@@ -1249,7 +1337,32 @@
         alertEl.className = 'login-alert-banner alert-danger';
         alertEl.textContent = 'Breakdown End Time cannot be earlier than Breakdown Start Time.';
       }
-      if (endInput) endInput.focus();
+      if (endErrorEl) {
+        endErrorEl.textContent = 'End Time cannot be earlier than Start Time.';
+        endErrorEl.style.display = 'block';
+      }
+      if (endInput) {
+        endInput.classList.add('input-error');
+        endInput.focus();
+      }
+      return;
+    }
+
+    // 2. Validate Assigned Technician (MANDATORY REQUIREMENT: Must be a selected Firebase technician UID)
+    if (!selectedTechUid || selectedTechUid.toLowerCase() === 'unassigned') {
+      if (alertEl) {
+        alertEl.style.display = 'block';
+        alertEl.className = 'login-alert-banner alert-danger';
+        alertEl.textContent = 'Assigned Technician is strictly required. Please select a registered technician before completing repair.';
+      }
+      if (techErrorEl) {
+        techErrorEl.textContent = 'Please select a registered technician from the dropdown.';
+        techErrorEl.style.display = 'block';
+      }
+      if (techSelect) {
+        techSelect.classList.add('input-error');
+        techSelect.focus();
+      }
       return;
     }
 
@@ -1274,11 +1387,14 @@
 
     const targetItem = state.breakdowns.find(b => b.id === bdId);
 
+    // Payload passes technician UID to be verified server-side via Firebase Admin SDK
     const payload = {
       id: bdId,
       machine: targetItem ? targetItem.machine : '',
       startTime: startVal,
       endTime: endTime,
+      technicianUid: selectedTechUid,
+      assignedTech: selectedTechUid,
       staffId: targetItem ? (targetItem.reportedBy || targetItem.staffId || '') : '',
       downtime: diffMin,
       afterPhoto: afterPhotoObj ? afterPhotoObj.name : '',
@@ -1295,11 +1411,18 @@
       const result = await response.json().catch(() => null);
 
       if (response.ok && result && result.success) {
+        // Resolve display name / staff ID for UI feedback
+        const matchedTech = cachedFirebaseTechnicians?.find(t => t.uid === selectedTechUid);
+        const resolvedStaffId = result.assignedTech || (matchedTech ? matchedTech.staffId : selectedTechUid);
+        const resolvedDisplay = matchedTech ? `${matchedTech.displayName} (${matchedTech.staffId})` : resolvedStaffId;
+
         // Update local state record
         const item = targetItem || state.breakdowns.find(b => b.id === bdId);
         if (item) {
           item.status = 'Completed';
           item.endTime = endTime;
+          item.assignedTech = resolvedStaffId;
+          item.technicianUid = selectedTechUid;
           item.downtimeMin = (result.downtime !== undefined && result.downtime !== null) ? result.downtime : diffMin;
           item.downtime = item.downtimeMin;
           if (afterPhotoObj) {
@@ -1307,11 +1430,14 @@
           }
         }
 
-        addNotification('Breakdown Completed', `Breakdown ${bdId} on ${item ? item.machine : 'machine'} marked as Completed (${diffMin} min downtime).`, 'breakdown', bdId);
+        addNotification('Breakdown Completed', `Breakdown ${bdId} on ${item ? item.machine : 'machine'} completed by ${resolvedDisplay} (${diffMin} min downtime).`, 'breakdown', bdId);
         saveState();
         closeAllModals();
         renderAll();
-        showToast(`Breakdown ${bdId} marked as Completed and updated in Google Sheets!`, 'success');
+        showToast(`Breakdown ${bdId} marked as Completed with ${resolvedDisplay} and saved to Google Sheets BD DATABASE!`, 'success');
+
+        // Sync with Google Sheets to ensure state coherence
+        fetchBreakdownsFromBackend();
       } else {
         const errMsg = (result && (result.error || result.message)) || `Server returned error (${response.status})`;
         if (alertEl) {
@@ -1685,8 +1811,12 @@
     }
   }
 
+  let lastBackendFetchError = null;
+
   /**
    * Fetch live records from Google Sheets BD DATABASE via Netlify Function
+   * All records originate strictly from the backend. If backend returns no records,
+   * display an empty state. If request fails, show an appropriate error without fabricated data.
    */
   async function fetchBreakdownsFromBackend() {
     const token = getStoredAuthToken() || '';
@@ -1697,50 +1827,56 @@
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (res.ok) {
-        const result = await res.json();
-        if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
-          // Merge records with state.breakdowns
-          result.data.forEach(remoteItem => {
-            const existingIdx = state.breakdowns.findIndex(b => b.id === remoteItem.id);
-            const formattedItem = {
-              id: remoteItem.id,
-              machine: remoteItem.machine,
-              issue: remoteItem.description,
-              description: remoteItem.description,
-              category: remoteItem.category || 'Mechanical',
-              priority: remoteItem.priority || 'Not Assigned',
-              status: remoteItem.status || 'Repair',
-              reportedBy: remoteItem.staffId || 'Staff',
-              assignedTech: remoteItem.assignedTech || 'Unassigned',
-              startTime: remoteItem.startTime,
-              endTime: remoteItem.endTime,
-              time: remoteItem.time,
-              reportedAt: remoteItem.startTime || remoteItem.time,
-              downtimeMin: remoteItem.downtime !== '' ? Number(remoteItem.downtime) : 0,
-              downtime: remoteItem.downtime !== '' ? Number(remoteItem.downtime) : 0,
-              beforePhoto: remoteItem.beforePhoto,
-              afterPhoto: remoteItem.afterPhoto
-            };
+      const result = await res.json().catch(() => null);
 
-            if (existingIdx >= 0) {
-              state.breakdowns[existingIdx] = Object.assign({}, state.breakdowns[existingIdx], formattedItem);
-            } else {
-              state.breakdowns.unshift(formattedItem);
-            }
-          });
+      if (res.ok && result && result.success) {
+        lastBackendFetchError = null;
+        const remoteList = Array.isArray(result.data) ? result.data : [];
 
-          saveState();
-          renderBreakdownTables();
-          updateKPICounters();
-          if (activeBreakdownTab === 'bd-dashboard') {
-            updateBDDashboard();
-          }
-          showToast('Breakdown records synced with Google Sheets BD DATABASE.', 'success');
+        // All records originate exclusively from Google Sheets BD DATABASE
+        state.breakdowns = remoteList.map(remoteItem => ({
+          id: remoteItem.id,
+          machine: remoteItem.machine,
+          line: 'Central Line',
+          issue: remoteItem.description || '',
+          description: remoteItem.description || '',
+          category: remoteItem.category || 'Mechanical',
+          priority: remoteItem.priority || 'Not Assigned',
+          status: remoteItem.status || 'Repair',
+          reportedBy: remoteItem.staffId || 'Staff',
+          assignedTech: remoteItem.assignedTech && String(remoteItem.assignedTech).trim() !== '' ? String(remoteItem.assignedTech).trim() : 'Unassigned',
+          startTime: remoteItem.startTime || '',
+          endTime: remoteItem.endTime || '',
+          time: remoteItem.time || '',
+          reportedAt: remoteItem.startTime || remoteItem.time || '',
+          downtimeMin: remoteItem.downtime !== '' && remoteItem.downtime !== null && !isNaN(remoteItem.downtime) ? Number(remoteItem.downtime) : 0,
+          downtime: remoteItem.downtime !== '' && remoteItem.downtime !== null && !isNaN(remoteItem.downtime) ? Number(remoteItem.downtime) : 0,
+          beforePhoto: remoteItem.beforePhoto || '',
+          afterPhoto: remoteItem.afterPhoto || ''
+        }));
+
+        saveState();
+        renderBreakdownTables();
+        updateKPICounters();
+        if (activeBreakdownTab === 'bd-dashboard') {
+          updateBDDashboard();
         }
+      } else {
+        const errMsg = (result && (result.error || result.message)) || `Server returned HTTP ${res.status}`;
+        lastBackendFetchError = errMsg;
+        renderBreakdownTables();
+        if (activeBreakdownTab === 'bd-dashboard') {
+          updateBDDashboard();
+        }
+        showToast('Database Sync Error: ' + errMsg, 'error');
       }
     } catch (e) {
-      // Backend unavailable or offline - preserve local state
+      lastBackendFetchError = 'Network connection failed: ' + e.message;
+      renderBreakdownTables();
+      if (activeBreakdownTab === 'bd-dashboard') {
+        updateBDDashboard();
+      }
+      showToast('Network error: Unable to connect to Google Sheets backend.', 'error');
     }
   }
 
@@ -2386,6 +2522,7 @@
         addNotification('New Breakdown Logged', `${validation.values.machine}: ${validation.values.category} reported to BD DATABASE.`, 'breakdown', newId);
         saveState();
         renderAll();
+        fetchBreakdownsFromBackend();
 
         // 6. Clear form after successful submission
         resetBreakdownForm();
@@ -3271,6 +3408,7 @@
     sessionStorage.removeItem('mmsAuthToken');
     sessionStorage.removeItem('mmsRefreshToken');
     sessionStorage.removeItem('mmsUserProfile');
+    cachedFirebaseTechnicians = null;
   }
 
   function showLoginScreen(errorMessage = null) {
@@ -3375,6 +3513,7 @@
         hideLoginScreen();
         renderAll();
         populateStaffIdFromProfile();
+        fetchBreakdownsFromBackend();
         return true;
       } else {
         clearAuthSession();
@@ -3400,6 +3539,7 @@
           hideLoginScreen();
           renderAll();
           populateStaffIdFromProfile();
+          fetchBreakdownsFromBackend();
           return true;
         } catch (e) {
           // parse error
@@ -3491,6 +3631,7 @@
         hideLoginScreen();
         renderAll();
         populateStaffIdFromProfile();
+        fetchBreakdownsFromBackend();
 
         showToast(`Welcome back, ${u.name} (${u.role})`, 'success');
       } else {

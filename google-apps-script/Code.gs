@@ -165,7 +165,11 @@ function handleGetBreakdowns() {
     }, 200);
   }
 
-  const lastCol = Math.max(12, sheet.getLastColumn());
+  const maxCols = sheet.getMaxColumns();
+  if (maxCols < 14) {
+    sheet.insertColumnsAfter(maxCols, 14 - maxCols);
+  }
+  const lastCol = Math.max(14, sheet.getLastColumn());
   const range = sheet.getRange(2, 1, lastRow - 1, lastCol);
   const values = range.getValues();
 
@@ -253,10 +257,12 @@ function handleCreateBreakdown(payload) {
       'Before Photo',          // Col I
       'After Photo',           // Col J
       'Problem Description',   // Col K
-      'Status'                 // Col L
+      'Status',                // Col L
+      'Priority',              // Col M
+      'Assigned Technician'    // Col N
     ];
     sheet.appendRow(headers);
-    sheet.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#062641').setFontColor('#FFFFFF');
+    sheet.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#062641').setFontColor('#FFFFFF');
     sheet.setFrozenRows(1);
   }
 
@@ -340,6 +346,15 @@ function handleResolveAction(payload) {
     return createJsonResponse({
       success: false,
       error: 'Invalid Breakdown End Time format.'
+    }, 422);
+  }
+
+  // Pre-validation: Require valid Assigned Technician
+  const assignedTechStr = payload.assignedTech ? String(payload.assignedTech).trim() : '';
+  if (!assignedTechStr || assignedTechStr.toLowerCase() === 'unassigned') {
+    return createJsonResponse({
+      success: false,
+      error: 'Assigned Technician is strictly required before marking a record as completed.'
     }, 422);
   }
 
@@ -495,32 +510,47 @@ function handleResolveAction(payload) {
       afterPhotoUrl = String(payload.afterPhoto).trim();
     }
 
-    // BATCH UPDATE (COLUMNS F THROUGH L):
-    // Read existing Columns F to L (cols 6 to 12) to preserve unrelated Columns H, I, K
-    const rangeFL = sheet.getRange(targetRow, 6, 1, 7);
-    const existingFL = rangeFL.getValues()[0];
+    // Ensure worksheet has at least 14 columns for Columns M (Priority) and N (Assigned Technician)
+    const maxCols = sheet.getMaxColumns();
+    if (maxCols < 14) {
+      sheet.insertColumnsAfter(maxCols, 14 - maxCols);
+    }
 
-    const finalAfterPhoto = afterPhotoUrl || existingFL[4] || '';
+    // Ensure header labels for Columns M & N exist
+    const headerRange = sheet.getRange(1, 13, 1, 2);
+    const headerVals = headerRange.getValues()[0];
+    if (!headerVals[0]) headerRange.getCell(1, 1).setValue('Priority');
+    if (!headerVals[1]) headerRange.getCell(1, 2).setValue('Assigned Technician');
 
-    const updatedFL = [
-      endTimeStr,         // Col F (index 0 in slice, col 6): Breakdown End Time
-      downtimeMin,        // Col G (index 1 in slice, col 7): Downtime (minutes)
-      existingFL[2],      // Col H (index 2 in slice, col 8): Problem Category (Preserved)
-      existingFL[3],      // Col I (index 3 in slice, col 9): Before Photo (Preserved)
-      finalAfterPhoto,    // Col J (index 4 in slice, col 10): After Photo (Updated if provided, else Preserved)
-      existingFL[5],      // Col K (index 5 in slice, col 11): Problem Description (Preserved)
-      'Completed'         // Col L (index 6 in slice, col 12): Status
+    // BATCH UPDATE (COLUMNS F THROUGH N - 9 COLUMNS):
+    // Read existing Columns F to N (cols 6 to 14) to preserve unrelated Columns H, I, K, and M
+    const rangeFN = sheet.getRange(targetRow, 6, 1, 9);
+    const existingFN = rangeFN.getValues()[0];
+
+    const finalAfterPhoto = afterPhotoUrl || existingFN[4] || '';
+
+    const updatedFN = [
+      endTimeStr,                 // Col F (col 6): Breakdown End Time
+      downtimeMin,                // Col G (col 7): Downtime (minutes)
+      existingFN[2],              // Col H (col 8): Problem Category (Preserved)
+      existingFN[3],              // Col I (col 9): Before Photo (Preserved)
+      finalAfterPhoto,            // Col J (col 10): After Photo (Updated if provided, else Preserved)
+      existingFN[5],              // Col K (col 11): Problem Description (Preserved)
+      'Completed',                // Col L (col 12): Status (Updated)
+      existingFN[7] || '',        // Col M (col 13): Priority (Preserved)
+      assignedTechStr             // Col N (col 14): Assigned Technician (Updated to Column N)
     ];
 
-    // Single batched write to minimize partial-update window
-    rangeFL.setValues([updatedFL]);
+    // Single batched write under LockService to minimize partial-update window
+    rangeFN.setValues([updatedFN]);
 
     return createJsonResponse({
       success: true,
       message: 'Breakdown record successfully resolved and updated to Completed in BD DATABASE.',
       rowNumber: targetRow,
       id: payload.id || ('BD-' + targetRow),
-      downtime: downtimeMin
+      downtime: downtimeMin,
+      assignedTech: assignedTechStr
     }, 200);
 
   } finally {

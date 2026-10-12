@@ -634,6 +634,7 @@
                   </button>
                 </div>
               </div>
+              <div id="bdBackendSyncAlert" style="display:none; margin:12px 18px 0; padding:10px 14px; border-radius:8px; font-size:13px;"></div>
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
@@ -1328,6 +1329,10 @@
             <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Status</div>
             <div id="detailStatus" style="margin-top:2px;">—</div>
           </div>
+          <div style="grid-column: span 3;">
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Assigned Technician</div>
+            <div id="detailAssignedTech" style="font-size:13.5px; font-weight:700; color:var(--navy-darkest); margin-top:2px;">Unassigned</div>
+          </div>
         </div>
 
         <!-- Problem Description Card -->
@@ -1408,6 +1413,22 @@
           <input type="hidden" id="resolveTargetId" value="">
           <input type="hidden" id="resolveStartTimeHidden" value="">
 
+          <!-- Read-only Breakdown Identification Fields -->
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div class="form-group">
+              <label class="form-label" for="resolveBdIdDisplay" style="font-size:12.5px; font-weight:600; color:var(--text-muted);">
+                Breakdown ID (Read-only)
+              </label>
+              <input type="text" id="resolveBdIdDisplay" class="form-control" readonly style="background:#F1F5F9; font-weight:700; color:var(--navy-darkest);">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="resolveMachineDisplay" style="font-size:12.5px; font-weight:600; color:var(--text-muted);">
+                Machine (Read-only)
+              </label>
+              <input type="text" id="resolveMachineDisplay" class="form-control" readonly style="background:#F1F5F9; font-weight:700; color:var(--navy-darkest);">
+            </div>
+          </div>
+
           <!-- Breakdown Start Time Display (Reference) -->
           <div class="form-group" style="margin-bottom:14px;">
             <label class="form-label" style="font-size:12.5px; font-weight:600; color:var(--text-muted);">
@@ -1425,6 +1446,21 @@
             <small class="form-hint" style="color:var(--navy-base); font-weight:500;">
               Breakdown End Time is strictly required before marking a breakdown as completed.
             </small>
+            <div id="resolveEndTimeError" style="display:none; color:var(--red-primary); font-size:12px; font-weight:600; margin-top:4px;">Please enter a valid Breakdown End Time.</div>
+          </div>
+
+          <!-- Assigned Technician Dropdown (MANDATORY REQUIREMENT) -->
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="resolveAssignedTechSelect" style="font-size:13px; font-weight:700; color:var(--navy-darkest);">
+              Assigned Technician <span class="required-star">*</span>
+            </label>
+            <select id="resolveAssignedTechSelect" class="form-control" required style="font-weight:600;">
+              <option value="">Select Technician</option>
+            </select>
+            <small class="form-hint" style="color:var(--navy-base); font-weight:500;">
+              Assigned Technician is strictly required before resolving the breakdown.
+            </small>
+            <div id="resolveTechError" style="display:none; color:var(--red-primary); font-size:12px; font-weight:600; margin-top:4px;">Please select an assigned technician from the list.</div>
           </div>
 
           <!-- Downtime Calculation Live Indicator -->
