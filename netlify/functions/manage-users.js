@@ -230,20 +230,9 @@ exports.handler = async function (event, context) {
     }
 
     // -----------------------------------------------------------------------
-    // ACTION: create — create a new Firebase user account
+    // ACTION: create — create a new Firebase user account and set custom claims
     // -----------------------------------------------------------------------
     if (action === 'create') {
-      if (!apiKey) {
-        return {
-          statusCode: 503,
-          headers,
-          body: JSON.stringify({
-            success: false,
-            error: 'User creation service requires FIREBASE_WEB_API_KEY in environment variables.'
-          })
-        };
-      }
-
       const { staffId, displayName, password, role } = payload;
 
       if (!staffId || !password) {
@@ -279,51 +268,159 @@ exports.handler = async function (event, context) {
       const normalizedStaffId = String(staffId).trim().toUpperCase();
       const mappedEmail = `${normalizedStaffId.toLowerCase()}@${staffDomain}`;
       const assignedRole = normalizedRole;
-      const resolvedName = displayName ? String(displayName).trim() : `Staff ${normalizedStaffId}`;
+      const resolvedName = displayName && String(displayName).trim()
+        ? String(displayName).trim()
+        : `Staff ${normalizedStaffId}`;
 
-      // Create user via Firebase Auth REST API (signUp)
-      const signUpUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${encodeURIComponent(apiKey)}`;
-      const signUpRes = await fetch(signUpUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: mappedEmail,
-          password,
-          displayName: resolvedName,
-          returnSecureToken: false
-        })
-      });
-
-      const signUpData = await signUpRes.json();
-
-      if (!signUpRes.ok) {
-        const errMsg = (signUpData.error && signUpData.error.message) || 'Failed to create user.';
-        let friendlyError = errMsg;
-        if (errMsg.includes('EMAIL_EXISTS')) {
-          friendlyError = `Staff ID ${normalizedStaffId} already has an existing account (${mappedEmail}).`;
-        } else if (errMsg.includes('WEAK_PASSWORD')) {
-          friendlyError = PASSWORD_POLICY_MESSAGE;
-        } else if (errMsg.includes('INVALID_EMAIL')) {
-          friendlyError = `Invalid Staff ID format: cannot map to a valid email address.`;
+      // 1. Prevent duplicate Staff IDs/accounts: proactively check if email exists
+      try {
+        const existing = await auth.getUserByEmail(mappedEmail);
+        if (existing) {
+          return {
+            statusCode: 409,
+            headers,
+            body: JSON.stringify({
+              success: false,
+              error: `Staff ID ${normalizedStaffId} already has an existing account (${mappedEmail}).`
+            })
+          };
         }
+      } catch (checkErr) {
+        // 'auth/user-not-found' is expected for new user creation
+        if (checkErr.code !== 'auth/user-not-found') {
+          console.warn('[manage-users] Duplicate pre-check notice:', checkErr.message);
+        }
+      }
+
+      // 2. Create user in Firebase Authentication
+      let createdUid = null;
+      try {
+        const newUser = await auth.createUser({
+          email: mappedEmail,
+          password: password,
+          displayName: resolvedName
+        });
+        createdUid = newUser.uid;
+      } catch (createErr) {
+        if (createErr.code === 'auth/email-already-exists') {
+          return {
+            statusCode: 409,
+            headers,
+            body: JSON.stringify({
+              success: false,
+              error: `Staff ID ${normalizedStaffId} already has an existing account (${mappedEmail}).`
+            })
+          };
+        }
+        if (createErr.code === 'auth/invalid-password' || createErr.code === 'auth/weak-password') {
+          return {
+            statusCode: 422,
+            headers,
+            body: JSON.stringify({ success: false, error: PASSWORD_POLICY_MESSAGE })
+          };
+        }
+        if (createErr.code === 'auth/invalid-email') {
+          return {
+            statusCode: 422,
+            headers,
+            body: JSON.stringify({ success: false, error: 'Invalid Staff ID format: cannot map to a valid email address.' })
+          };
+        }
+
+        console.warn('[manage-users] auth.createUser threw, trying REST API fallback if available:', createErr.message);
+
+        // Fallback: If Firebase Admin SDK direct user creation is restricted, try Identity Toolkit REST API
+        if (apiKey) {
+          const signUpUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${encodeURIComponent(apiKey)}`;
+          const signUpRes = await fetch(signUpUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: mappedEmail,
+              password,
+              displayName: resolvedName,
+              returnSecureToken: false
+            })
+          });
+
+          const signUpData = await signUpRes.json();
+          if (!signUpRes.ok) {
+            const errMsg = (signUpData.error && signUpData.error.message) || 'Failed to create user.';
+            let friendlyError = errMsg;
+            if (errMsg.includes('EMAIL_EXISTS')) {
+              friendlyError = `Staff ID ${normalizedStaffId} already has an existing account (${mappedEmail}).`;
+            } else if (errMsg.includes('WEAK_PASSWORD')) {
+              friendlyError = PASSWORD_POLICY_MESSAGE;
+            } else if (errMsg.includes('INVALID_EMAIL')) {
+              friendlyError = 'Invalid Staff ID format: cannot map to a valid email address.';
+            }
+            return {
+              statusCode: 400,
+              headers,
+              body: JSON.stringify({ success: false, error: friendlyError })
+            };
+          }
+          createdUid = signUpData.localId;
+        } else {
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ success: false, error: 'Failed to create user account: ' + createErr.message })
+          };
+        }
+      }
+
+      if (!createdUid) {
         return {
-          statusCode: 400,
+          statusCode: 500,
           headers,
-          body: JSON.stringify({ success: false, error: friendlyError })
+          body: JSON.stringify({ success: false, error: 'Failed to establish user identifier after creation attempt.' })
         };
       }
 
+      // 3. Set Firebase Custom Claims: role and staffId
+      let claimsAssigned = false;
+      try {
+        await auth.setCustomUserClaims(createdUid, {
+          role: assignedRole,
+          staffId: normalizedStaffId
+        });
+        const verifyUser = await auth.getUser(createdUid);
+        if (verifyUser && verifyUser.customClaims && verifyUser.customClaims.role === assignedRole) {
+          claimsAssigned = true;
+        }
+      } catch (claimsErr) {
+        console.error('[manage-users] Failed to assign custom claims to UID', createdUid, claimsErr.message);
+      }
+
+      // 4. Safe partial failure handling: if user created but claims failed, do NOT report full success
+      if (!claimsAssigned) {
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            partialFailure: true,
+            error: `User account created for ${normalizedStaffId} (${mappedEmail}), but assigning ${assignedRole} role claims failed. Please contact administrator to assign claims before logging in.`,
+            staffId: normalizedStaffId,
+            email: mappedEmail,
+            uid: createdUid
+          })
+        };
+      }
+
+      // 5. Success: account and claims verified
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          message: `User account created successfully for Staff ID: ${normalizedStaffId}.`,
+          message: `User account and ${assignedRole} role successfully configured for Staff ID: ${normalizedStaffId}.`,
           staffId: normalizedStaffId,
           email: mappedEmail,
           displayName: resolvedName,
-          roleRequested: assignedRole,
-          note: 'Custom role claims must be set via Firebase Admin SDK. Password meets MMS policy.'
+          role: assignedRole,
+          uid: createdUid
         })
       };
     }

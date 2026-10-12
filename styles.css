@@ -20,6 +20,9 @@
   --blue-soft-bg: #E8F4FF;
   --blue-border: #D0E6FC;
   --blue-text: #0B63B8;
+  --accent-primary: #0078E7;
+  --accent-primary-hover: #0065C5;
+  --text-primary: #0A304F;
 
   /* Alert / Breakdown Red Palette */
   --red-primary: #E50920;
@@ -1319,6 +1322,49 @@ body {
   background: var(--blue-primary-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 120, 231, 0.35);
+}
+
+.btn-primary:disabled {
+  background: #94A3B8;
+  color: #FFFFFF;
+  opacity: 0.7;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  pointer-events: none;
+}
+
+#createUserSubmitBtn {
+  background-color: var(--blue-primary);
+  color: #FFFFFF;
+  border: none;
+  padding: 10px 22px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 6px rgba(0, 120, 231, 0.25);
+}
+
+#createUserSubmitBtn:hover:not(:disabled) {
+  background-color: var(--blue-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 120, 231, 0.35);
+}
+
+#createUserSubmitBtn:disabled {
+  background-color: #94A3B8 !important;
+  color: #FFFFFF !important;
+  opacity: 0.7 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+  pointer-events: none !important;
 }
 
 .btn-danger {

@@ -3109,43 +3109,82 @@
   function submitCreateUser() {
     hidePanelAlert('muCreateUserAlert');
 
-    const staffId = (document.getElementById('newUserStaffId') || {}).value || '';
-    const displayName = (document.getElementById('newUserDisplayName') || {}).value || '';
-    const role = (document.getElementById('newUserRole') || {}).value || '';
-    const password = (document.getElementById('newUserPassword') || {}).value || '';
-    const confirmPassword = (document.getElementById('newUserConfirmPassword') || {}).value || '';
+    const staffIdInput = document.getElementById('newUserStaffId');
+    const displayNameInput = document.getElementById('newUserDisplayName');
+    const roleInput = document.getElementById('newUserRole');
+    const passwordInput = document.getElementById('newUserPassword');
+    const confirmPasswordInput = document.getElementById('newUserConfirmPassword');
 
-    if (role !== 'ADMIN' && role !== 'TECHNICIAN') {
-      showPanelAlert('muCreateUserAlert', 'Role must strictly be Administrator (ADMIN) or Technician (TECHNICIAN).', 'error');
+    const staffId = (staffIdInput || {}).value || '';
+    const displayName = (displayNameInput || {}).value || '';
+    const role = (roleInput || {}).value || '';
+    const password = (passwordInput || {}).value || '';
+    const confirmPassword = (confirmPasswordInput || {}).value || '';
+
+    // 1. Require valid Firebase ADMIN authentication
+    const token = sessionStorage.getItem('mmsAuthToken') || '';
+    if (!token) {
+      showPanelAlert('muCreateUserAlert', 'Authentication required. Please log in as Administrator to create user accounts.', 'error');
       return;
     }
 
+    const currentRole = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = currentRole === 'ADMIN' || currentRole === 'Administrator';
+    if (!isAdmin) {
+      showPanelAlert('muCreateUserAlert', 'Forbidden: User creation is restricted to Administrators only.', 'error');
+      return;
+    }
+
+    // 2. Validate Staff ID
     if (!staffId.trim()) {
       showPanelAlert('muCreateUserAlert', 'Staff ID is required.', 'error');
+      if (staffIdInput) staffIdInput.focus();
       return;
     }
 
-    // Frontend: enforce MMS password policy
+    // 3. Validate Role: ADMIN or TECHNICIAN only
+    if (role !== 'ADMIN' && role !== 'TECHNICIAN') {
+      showPanelAlert('muCreateUserAlert', 'Role must strictly be Administrator (ADMIN) or Technician (TECHNICIAN).', 'error');
+      if (roleInput) roleInput.focus();
+      return;
+    }
+
+    // 4. Validate Password & Confirmation
+    if (!password) {
+      showPanelAlert('muCreateUserAlert', 'Password is required.', 'error');
+      if (passwordInput) passwordInput.focus();
+      return;
+    }
+
     if (!isValidPassword(password)) {
       showPanelAlert('muCreateUserAlert', MMS_PASSWORD_POLICY_MSG, 'error');
+      if (passwordInput) passwordInput.focus();
+      return;
+    }
+
+    if (!confirmPassword) {
+      showPanelAlert('muCreateUserAlert', 'Please confirm the password.', 'error');
+      if (confirmPasswordInput) confirmPasswordInput.focus();
       return;
     }
 
     if (password !== confirmPassword) {
       showPanelAlert('muCreateUserAlert', 'Passwords do not match. Please re-enter.', 'error');
+      if (confirmPasswordInput) confirmPasswordInput.focus();
       return;
     }
 
     const btn = document.getElementById('createUserSubmitBtn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
-
-    const token = sessionStorage.getItem('mmsAuthToken') || '';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Creating User...';
+    }
 
     fetch('/.netlify/functions/manage-users', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         action: 'create',
@@ -3158,18 +3197,41 @@
       .then(r => r.json())
       .then(data => {
         if (data.success) {
-          showPanelAlert('muCreateUserAlert', `Account created for ${data.staffId} (${data.email}). ${data.note || ''}`, 'success');
-          document.getElementById('createUserForm').reset();
+          const successRole = data.role || role;
+          showPanelAlert('muCreateUserAlert', `Account created successfully for Staff ID: ${data.staffId} (${data.email}) with ${successRole} role.`, 'success');
+          const form = document.getElementById('createUserForm');
+          if (form) form.reset();
           showToast(`User ${data.staffId} created successfully.`, 'success');
+
+          // Update local accounts table if user list state exists
+          if (Array.isArray(state.usersList)) {
+            const normalizedId = (data.staffId || '').toUpperCase();
+            const exists = state.usersList.some(u => (u.id || '').toUpperCase() === normalizedId);
+            if (!exists) {
+              state.usersList.push({
+                id: normalizedId,
+                name: data.displayName || displayName.trim() || `Staff ${normalizedId}`,
+                role: successRole === 'ADMIN' ? 'Administrator' : 'Technician'
+              });
+              populateUserAccountsTable();
+            }
+          }
+        } else if (data.partialFailure) {
+          showPanelAlert('muCreateUserAlert', data.error || 'User account was created, but assigning role custom claims failed.', 'error');
+          showToast(`Warning: Role assignment incomplete for ${data.staffId || staffId}.`, 'error');
         } else {
           showPanelAlert('muCreateUserAlert', data.error || 'Failed to create user account.', 'error');
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('[submitCreateUser] Error:', err);
         showPanelAlert('muCreateUserAlert', 'Network error. Check your connection and try again.', 'error');
       })
       .finally(() => {
-        if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Create User';
+        }
       });
   }
   window.submitCreateUser = submitCreateUser;
