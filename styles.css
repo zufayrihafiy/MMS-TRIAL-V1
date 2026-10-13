@@ -2816,7 +2816,8 @@ body {
 }
 
 @media (max-width: 992px) {
-  .bd-charts-grid {
+  .bd-charts-grid,
+  .pm-charts-grid {
     grid-template-columns: 1fr !important;
   }
 }
@@ -2826,4 +2827,14 @@ body {
     flex-direction: column;
     align-items: flex-start !important;
   }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.is-spinning {
+  animation: spin 1s linear infinite;
+  display: inline-block;
 }

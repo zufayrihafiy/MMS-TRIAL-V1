@@ -143,149 +143,7 @@
       }
     ],
     breakdowns: [],
-    preventiveMaintenance: [
-      {
-        id: 'PM-801',
-        machine: 'CNC Milling Center 01',
-        taskTitle: 'Weekly Way Lube & Axis Backlash Verification',
-        frequency: 'Weekly',
-        scheduledDate: '2026-10-09 (Friday)',
-        status: 'Due This Week', // Due This Week / Completed / Overdue
-        assignedTech: 'Kumar Sanjeev',
-        department: 'Machining Line 1'
-      },
-      {
-        id: 'PM-802',
-        machine: 'Stamping Press Line 01',
-        taskTitle: 'Hydraulic Fluid Sampling & Filter Cartridge Check',
-        frequency: 'Bi-Weekly',
-        scheduledDate: '2026-10-09 (Friday)',
-        status: 'Due This Week',
-        assignedTech: 'Razak bin Ismail',
-        department: 'Press Shop'
-      },
-      {
-        id: 'PM-803',
-        machine: 'Robotic Welder 01',
-        taskTitle: '6-Axis Arm Calibration & Cable Harness Inspection',
-        frequency: 'Weekly',
-        scheduledDate: '2026-10-10 (Saturday)',
-        status: 'Due This Week',
-        assignedTech: 'Chen Wei Liang',
-        department: 'Chassis Assembly'
-      },
-      {
-        id: 'PM-804',
-        machine: 'Main Air Compressor A',
-        taskTitle: 'Intercooler Condensate Drain & V-Belt Tensioning',
-        frequency: 'Weekly',
-        scheduledDate: '2026-10-10 (Saturday)',
-        status: 'Due This Week',
-        assignedTech: 'Farhan Azman',
-        department: 'Utility'
-      },
-      {
-        id: 'PM-805',
-        machine: 'Paint Booth Air Handling Unit',
-        taskTitle: 'Primary Pleated Filter Stage 1 Replacement',
-        frequency: 'Weekly',
-        scheduledDate: '2026-10-10 (Saturday)',
-        status: 'Due This Week',
-        assignedTech: 'Kumar Sanjeev',
-        department: 'Paint Shop'
-      },
-      {
-        id: 'PM-806',
-        machine: 'Chiller System Line 1',
-        taskTitle: 'Suction/Discharge Refrigerant Pressure Logging',
-        frequency: 'Weekly',
-        scheduledDate: '2026-10-11 (Sunday)',
-        status: 'Due This Week',
-        assignedTech: 'Daniel Tan',
-        department: 'Central Plant'
-      },
-      {
-        id: 'PM-807',
-        machine: 'Overhead Crane 10-Ton',
-        taskTitle: 'Wire Rope Lubrication & Upper Limit Safety Switch',
-        frequency: 'Monthly',
-        scheduledDate: '2026-10-11 (Sunday)',
-        status: 'Due This Week',
-        assignedTech: 'Ahmad Firdaus',
-        department: 'Heavy Stamping'
-      },
-      {
-        id: 'PM-808',
-        machine: 'Laser Cutting Machine 02',
-        taskTitle: 'Optics Lens Clean & Assist Gas Regulator Inspection',
-        frequency: 'Weekly',
-        scheduledDate: '2026-10-12 (Monday)',
-        status: 'Due This Week',
-        assignedTech: 'Chen Wei Liang',
-        department: 'Sheet Metal'
-      },
-      {
-        id: 'PM-809',
-        machine: 'Forklift Fleet Unit 04',
-        taskTitle: 'Traction Battery Equalization & Mast Chain Greasing',
-        frequency: 'Weekly',
-        scheduledDate: '2026-10-12 (Monday)',
-        status: 'Due This Week',
-        assignedTech: 'Farhan Azman',
-        department: 'Logistics'
-      },
-      {
-        id: 'PM-810',
-        machine: 'Conveyor Line B',
-        taskTitle: 'Roller Bearing Grease Refill & Belt Tracking Inspection',
-        frequency: 'Bi-Weekly',
-        scheduledDate: '2026-10-13 (Tuesday)',
-        status: 'Due This Week',
-        assignedTech: 'Razak bin Ismail',
-        department: 'Assembly Line B'
-      },
-      {
-        id: 'PM-811',
-        machine: 'Substation Transformer 01',
-        taskTitle: 'Infrared Thermographic Scan on High-Voltage Bushings',
-        frequency: 'Monthly',
-        scheduledDate: '2026-10-14 (Wednesday)',
-        status: 'Due This Week',
-        assignedTech: 'Daniel Tan',
-        department: 'Electrical Main'
-      },
-      {
-        id: 'PM-812',
-        machine: 'Cooling Tower Pump 3',
-        taskTitle: 'Dynamic Vibration Analysis & Mechanical Seal Check',
-        frequency: 'Monthly',
-        scheduledDate: '2026-10-15 (Thursday)',
-        status: 'Due This Week',
-        assignedTech: 'Nurul Huda',
-        department: 'Utility'
-      },
-      // Completed PM tasks for history
-      {
-        id: 'PM-795',
-        machine: 'Hydraulic Bending Machine',
-        taskTitle: 'Proportional Valve Spool Clean & Zero Offset',
-        frequency: 'Monthly',
-        scheduledDate: '2026-10-05',
-        status: 'Completed',
-        assignedTech: 'Razak bin Ismail',
-        department: 'Sheet Metal'
-      },
-      {
-        id: 'PM-796',
-        machine: 'Automated Guided Vehicle AGV-03',
-        taskTitle: 'Li-Ion Battery Health & LiDAR Sensor Wipe',
-        frequency: 'Weekly',
-        scheduledDate: '2026-10-06',
-        status: 'Completed',
-        assignedTech: 'Chen Wei Liang',
-        department: 'Warehouse'
-      }
-    ],
+    preventiveMaintenance: [],
     spareParts: [
       {
         code: 'SP-301',
@@ -473,6 +331,14 @@
         } else {
           state.breakdowns = [];
         }
+
+        // Completely purge demo PM records from cached local storage
+        const KNOWN_DEMO_PM_IDS = ['PM-801', 'PM-802', 'PM-803', 'PM-804', 'PM-805', 'PM-806', 'PM-807', 'PM-808', 'PM-809', 'PM-810', 'PM-811', 'PM-812', 'PM-795', 'PM-796'];
+        if (Array.isArray(state.preventiveMaintenance)) {
+          state.preventiveMaintenance = state.preventiveMaintenance.filter(p => !KNOWN_DEMO_PM_IDS.includes(p.id || p.pmCode));
+        } else {
+          state.preventiveMaintenance = [];
+        }
         // Clean any demo activeJobs in technicians list
         if (Array.isArray(state.technicians)) {
           state.technicians.forEach(t => {
@@ -658,6 +524,19 @@
     document.querySelectorAll('.supervisor-admin-only').forEach(el => {
       el.style.display = isAdmin ? '' : 'none';
     });
+
+    // PM Module access rules
+    const addPMBtn = document.getElementById('addPMRecordBtn');
+    if (addPMBtn) {
+      addPMBtn.style.display = isAdmin ? 'inline-block' : 'none';
+    }
+    const pmDashboardTab = document.getElementById('pmDashboardTabBtn');
+    if (pmDashboardTab) {
+      pmDashboardTab.style.display = isAdmin ? 'inline-block' : 'none';
+      if (!isAdmin && activeMaintenanceTab === 'pm-dashboard') {
+        switchMaintenanceTab('pm-schedule');
+      }
+    }
   }
 
   // =========================================================================
@@ -2040,15 +1919,36 @@
   }
 
   // =========================================================================
-  // 7. MODULE 2: MAINTENANCE RECORD (PM)
+  // 7. MODULE 2: MAINTENANCE RECORD (PM) — DATABASE CONNECTED WORKFLOW
   // =========================================================================
   let activeMaintenanceTab = 'pm-schedule';
+  let isPMSyncing = false;
+  let lastPMFetchError = null;
+  let chartPMTrendInstance = null;
+  let chartPMTypeInstance = null;
+  let chartPMMachineInstance = null;
+  let selectedPMPhotoFile = null;
 
   function renderMaintenanceView() {
-    renderMaintenanceTables();
+    applyRolePermissions();
+    renderOngoingPMTable();
+    renderPMHistoryTable();
+    if (activeMaintenanceTab === 'pm-dashboard') {
+      updatePMDashboard();
+    }
   }
 
   function switchMaintenanceTab(tabName) {
+    if (tabName === 'pm-dashboard') {
+      const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+      const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+      if (!isAdmin) {
+        showToast('Access Denied: PM Dashboard is restricted exclusively to Administrators.', 'error');
+        switchMaintenanceTab('pm-schedule');
+        return;
+      }
+    }
+
     activeMaintenanceTab = tabName;
     document.querySelectorAll('#maintenanceTabs .module-tab-btn').forEach(btn => {
       if (btn.getAttribute('data-tab') === tabName) {
@@ -2064,53 +1964,930 @@
 
     const targetTab = document.getElementById(`pm-tab-${tabName}`);
     if (targetTab) targetTab.style.display = 'block';
+
+    if (tabName === 'pm-dashboard') {
+      updatePMDashboard();
+    }
   }
 
-  function renderMaintenanceTables() {
-    // 1. PM Schedule (Due This Week)
-    const dueList = state.preventiveMaintenance.filter(p => p.status === 'Due This Week');
-    const pmScheduleTbody = document.getElementById('pmScheduleTbody');
-    if (pmScheduleTbody) {
-      if (dueList.length === 0) {
-        pmScheduleTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">All PM schedules for this week have been completed!</td></tr>`;
+  /**
+   * Fetch live PM records from Google Sheets PM DATABASE via Netlify Function.
+   * Completely preserves the user session (never reloads page).
+   */
+  async function fetchPMRecordsFromBackend(silent = false) {
+    const token = getStoredAuthToken() || '';
+    if (!token) return { ok: false, error: 'Not authenticated' };
+
+    try {
+      const res = await fetch('/.netlify/functions/get-pm-records', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const result = await res.json().catch(() => null);
+
+      if (res.ok && result && result.success) {
+        lastPMFetchError = null;
+        const remoteList = Array.isArray(result.data) ? result.data : [];
+
+        // Map remote records from PM DATABASE
+        state.preventiveMaintenance = remoteList.map(item => ({
+          id: item.pmCode,
+          pmCode: item.pmCode,
+          machine: item.machine || '',
+          maintenanceType: item.maintenanceType || 'Scheduled',
+          taskTitle: item.taskTitle || '',
+          taskDescription: item.taskDescription || '',
+          scheduledDate: item.scheduledDate || '',
+          assignedTech: item.assignedTech || 'Unassigned',
+          status: item.status || 'Pending',
+          createdBy: item.createdBy || 'ADMIN',
+          createdAt: item.createdAt || '',
+          completionDateTime: item.completionDateTime || '',
+          workDetails: item.workDetails || '',
+          remarks: item.remarks || '',
+          afterPhoto: item.afterPhoto || '',
+          completedBy: item.completedBy || ''
+        }));
+
+        saveState();
+        renderOngoingPMTable();
+        renderPMHistoryTable();
+
+        const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+        const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+        if (isAdmin && activeMaintenanceTab === 'pm-dashboard') {
+          updatePMDashboard();
+        }
+        return { ok: true, count: state.preventiveMaintenance.length };
       } else {
-        pmScheduleTbody.innerHTML = dueList.map(item => `
-          <tr>
-            <td><strong>${item.id}</strong></td>
-            <td>
-              <div style="font-weight:600; color:var(--navy-darkest);">${escapeHtml(item.machine)}</div>
-              <div style="font-size:11.5px; color:var(--text-muted);">${escapeHtml(item.department)}</div>
-            </td>
-            <td>${escapeHtml(item.taskTitle)}</td>
-            <td><span class="status-badge status-badge-blue">${item.frequency}</span></td>
-            <td><strong>${escapeHtml(item.scheduledDate)}</strong></td>
-            <td>
-              <div class="action-btn-group">
-                <button class="btn-table-action success" onclick="window.completePMTask('${item.id}')">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Mark Complete
+        const errMsg = (result && (result.error || result.message)) || `Server returned HTTP ${res.status}`;
+        lastPMFetchError = errMsg;
+        renderOngoingPMTable();
+        renderPMHistoryTable();
+        if (!silent) {
+          showToast('PM Database Sync Error: ' + errMsg, 'error');
+        }
+        return { ok: false, error: errMsg };
+      }
+    } catch (e) {
+      const errMsg = 'Network connection failed: ' + e.message;
+      lastPMFetchError = errMsg;
+      renderOngoingPMTable();
+      renderPMHistoryTable();
+      if (!silent) {
+        showToast('Network error: Unable to connect to Google Sheets PM backend.', 'error');
+      }
+      return { ok: false, error: errMsg };
+    }
+  }
+
+  /**
+   * Sync PM Records button handler with loading spinner, session preservation, and duplicate protection.
+   */
+  async function syncPMRecords(source = 'ongoing') {
+    if (isPMSyncing) return;
+    isPMSyncing = true;
+
+    const btn = source === 'history' ? document.getElementById('syncPMHistoryBtn') : document.getElementById('syncPMOngoingBtn');
+    const spinIcon = btn ? btn.querySelector('.sync-icon') : null;
+    const originalText = btn ? btn.querySelector('span')?.textContent : 'Sync';
+
+    if (btn) btn.disabled = true;
+    if (spinIcon) spinIcon.classList.add('is-spinning');
+    if (btn && btn.querySelector('span')) btn.querySelector('span').textContent = 'Syncing...';
+
+    try {
+      const result = await fetchPMRecordsFromBackend(true);
+      if (result.ok) {
+        showToast('Ongoing & Completed PM records synced successfully.', 'success');
+      } else {
+        showToast('Sync Failed: ' + (result.error || 'Unable to reach PM database.'), 'error');
+      }
+    } catch (err) {
+      showToast('Sync Error: ' + err.message, 'error');
+    } finally {
+      isPMSyncing = false;
+      if (spinIcon) spinIcon.classList.remove('is-spinning');
+      if (btn && btn.querySelector('span')) btn.querySelector('span').textContent = originalText;
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  /**
+   * Render Table 1: Ongoing Preventive Maintenance
+   */
+  function renderOngoingPMTable() {
+    const tbody = document.getElementById('pmScheduleTbody');
+    if (!tbody) return;
+
+    if (lastPMFetchError && (!state.preventiveMaintenance || state.preventiveMaintenance.length === 0)) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#E53E3E; font-weight:500;">
+        <div style="margin-bottom:6px;">&#9888; Database Connection Error</div>
+        <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(lastPMFetchError)}</div>
+      </td></tr>`;
+      return;
+    }
+
+    const ongoingList = (state.preventiveMaintenance || []).filter(p => {
+      const s = String(p.status || '').trim();
+      return s === 'Pending' || s === 'In Progress';
+    });
+
+    // Sort by Scheduled Date ascending
+    ongoingList.sort((a, b) => String(a.scheduledDate || '').localeCompare(String(b.scheduledDate || '')));
+
+    if (ongoingList.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px 16px; color:var(--text-muted);">
+        <div style="font-weight:600; color:var(--navy-darkest); margin-bottom:4px;">No ongoing preventive maintenance tasks found.</div>
+        <div style="font-size:12px;">All scheduled maintenance tasks are currently up-to-date or resolved.</div>
+      </td></tr>`;
+      return;
+    }
+
+    const currentStaffId = (state.currentUser ? (state.currentUser.staffId || state.currentUser.id || '') : '').toUpperCase();
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+
+    tbody.innerHTML = ongoingList.map(item => {
+      const assignedTech = (item.assignedTech || '').toUpperCase();
+      const canResolve = isAdmin || (assignedTech === currentStaffId && currentStaffId !== '');
+      const typeBadgeClass = item.maintenanceType === 'Scheduled' ? 'status-badge-blue' : 'status-badge-purple';
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(item.pmCode || item.id)}</strong></td>
+          <td>
+            <div style="font-weight:600; color:var(--navy-darkest);">${escapeHtml(item.machine)}</div>
+          </td>
+          <td><span class="status-badge ${typeBadgeClass}">${escapeHtml(item.maintenanceType || 'Scheduled')}</span></td>
+          <td>
+            <div style="font-weight:600; color:var(--text-primary);">${escapeHtml(item.taskTitle)}</div>
+            ${item.taskDescription ? `<div style="font-size:11.5px; color:var(--text-muted); max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(item.taskDescription)}</div>` : ''}
+          </td>
+          <td><strong>${escapeHtml(item.scheduledDate)}</strong></td>
+          <td>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-weight:500;">
+              <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#0078E7;"></span>
+              ${escapeHtml(item.assignedTech || 'Unassigned')}
+            </span>
+          </td>
+          <td>
+            <div class="action-btn-group">
+              ${canResolve ? `
+                <button class="btn-table-action success" onclick="window.openResolvePMModal('${escapeHtml(item.pmCode || item.id)}')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  Resolve
                 </button>
-              </div>
-            </td>
-          </tr>
-        `).join('');
+              ` : `
+                <span style="font-size:11.5px; color:var(--text-muted); font-style:italic;" title="Only the assigned technician or an Administrator may resolve this task">
+                  Assigned
+                </span>
+              `}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  /**
+   * Render Table 2: Maintenance History (Completed PMs only)
+   */
+  function renderPMHistoryTable() {
+    const tbody = document.getElementById('pmHistoryTbody');
+    if (!tbody) return;
+
+    if (lastPMFetchError && (!state.preventiveMaintenance || state.preventiveMaintenance.length === 0)) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#E53E3E; font-weight:500;">
+        <div style="margin-bottom:6px;">&#9888; Database Connection Error</div>
+        <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(lastPMFetchError)}</div>
+      </td></tr>`;
+      return;
+    }
+
+    const historyList = (state.preventiveMaintenance || []).filter(p => {
+      return String(p.status || '').trim() === 'Completed';
+    });
+
+    // Sort by Completion Date / Created At descending
+    historyList.sort((a, b) => {
+      const da = a.completionDateTime || a.createdAt || '';
+      const db = b.completionDateTime || b.createdAt || '';
+      return db.localeCompare(da);
+    });
+
+    if (historyList.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px 16px; color:var(--text-muted);">
+        No completed maintenance records found.
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = historyList.map(item => {
+      const typeBadgeClass = item.maintenanceType === 'Scheduled' ? 'status-badge-blue' : 'status-badge-purple';
+      const techDisplay = item.assignedTech || item.completedBy || 'Not recorded';
+      const compDateDisplay = item.completionDateTime ? formatTimeReportedKL(item.completionDateTime) : 'Not recorded';
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(item.pmCode || item.id)}</strong></td>
+          <td><span style="font-weight:600; color:var(--navy-darkest);">${escapeHtml(item.machine)}</span></td>
+          <td><span class="status-badge ${typeBadgeClass}">${escapeHtml(item.maintenanceType || 'Scheduled')}</span></td>
+          <td>${escapeHtml(item.taskTitle)}</td>
+          <td><strong>${escapeHtml(techDisplay)}</strong></td>
+          <td>${escapeHtml(compDateDisplay)}</td>
+          <td>
+            <button class="btn-table-action info" onclick="window.openViewPMHistoryModal('${escapeHtml(item.pmCode || item.id)}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              View
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  /**
+   * CREATE PM RECORD MODAL (Admin Only)
+   */
+  async function openCreatePMModal() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Creating PM records is restricted to Administrators.', 'error');
+      return;
+    }
+
+    const modal = document.getElementById('createPMRecordModal');
+    if (!modal) return;
+
+    // Reset form and alert
+    const form = document.getElementById('createPMForm');
+    if (form) form.reset();
+
+    const alertEl = document.getElementById('createPMAlert');
+    if (alertEl) alertEl.style.display = 'none';
+
+    // Set Created By with verified staff ID
+    const createdByInput = document.getElementById('createPMCreatedBy');
+    if (createdByInput) {
+      createdByInput.value = state.currentUser.staffId || state.currentUser.id || 'ADMIN';
+    }
+
+    // Default Scheduled Date to today (YYYY-MM-DD)
+    const schedDateInput = document.getElementById('createPMScheduledDate');
+    if (schedDateInput) {
+      const today = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      schedDateInput.value = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+    }
+
+    // Populate Technician dropdown from Firebase
+    const techSelect = document.getElementById('createPMAssignedTech');
+    if (techSelect) {
+      techSelect.disabled = true;
+      techSelect.innerHTML = '<option value="">Loading registered technicians...</option>';
+    }
+
+    modal.classList.add('active');
+
+    // Fetch technicians from secure endpoint
+    const dirResult = await fetchRegisteredTechnicians();
+    if (techSelect) {
+      if (!dirResult.ok || !Array.isArray(dirResult.technicians) || dirResult.technicians.length === 0) {
+        techSelect.innerHTML = '<option value="">No registered technicians found</option>';
+        techSelect.disabled = true;
+      } else {
+        techSelect.disabled = false;
+        techSelect.innerHTML = '<option value="">Select Technician...</option>' +
+          dirResult.technicians.map(t => `<option value="${escapeHtml(t.staffId)}">${escapeHtml(t.displayName || t.staffId)} (${escapeHtml(t.staffId)})</option>`).join('');
+      }
+    }
+  }
+
+  async function submitCreatePMRecord() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Creating PM records is restricted to Administrators.', 'error');
+      return;
+    }
+
+    const alertEl = document.getElementById('createPMAlert');
+    const submitBtn = document.getElementById('submitCreatePMBtn');
+
+    const machine = (document.getElementById('createPMMachine')?.value || '').trim();
+    const maintenanceType = (document.getElementById('createPMType')?.value || '').trim();
+    const taskTitle = (document.getElementById('createPMTaskTitle')?.value || '').trim();
+    const taskDescription = (document.getElementById('createPMTaskDescription')?.value || '').trim();
+    const scheduledDate = (document.getElementById('createPMScheduledDate')?.value || '').trim();
+    const assignedTech = (document.getElementById('createPMAssignedTech')?.value || '').trim();
+
+    // Validation
+    if (!machine) {
+      showCreatePMAlert('Please select a valid Machine / Section.');
+      return;
+    }
+    if (maintenanceType !== 'Scheduled' && maintenanceType !== 'Unscheduled') {
+      showCreatePMAlert('Please select a valid Maintenance Type (Scheduled or Unscheduled).');
+      return;
+    }
+    if (!taskTitle || taskTitle.length < 3) {
+      showCreatePMAlert('Please enter a Task Title (at least 3 characters).');
+      return;
+    }
+    if (!scheduledDate) {
+      showCreatePMAlert('Please specify a valid Scheduled Date.');
+      return;
+    }
+    if (!assignedTech) {
+      showCreatePMAlert('Please select an Assigned Technician from the directory.');
+      return;
+    }
+
+    const token = getStoredAuthToken();
+    if (!token) {
+      showCreatePMAlert('Authentication session expired. Please log in again.');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating Record...';
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/create-pm-record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          machine,
+          maintenanceType,
+          taskTitle,
+          taskDescription,
+          scheduledDate,
+          assignedTech
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        showCreatePMAlert(data.error || 'Failed to create PM record in database.');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create PM Record';
+        }
+        return;
+      }
+
+      // Success
+      closeAllModals();
+      showToast(`Preventive maintenance record ${data.pmCode} created successfully!`, 'success');
+      await fetchPMRecordsFromBackend(true);
+
+    } catch (err) {
+      showCreatePMAlert('Network error connecting to backend: ' + err.message);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create PM Record';
+      }
+    }
+  }
+
+  function showCreatePMAlert(msg) {
+    const alertEl = document.getElementById('createPMAlert');
+    if (alertEl) {
+      alertEl.textContent = msg;
+      alertEl.style.display = 'block';
+      alertEl.style.background = '#FEE2E2';
+      alertEl.style.color = '#B91C1C';
+      alertEl.style.border = '1px solid #FCA5A5';
+    }
+  }
+
+  /**
+   * RESOLVE PM TASK MODAL
+   */
+  function openResolvePMModal(pmCode) {
+    const item = (state.preventiveMaintenance || []).find(p => (p.pmCode || p.id) === pmCode);
+    if (!item) {
+      showToast(`PM record ${pmCode} not found.`, 'error');
+      return;
+    }
+
+    const currentStaffId = (state.currentUser ? (state.currentUser.staffId || state.currentUser.id || '') : '').toUpperCase();
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    const assignedTech = (item.assignedTech || '').toUpperCase();
+
+    if (!isAdmin && assignedTech !== currentStaffId) {
+      showToast('Access Denied: Technicians may only resolve maintenance tasks assigned to them.', 'error');
+      return;
+    }
+
+    const modal = document.getElementById('resolvePMModal');
+    if (!modal) return;
+
+    // Reset alert & inputs
+    const alertEl = document.getElementById('resolvePMAlert');
+    if (alertEl) alertEl.style.display = 'none';
+
+    document.getElementById('resolvePMHiddenCode').value = pmCode;
+    document.getElementById('resolvePMPmCode').textContent = pmCode;
+    document.getElementById('resolvePMTitle').textContent = item.taskTitle || '';
+    document.getElementById('resolvePMMachine').textContent = item.machine || '';
+    document.getElementById('resolvePMSchedDate').textContent = item.scheduledDate || '';
+    document.getElementById('resolvePMTech').textContent = item.assignedTech || '';
+
+    const typeBadge = document.getElementById('resolvePMTypeBadge');
+    if (typeBadge) {
+      typeBadge.textContent = item.maintenanceType || 'Scheduled';
+      typeBadge.className = item.maintenanceType === 'Scheduled' ? 'status-badge status-badge-blue' : 'status-badge status-badge-purple';
+    }
+
+    // Default completion time to now in local format
+    const compInput = document.getElementById('resolvePMCompletionTime');
+    if (compInput) compInput.value = formatInputDateTime(new Date());
+
+    const workInput = document.getElementById('resolvePMWorkDetails');
+    if (workInput) workInput.value = '';
+
+    const remarksInput = document.getElementById('resolvePMRemarks');
+    if (remarksInput) remarksInput.value = '';
+
+    // Reset photo file selection
+    selectedPMPhotoFile = null;
+    const photoInput = document.getElementById('resolvePMPhotoInput');
+    if (photoInput) photoInput.value = '';
+    const photoName = document.getElementById('resolvePMPhotoFileName');
+    if (photoName) photoName.textContent = 'Upload image (Optional)';
+
+    modal.classList.add('active');
+  }
+
+  function handlePMPhotoSelect(e) {
+    const file = e.target.files && e.target.files[0];
+    const nameEl = document.getElementById('resolvePMPhotoFileName');
+    if (!file) {
+      selectedPMPhotoFile = null;
+      if (nameEl) nameEl.textContent = 'Upload image (Optional)';
+      return;
+    }
+    selectedPMPhotoFile = file;
+    if (nameEl) nameEl.textContent = file.name;
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function submitResolvePMRecord() {
+    const pmCode = (document.getElementById('resolvePMHiddenCode')?.value || '').trim();
+    const completionDateTime = (document.getElementById('resolvePMCompletionTime')?.value || '').trim();
+    const workDetails = (document.getElementById('resolvePMWorkDetails')?.value || '').trim();
+    const remarks = (document.getElementById('resolvePMRemarks')?.value || '').trim();
+    const submitBtn = document.getElementById('submitResolvePMBtn');
+
+    if (!pmCode) {
+      showResolvePMAlert('Missing PM Code reference.');
+      return;
+    }
+    if (!completionDateTime) {
+      showResolvePMAlert('Please select a Completion Date & Time.');
+      return;
+    }
+    if (!workDetails || workDetails.length < 5) {
+      showResolvePMAlert('Please provide detailed Maintenance Work Details (at least 5 characters).');
+      return;
+    }
+
+    const token = getStoredAuthToken();
+    if (!token) {
+      showResolvePMAlert('Authentication session expired. Please log in again.');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Resolving Task...';
+    }
+
+    try {
+      let photoFiles = null;
+      if (selectedPMPhotoFile) {
+        try {
+          const base64Data = await readFileAsBase64(selectedPMPhotoFile);
+          photoFiles = {
+            after: {
+              name: selectedPMPhotoFile.name,
+              type: selectedPMPhotoFile.type,
+              data: base64Data
+            }
+          };
+        } catch (photoErr) {
+          console.warn('Photo conversion error:', photoErr);
+        }
+      }
+
+      const res = await fetch('/.netlify/functions/resolve-pm-record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          pmCode,
+          completionDateTime,
+          workDetails,
+          remarks,
+          photoFiles
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        showResolvePMAlert(data.error || 'Failed to resolve PM record in database.');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm Complete';
+        }
+        return;
+      }
+
+      // Success: Close modal, toast, refresh records
+      closeAllModals();
+      showToast(`Preventive maintenance ${pmCode} resolved and marked as Completed!`, 'success');
+      await fetchPMRecordsFromBackend(true);
+
+    } catch (err) {
+      showResolvePMAlert('Network error connecting to backend: ' + err.message);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm Complete';
+      }
+    }
+  }
+
+  function showResolvePMAlert(msg) {
+    const alertEl = document.getElementById('resolvePMAlert');
+    if (alertEl) {
+      alertEl.textContent = msg;
+      alertEl.style.display = 'block';
+      alertEl.style.background = '#FEE2E2';
+      alertEl.style.color = '#B91C1C';
+      alertEl.style.border = '1px solid #FCA5A5';
+    }
+  }
+
+  /**
+   * VIEW PM HISTORY MODAL
+   */
+  function openViewPMHistoryModal(pmCode) {
+    const item = (state.preventiveMaintenance || []).find(p => (p.pmCode || p.id) === pmCode);
+    if (!item) {
+      showToast(`PM record ${pmCode} not found.`, 'error');
+      return;
+    }
+
+    const modal = document.getElementById('viewPMHistoryModal');
+    if (!modal) return;
+
+    document.getElementById('viewPMPmCode').textContent = item.pmCode || item.id;
+    document.getElementById('viewPMTitle').textContent = item.taskTitle || '-';
+    document.getElementById('viewPMMachine').textContent = item.machine || '-';
+    document.getElementById('viewPMSchedDate').textContent = item.scheduledDate || '-';
+    document.getElementById('viewPMTech').textContent = item.assignedTech || 'Not provided';
+    document.getElementById('viewPMCompletedBy').textContent = item.completedBy || 'Not provided';
+    document.getElementById('viewPMCompletionTime').textContent = item.completionDateTime ? formatTimeReportedKL(item.completionDateTime) : 'Not provided';
+    document.getElementById('viewPMDesc').textContent = item.taskDescription || 'Not provided';
+    document.getElementById('viewPMWorkDetails').textContent = item.workDetails || 'Not provided';
+    document.getElementById('viewPMRemarks').textContent = item.remarks || 'Not provided';
+
+    const typeBadge = document.getElementById('viewPMType');
+    if (typeBadge) {
+      typeBadge.textContent = item.maintenanceType || 'Scheduled';
+      typeBadge.className = item.maintenanceType === 'Scheduled' ? 'status-badge status-badge-blue' : 'status-badge status-badge-purple';
+    }
+
+    const photoCont = document.getElementById('viewPMPhotoContainer');
+    if (photoCont) {
+      if (item.afterPhoto && item.afterPhoto.trim()) {
+        photoCont.innerHTML = `
+          <a href="${escapeHtml(item.afterPhoto)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:8px; color:#0078E7; text-decoration:none; font-weight:600; padding:6px 12px; background:#EFF6FF; border-radius:6px; border:1px solid #BFDBFE;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            View After Maintenance Photo
+          </a>
+        `;
+      } else {
+        photoCont.textContent = 'Not provided';
       }
     }
 
-    // 2. PM History
-    const historyList = state.preventiveMaintenance.filter(p => p.status === 'Completed');
-    const pmHistoryTbody = document.getElementById('pmHistoryTbody');
-    if (pmHistoryTbody) {
-      pmHistoryTbody.innerHTML = historyList.map(item => `
-        <tr>
-          <td><strong>${item.id}</strong></td>
-          <td>${escapeHtml(item.machine)}</td>
-          <td>${escapeHtml(item.taskTitle)}</td>
-          <td><span class="status-badge status-badge-green">Completed</span></td>
-          <td>${escapeHtml(item.assignedTech)}</td>
-          <td>${escapeHtml(item.scheduledDate)}</td>
-        </tr>
-      `).join('');
+    modal.classList.add('active');
+  }
+
+  /**
+   * PM DASHBOARD: Admin-Only KPI & Chart Rendering
+   */
+  async function updatePMDashboard() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) return;
+
+    const token = getStoredAuthToken() || '';
+    if (!token) return;
+
+    try {
+      const res = await fetch('/.netlify/functions/get-pm-dashboard', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success) {
+          // 1. KPI Cards
+          const compRateEl = document.getElementById('pmKpiComplianceRate');
+          if (compRateEl) compRateEl.textContent = data.kpis.complianceRate || 'N/A';
+
+          const comp30El = document.getElementById('pmKpiCompleted30Days');
+          if (comp30El) comp30El.textContent = `${data.kpis.completedPast30Days} Tasks`;
+
+          const ratioEl = document.getElementById('pmKpiRatio');
+          if (ratioEl) ratioEl.textContent = data.kpis.breakdownVsPmRatio || 'N/A';
+
+          const overdueEl = document.getElementById('pmKpiOverdue');
+          if (overdueEl) {
+            overdueEl.textContent = data.kpis.overdueTasks;
+            overdueEl.style.color = data.kpis.overdueTasks > 0 ? '#E53E3E' : '#10B981';
+          }
+
+          // 2. Charts
+          renderPMDashboardCharts(data.charts.monthlyTrend, data.charts.typeDistribution, data.charts.machineRank);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Dashboard fetch warning, falling back to local calculation:', err);
+    }
+
+    // Client-side fallback calculation if endpoint is offline
+    calculateAndRenderPMLocalDashboard();
+  }
+
+  function calculateAndRenderPMLocalDashboard() {
+    const pmList = state.preventiveMaintenance || [];
+    const bdList = state.breakdowns || [];
+
+    const now = new Date();
+    const todayKL = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    const thirtyDaysAgoMs = now.getTime() - (30 * 24 * 60 * 60 * 1000);
+
+    // 1. Compliance Rate
+    let scheduledDue = 0;
+    let scheduledOnTime = 0;
+    for (const r of pmList) {
+      if ((r.maintenanceType || '').trim() !== 'Scheduled') continue;
+      const sDate = (r.scheduledDate || '').trim().slice(0, 10);
+      if (!sDate) continue;
+      const isComp = (r.status || '').trim() === 'Completed';
+      if (sDate <= todayKL || isComp) {
+        scheduledDue++;
+        if (isComp && r.completionDateTime) {
+          const compDate = (r.completionDateTime || '').trim().slice(0, 10);
+          if (compDate && compDate <= sDate) scheduledOnTime++;
+        }
+      }
+    }
+    const compRateStr = scheduledDue > 0 ? ((scheduledOnTime / scheduledDue) * 100).toFixed(1) + '%' : 'N/A';
+
+    // 2. Completed Past 30 Days
+    let comp30Count = 0;
+    for (const r of pmList) {
+      if ((r.status || '').trim() !== 'Completed') continue;
+      const t = new Date(r.completionDateTime).getTime();
+      if (!isNaN(t) && t >= thirtyDaysAgoMs) comp30Count++;
+    }
+
+    // 3. Ratio
+    const totalBD = bdList.length;
+    let totalPM = pmList.filter(r => (r.status || '').trim() === 'Completed').length;
+    let ratioStr = 'N/A';
+    if (totalBD === 0 && totalPM === 0) ratioStr = '0 : 0';
+    else if (totalBD === 0) ratioStr = `0 : ${totalPM}`;
+    else if (totalPM === 0) ratioStr = `${totalBD} : 0`;
+    else ratioStr = `1 : ${(totalPM / totalBD).toFixed(1)}`;
+
+    // 4. Overdue
+    let overdueCount = 0;
+    for (const r of pmList) {
+      if ((r.status || '').trim() === 'Completed') continue;
+      if ((r.maintenanceType || '').trim() !== 'Scheduled') continue;
+      const sDate = (r.scheduledDate || '').trim().slice(0, 10);
+      if (sDate && sDate < todayKL) overdueCount++;
+    }
+
+    const compRateEl = document.getElementById('pmKpiComplianceRate');
+    if (compRateEl) compRateEl.textContent = compRateStr;
+    const comp30El = document.getElementById('pmKpiCompleted30Days');
+    if (comp30El) comp30El.textContent = `${comp30Count} Tasks`;
+    const ratioEl = document.getElementById('pmKpiRatio');
+    if (ratioEl) ratioEl.textContent = ratioStr;
+    const overdueEl = document.getElementById('pmKpiOverdue');
+    if (overdueEl) {
+      overdueEl.textContent = overdueCount;
+      overdueEl.style.color = overdueCount > 0 ? '#E53E3E' : '#10B981';
+    }
+
+    // Charts fallback
+    const months = [];
+    const mCounts = {};
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      months.push({ k, label: d.toLocaleString('en-US', { month: 'short', year: '2-digit' }) });
+      mCounts[k] = 0;
+    }
+    for (const r of pmList) {
+      if ((r.status || '').trim() !== 'Completed') continue;
+      const m = (r.completionDateTime || '').slice(0, 7);
+      if (mCounts[m] !== undefined) mCounts[m]++;
+    }
+
+    let schedCount = pmList.filter(r => (r.maintenanceType || '').trim() === 'Scheduled').length;
+    let unschedCount = pmList.filter(r => (r.maintenanceType || '').trim() === 'Unscheduled').length;
+
+    const machCounts = {};
+    for (const r of pmList) {
+      if ((r.status || '').trim() !== 'Completed') continue;
+      const mach = r.machine || 'Unknown';
+      machCounts[mach] = (machCounts[mach] || 0) + 1;
+    }
+    const topMach = Object.keys(machCounts).map(m => ({ name: m, count: machCounts[m] })).sort((a,b) => b.count - a.count).slice(0, 5);
+
+    renderPMDashboardCharts(
+      { labels: months.map(m => m.label), data: months.map(m => mCounts[m.k]) },
+      { labels: ['Scheduled', 'Unscheduled'], data: [schedCount, unschedCount] },
+      { labels: topMach.map(m => m.name), data: topMach.map(m => m.count) }
+    );
+  }
+
+  function renderPMDashboardCharts(monthlyTrend, typeDistribution, machineRank) {
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js library is not available.');
+      return;
+    }
+
+    // 1. Chart 1: Line Chart — Monthly Completion Trend
+    const trendCanvas = document.getElementById('chartPMCompletionTrend');
+    if (trendCanvas) {
+      if (chartPMTrendInstance) {
+        chartPMTrendInstance.destroy();
+        chartPMTrendInstance = null;
+      }
+      const ctx = trendCanvas.getContext('2d');
+      chartPMTrendInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: monthlyTrend.labels,
+          datasets: [{
+            label: 'Completed PM Tasks',
+            data: monthlyTrend.data,
+            borderColor: '#0078E7',
+            backgroundColor: 'rgba(0, 120, 231, 0.08)',
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#0078E7'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#062641',
+              padding: 10,
+              cornerRadius: 6
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0, font: { size: 11 } },
+              grid: { color: '#F1F5F9' }
+            },
+            x: {
+              ticks: { font: { size: 11 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Chart 2: Doughnut Chart — Maintenance Type Distribution
+    const typeCanvas = document.getElementById('chartPMTypeDistribution');
+    if (typeCanvas) {
+      if (chartPMTypeInstance) {
+        chartPMTypeInstance.destroy();
+        chartPMTypeInstance = null;
+      }
+      const ctx = typeCanvas.getContext('2d');
+      const hasData = (typeDistribution.data[0] + typeDistribution.data[1]) > 0;
+      chartPMTypeInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: hasData ? typeDistribution.labels : ['No Records'],
+          datasets: [{
+            data: hasData ? typeDistribution.data : [1],
+            backgroundColor: hasData ? ['#0078E7', '#8B5CF6'] : ['#E2E8F0'],
+            borderWidth: 2,
+            borderColor: '#FFFFFF'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { font: { size: 12 }, padding: 14 }
+            },
+            tooltip: {
+              enabled: hasData,
+              backgroundColor: '#062641',
+              padding: 10,
+              cornerRadius: 6
+            }
+          },
+          cutout: '68%'
+        }
+      });
+    }
+
+    // 3. Chart 3: Horizontal Bar Chart — PM Completion by Machine
+    const machineCanvas = document.getElementById('chartPMMachineCompletion');
+    if (machineCanvas) {
+      if (chartPMMachineInstance) {
+        chartPMMachineInstance.destroy();
+        chartPMMachineInstance = null;
+      }
+      const ctx = machineCanvas.getContext('2d');
+      const hasData = machineRank.data && machineRank.data.length > 0 && machineRank.data.some(c => c > 0);
+      chartPMMachineInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: hasData ? machineRank.labels : ['No Completed Records'],
+          datasets: [{
+            label: 'Completed PMs',
+            data: hasData ? machineRank.data : [0],
+            backgroundColor: '#062641',
+            hoverBackgroundColor: '#0078E7',
+            borderRadius: 4,
+            barThickness: 18
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: hasData,
+              backgroundColor: '#062641',
+              padding: 10,
+              cornerRadius: 6
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: { precision: 0, font: { size: 11 } },
+              grid: { color: '#F1F5F9' }
+            },
+            y: {
+              ticks: { font: { size: 11, weight: 'bold' } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
     }
   }
 
@@ -2779,16 +3556,9 @@
     openResolveBreakdownModal(bdId);
   }
 
-  // Complete PM Task Action
+  // Complete PM Task Action (Routes to database-backed resolve modal)
   function completePMTask(pmId) {
-    const item = state.preventiveMaintenance.find(p => p.id === pmId);
-    if (item) {
-      item.status = 'Completed';
-      addNotification('PM Task Completed', `${item.taskTitle} on ${item.machine} completed.`, 'maintenance', pmId);
-      saveState();
-      renderAll();
-      showToast(`Preventive maintenance ${pmId} marked as Completed!`, 'success');
-    }
+    openResolvePMModal(pmId);
   }
 
   // Edit Stock Modal
@@ -2985,6 +3755,7 @@
   // Render everything based on state
   function renderAll() {
     renderUserAccount();
+    applyRolePermissions();
     updateKPICounters();
     if (currentView === 'breakdown') renderBreakdownView();
     if (currentView === 'maintenance') renderMaintenanceView();
@@ -3125,6 +3896,15 @@
   window.filterResolvedHistory = filterResolvedHistory;
   window.updateBDDashboard = updateBDDashboard;
   window.fetchBreakdownsFromBackend = fetchBreakdownsFromBackend;
+  window.fetchPMRecordsFromBackend = fetchPMRecordsFromBackend;
+  window.syncPMRecords = syncPMRecords;
+  window.openCreatePMModal = openCreatePMModal;
+  window.submitCreatePMRecord = submitCreatePMRecord;
+  window.openResolvePMModal = openResolvePMModal;
+  window.submitResolvePMRecord = submitResolvePMRecord;
+  window.handlePMPhotoSelect = handlePMPhotoSelect;
+  window.openViewPMHistoryModal = openViewPMHistoryModal;
+  window.updatePMDashboard = updatePMDashboard;
   window.completePMTask = completePMTask;
   window.openEditStockModal = openEditStockModal;
   window.openRequestStockModal = openRequestStockModal;
@@ -3761,6 +4541,7 @@
         renderAll();
         populateStaffIdFromProfile();
         fetchBreakdownsFromBackend();
+        fetchPMRecordsFromBackend();
         return true;
       } else {
         clearAuthSession();
@@ -3787,6 +4568,7 @@
           renderAll();
           populateStaffIdFromProfile();
           fetchBreakdownsFromBackend();
+          fetchPMRecordsFromBackend();
           return true;
         } catch (e) {
           // parse error
@@ -3879,6 +4661,7 @@
         renderAll();
         populateStaffIdFromProfile();
         fetchBreakdownsFromBackend();
+        fetchPMRecordsFromBackend();
 
         showToast(`Welcome back, ${u.name} (${u.role})`, 'success');
       } else {

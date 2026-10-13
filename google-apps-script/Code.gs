@@ -49,7 +49,25 @@
  */
 
 const SHEET_NAME = 'BD DATABASE';
+const PM_SHEET_NAME = 'PM DATABASE';
 const DRIVE_FOLDER_NAME = 'MMS Breakdown Photos';
+const PM_HEADERS = [
+  'PM Code',
+  'Machine / Section',
+  'Maintenance Type',
+  'Task Title',
+  'Task Description',
+  'Scheduled Date',
+  'Assigned Technician Staff ID',
+  'Status',
+  'Created By Staff ID',
+  'Created At',
+  'Completion Date & Time',
+  'Maintenance Work Details',
+  'Remarks',
+  'After Maintenance Photo URL',
+  'Completed By Staff ID'
+];
 
 /**
  * Read MMS_API_KEY securely from Script Properties.
@@ -126,6 +144,27 @@ function doPost(e) {
     // =========================================================================
     if (payload.action === 'resolve') {
       return handleResolveAction(payload);
+    }
+
+    // =========================================================================
+    // ACTION 4: GET PM RECORDS (getPMRecords / get-pm)
+    // =========================================================================
+    if (payload.action === 'getPMRecords' || payload.action === 'get-pm') {
+      return handleGetPMRecords();
+    }
+
+    // =========================================================================
+    // ACTION 5: CREATE PM RECORD (createPMRecord / create-pm)
+    // =========================================================================
+    if (payload.action === 'createPMRecord' || payload.action === 'create-pm') {
+      return handleCreatePMRecord(payload);
+    }
+
+    // =========================================================================
+    // ACTION 6: RESOLVE PM RECORD (resolvePMRecord / resolve-pm)
+    // =========================================================================
+    if (payload.action === 'resolvePMRecord' || payload.action === 'resolve-pm') {
+      return handleResolvePMRecord(payload);
     }
 
     // =========================================================================
@@ -638,4 +677,341 @@ function createJsonResponse(data, statusCode) {
   const output = ContentService.createTextOutput(JSON.stringify(data));
   output.setMimeType(ContentService.MimeType.JSON);
   return output;
+}
+
+/**
+ * Format a cell specifically as a Date-only string (yyyy-MM-dd)
+ */
+function formatCellDateOnly(cell) {
+  if (!cell) return '';
+  if (cell instanceof Date) {
+    return Utilities.formatDate(cell, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  const s = String(cell).trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (m) return m[1];
+  return s;
+}
+
+/**
+ * Get or initialize the PM DATABASE worksheet with proper headers and formatting.
+ * Preserves the existing BD DATABASE worksheet completely untouched.
+ */
+function getOrInitPMSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(PM_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(PM_SHEET_NAME);
+    sheet.appendRow(PM_HEADERS);
+    const headerRange = sheet.getRange(1, 1, 1, PM_HEADERS.length);
+    headerRange.setBackground('#062641');
+    headerRange.setFontColor('#FFFFFF');
+    headerRange.setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Authenticated retrieval of PM records from PM DATABASE
+ */
+function handleGetPMRecords() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrInitPMSheet(ss);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow <= 1) {
+    return createJsonResponse({
+      success: true,
+      count: 0,
+      data: []
+    }, 200);
+  }
+
+  const values = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+  const records = [];
+
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    const pmCode = String(row[0] || '').trim();
+    if (!pmCode) continue;
+
+    records.push({
+      pmCode: pmCode,
+      machine: String(row[1] || '').trim(),
+      maintenanceType: String(row[2] || '').trim(),
+      taskTitle: String(row[3] || '').trim(),
+      taskDescription: String(row[4] || '').trim(),
+      scheduledDate: formatCellDateOnly(row[5]),
+      assignedTech: String(row[6] || '').trim(),
+      status: String(row[7] || 'Pending').trim(),
+      createdBy: String(row[8] || '').trim(),
+      createdAt: formatCellDate(row[9]),
+      completionDateTime: formatCellDate(row[10]),
+      workDetails: String(row[11] || '').trim(),
+      remarks: String(row[12] || '').trim(),
+      afterPhoto: String(row[13] || '').trim(),
+      completedBy: String(row[14] || '').trim()
+    });
+  }
+
+  return createJsonResponse({
+    success: true,
+    count: records.length,
+    data: records
+  }, 200);
+}
+
+/**
+ * Append new Preventive Maintenance Record to PM DATABASE
+ * Uses ScriptLock to prevent concurrent duplicate codes.
+ */
+function handleCreatePMRecord(payload) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({
+      success: false,
+      error: 'Database is currently busy processing another write operation. Please try again.'
+    }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = getOrInitPMSheet(ss);
+
+    const machine = String(payload.machine || '').trim();
+    const maintenanceType = String(payload.maintenanceType || '').trim();
+    const taskTitle = String(payload.taskTitle || '').trim();
+    const taskDescription = String(payload.taskDescription || '').trim();
+    const scheduledDate = String(payload.scheduledDate || '').trim();
+    const assignedTech = String(payload.assignedTech || '').trim().toUpperCase();
+    const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+    const callerStaffId = String(payload.callerStaffId || '').trim().toUpperCase();
+    const createdBy = String(payload.createdBy || '').trim().toUpperCase();
+
+    // FAIL-CLOSED AUTHORIZATION: Only verified ADMIN accounts may create PM records
+    if (callerRole !== 'ADMIN') {
+      return createJsonResponse({
+        success: false,
+        error: 'Forbidden: Creating preventive maintenance records is restricted to Administrator accounts.'
+      }, 403);
+    }
+
+    const finalCreatedBy = callerStaffId || createdBy || 'ADMIN';
+
+    if (!machine) {
+      return createJsonResponse({ success: false, error: 'Validation Error: Machine / Section is required.' }, 400);
+    }
+    if (maintenanceType !== 'Scheduled' && maintenanceType !== 'Unscheduled') {
+      return createJsonResponse({ success: false, error: 'Validation Error: Maintenance Type must be Scheduled or Unscheduled.' }, 400);
+    }
+    if (!taskTitle) {
+      return createJsonResponse({ success: false, error: 'Validation Error: Task Title is required.' }, 400);
+    }
+    if (!scheduledDate) {
+      return createJsonResponse({ success: false, error: 'Validation Error: Scheduled Date is required.' }, 400);
+    }
+    if (!assignedTech) {
+      return createJsonResponse({ success: false, error: 'Validation Error: Assigned Technician is required.' }, 400);
+    }
+
+    // Determine next unique PM Code (e.g. PM-0001)
+    const lastRow = sheet.getLastRow();
+    let maxNum = 0;
+    if (lastRow > 1) {
+      const codeValues = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (let i = 0; i < codeValues.length; i++) {
+        const val = String(codeValues[i][0] || '').trim();
+        const match = val.match(/^PM-(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+    }
+
+    const nextNum = maxNum + 1;
+    const pmCode = 'PM-' + String(nextNum).padStart(4, '0');
+    const createdAt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    const status = 'Pending';
+
+    sheet.appendRow([
+      pmCode,
+      machine,
+      maintenanceType,
+      taskTitle,
+      taskDescription,
+      scheduledDate,
+      assignedTech,
+      status,
+      finalCreatedBy,
+      createdAt,
+      '', // completionDateTime
+      '', // workDetails
+      '', // remarks
+      '', // afterPhoto
+      ''  // completedBy
+    ]);
+
+    return createJsonResponse({
+      success: true,
+      pmCode: pmCode,
+      message: 'Preventive maintenance record ' + pmCode + ' created successfully.'
+    }, 201);
+
+  } catch (err) {
+    return createJsonResponse({
+      success: false,
+      error: 'Failed to create PM record: ' + err.toString()
+    }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Resolve an active PM Record in PM DATABASE
+ * Updates Status to 'Completed', records completion date, work details, remarks, photo, completedBy
+ */
+function handleResolvePMRecord(payload) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({
+      success: false,
+      error: 'Database is currently busy processing another write operation. Please try again.'
+    }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = getOrInitPMSheet(ss);
+    const lastRow = sheet.getLastRow();
+
+    if (lastRow <= 1) {
+      return createJsonResponse({ success: false, error: 'PM record not found (empty database).' }, 404);
+    }
+
+    const pmCode = String(payload.pmCode || '').trim();
+    if (!pmCode) {
+      return createJsonResponse({ success: false, error: 'PM Code is required for resolution.' }, 400);
+    }
+
+    const completionDateTime = String(payload.completionDateTime || '').trim();
+    const workDetails = String(payload.workDetails || '').trim();
+    const remarks = String(payload.remarks || '').trim();
+    const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+    const callerStaffId = String(payload.callerStaffId || '').trim().toUpperCase();
+    const completedBy = String(payload.completedBy || '').trim().toUpperCase();
+
+    // 1. FAIL-CLOSED ROLE CHECK: Strictly allow only ADMIN or TECHNICIAN
+    if (callerRole !== 'ADMIN' && callerRole !== 'TECHNICIAN') {
+      return createJsonResponse({
+        success: false,
+        error: 'Forbidden: Invalid or unauthorized caller role. Resolution is restricted to ADMIN or TECHNICIAN.'
+      }, 403);
+    }
+
+    // 2. Verified callerStaffId is mandatory for both roles
+    if (!callerStaffId) {
+      return createJsonResponse({
+        success: false,
+        error: 'Forbidden: Missing verified caller Staff ID.'
+      }, 403);
+    }
+
+    if (!completionDateTime) {
+      return createJsonResponse({ success: false, error: 'Completion Date & Time is required.' }, 400);
+    }
+    if (!workDetails) {
+      return createJsonResponse({ success: false, error: 'Maintenance Work Details are required.' }, 400);
+    }
+
+    // Locate record by PM Code in Column A
+    const codeValues = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+    let targetRowIndex = -1;
+    let targetRowData = null;
+
+    for (let i = 0; i < codeValues.length; i++) {
+      if (String(codeValues[i][0] || '').trim().toUpperCase() === pmCode.toUpperCase()) {
+        targetRowIndex = i + 2; // 1-indexed including header
+        targetRowData = codeValues[i];
+        break;
+      }
+    }
+
+    if (targetRowIndex === -1 || !targetRowData) {
+      return createJsonResponse({ success: false, error: 'PM record ' + pmCode + ' not found.' }, 404);
+    }
+
+    const currentStatus = String(targetRowData[7] || '').trim();
+    if (currentStatus === 'Completed') {
+      return createJsonResponse({ success: false, error: 'PM record ' + pmCode + ' is already marked as Completed.' }, 400);
+    }
+
+    const assignedTech = String(targetRowData[6] || '').trim().toUpperCase();
+
+    // 3. FAIL-CLOSED AUTHORIZATION VALIDATION:
+    let finalCompletedBy = '';
+    if (callerRole === 'TECHNICIAN') {
+      // For TECHNICIAN:
+      // - Require non-empty verified callerStaffId (already validated above)
+      // - Require non-empty assignedTech on the record
+      // - Require assignedTech === callerStaffId exactly
+      if (!assignedTech) {
+        return createJsonResponse({
+          success: false,
+          error: 'Forbidden: This maintenance task has no assigned technician and cannot be resolved by a technician.'
+        }, 403);
+      }
+      if (assignedTech !== callerStaffId) {
+        return createJsonResponse({
+          success: false,
+          error: 'Forbidden: Technicians are only authorized to resolve maintenance tasks assigned to them.'
+        }, 403);
+      }
+      // Completed By must be the verified technician's staff ID (never spoofable)
+      finalCompletedBy = callerStaffId;
+    } else if (callerRole === 'ADMIN') {
+      // For ADMIN:
+      // Verified ADMIN role can resolve any record
+      finalCompletedBy = callerStaffId || completedBy || 'ADMIN';
+    }
+
+    // Optional Photo upload
+    let afterPhotoUrl = String(payload.afterPhoto || '').trim();
+    if (payload.photoFiles && payload.photoFiles.after && payload.photoFiles.after.data) {
+      try {
+        const machine = String(targetRowData[1] || 'PM').trim();
+        afterPhotoUrl = savePhotoToDrive(payload.photoFiles.after, machine, 'PM_AFTER');
+      } catch (photoErr) {
+        console.warn('Photo upload warning: ' + photoErr.message);
+      }
+    }
+
+    // Update Columns H, K, L, M, N, O
+    sheet.getRange(targetRowIndex, 8).setValue('Completed');             // Column H: Status
+    sheet.getRange(targetRowIndex, 11).setValue(completionDateTime);      // Column K: Completion Date & Time
+    sheet.getRange(targetRowIndex, 12).setValue(workDetails);             // Column L: Maintenance Work Details
+    sheet.getRange(targetRowIndex, 13).setValue(remarks);                 // Column M: Remarks
+    sheet.getRange(targetRowIndex, 14).setValue(afterPhotoUrl);           // Column N: After Maintenance Photo URL
+    sheet.getRange(targetRowIndex, 15).setValue(finalCompletedBy);        // Column O: Completed By Staff ID
+
+    return createJsonResponse({
+      success: true,
+      pmCode: pmCode,
+      message: 'Preventive maintenance ' + pmCode + ' successfully resolved as Completed.'
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({
+      success: false,
+      error: 'Failed to resolve PM record: ' + err.toString()
+    }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
 }

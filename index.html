@@ -906,21 +906,19 @@
             </div>
 
             <div class="subview-actions">
-              <button class="btn-secondary" onclick="window.navigateTo('technicians')">
-                View Assigned Techs
-              </button>
+              <!-- Removed View Assigned Techs per specification -->
             </div>
           </div>
 
           <!-- Module Tabs -->
           <div class="module-tabs-nav" id="maintenanceTabs">
             <button class="module-tab-btn active" data-tab="pm-schedule" onclick="window.switchMaintenanceTab('pm-schedule')">
-              PM Schedule (This Week)
+              PM Schedule
             </button>
             <button class="module-tab-btn" data-tab="pm-history" onclick="window.switchMaintenanceTab('pm-history')">
               Maintenance History
             </button>
-            <button class="module-tab-btn" data-tab="pm-dashboard" onclick="window.switchMaintenanceTab('pm-dashboard')">
+            <button class="module-tab-btn" id="pmDashboardTabBtn" data-tab="pm-dashboard" onclick="window.switchMaintenanceTab('pm-dashboard')" style="display:none;">
               PM Dashboard
             </button>
           </div>
@@ -928,9 +926,20 @@
           <!-- TAB 1: PM SCHEDULE -->
           <div id="pm-tab-pm-schedule" class="maintenance-tab-content">
             <div class="data-table-container">
-              <div class="table-toolbar">
-                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Preventive Maintenance Scheduled For Current Week</h3>
-                <span class="status-badge status-badge-blue">Active Schedule</span>
+              <div class="table-toolbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest); margin:0;">Ongoing Preventive Maintenance</h3>
+                  <span class="status-badge status-badge-blue">Active Schedule</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <button id="addPMRecordBtn" class="btn-primary" type="button" style="display:none; padding:7px 14px; font-size:13px; font-weight:600;" onclick="window.openCreatePMModal()">
+                    + Add PM Record
+                  </button>
+                  <button id="syncPMOngoingBtn" class="btn-secondary" type="button" style="padding:7px 14px; font-size:13px; display:inline-flex; align-items:center; gap:6px;" onclick="window.syncPMRecords('ongoing')">
+                    <svg class="sync-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <span>Sync</span>
+                  </button>
+                </div>
               </div>
               <div class="table-responsive">
                 <table class="data-table">
@@ -938,14 +947,15 @@
                     <tr>
                       <th>PM Code</th>
                       <th>Machine / Section</th>
-                      <th>Preventive Maintenance Task</th>
-                      <th>Frequency</th>
+                      <th>Maintenance Type</th>
+                      <th>Task Title</th>
                       <th>Scheduled Date</th>
+                      <th>Assigned Technician</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody id="pmScheduleTbody">
-                    <!-- Populated by JS -->
+                    <!-- Populated dynamically from PM DATABASE -->
                   </tbody>
                 </table>
               </div>
@@ -955,52 +965,102 @@
           <!-- TAB 2: PM HISTORY -->
           <div id="pm-tab-pm-history" class="maintenance-tab-content" style="display:none;">
             <div class="data-table-container">
-              <div class="table-toolbar">
-                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Completed PM History Log</h3>
-                <span class="status-badge status-badge-green">Audited Records</span>
+              <div class="table-toolbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest); margin:0;">Maintenance History</h3>
+                  <span class="status-badge status-badge-green">Audited Records</span>
+                </div>
+                <button id="syncPMHistoryBtn" class="btn-secondary" type="button" style="padding:7px 14px; font-size:13px; display:inline-flex; align-items:center; gap:6px;" onclick="window.syncPMRecords('history')">
+                  <svg class="sync-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                  <span>Sync</span>
+                </button>
               </div>
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Code</th>
+                      <th>PM Code</th>
                       <th>Machine</th>
+                      <th>Maintenance Type</th>
                       <th>Task Title</th>
-                      <th>Status</th>
                       <th>Technician</th>
                       <th>Completion Date</th>
+                      <th>Details</th>
                     </tr>
                   </thead>
                   <tbody id="pmHistoryTbody">
-                    <!-- Populated by JS -->
+                    <!-- Populated dynamically from PM DATABASE -->
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
 
-          <!-- TAB 3: PM DASHBOARD -->
+          <!-- TAB 3: PM DASHBOARD (ADMIN ONLY) -->
           <div id="pm-tab-pm-dashboard" class="maintenance-tab-content" style="display:none;">
-            <div class="analytics-grid">
+            <!-- Four KPI Cards -->
+            <div class="analytics-grid" style="margin-bottom:20px;">
               <div class="analytics-card">
                 <div class="analytics-card-title">PM Schedule Compliance Rate</div>
-                <div class="analytics-card-val">96.4%</div>
-                <div class="analytics-card-sub">Target: > 95%</div>
+                <div class="analytics-card-val" id="pmKpiComplianceRate">--</div>
+                <div class="analytics-card-sub" id="pmKpiComplianceSub">Scheduled PMs met on deadline (KL Time)</div>
               </div>
               <div class="analytics-card">
                 <div class="analytics-card-title">Completed PMs (Past 30 Days)</div>
-                <div class="analytics-card-val">48 Tasks</div>
-                <div class="analytics-card-sub">100% On Time</div>
+                <div class="analytics-card-val" id="pmKpiCompleted30Days">--</div>
+                <div class="analytics-card-sub" id="pmKpiCompleted30DaysSub">Actual closed tasks</div>
               </div>
               <div class="analytics-card">
                 <div class="analytics-card-title">Breakdown vs PM Ratio</div>
-                <div class="analytics-card-val">1 : 4.2</div>
-                <div class="analytics-card-sub">Healthy proactive ratio</div>
+                <div class="analytics-card-val" id="pmKpiRatio">--</div>
+                <div class="analytics-card-sub" id="pmKpiRatioSub">Breakdowns : Completed PMs</div>
               </div>
               <div class="analytics-card">
                 <div class="analytics-card-title">Overdue Tasks</div>
-                <div class="analytics-card-val" style="color:#10B981;">0</div>
-                <div class="analytics-card-sub">No backlog pending</div>
+                <div class="analytics-card-val" id="pmKpiOverdue" style="color:#10B981;">--</div>
+                <div class="analytics-card-sub" id="pmKpiOverdueSub">Scheduled tasks past due date</div>
+              </div>
+            </div>
+
+            <!-- Row 1: Two Infographics (Line Trend & Doughnut Type Distribution) -->
+            <div class="pm-charts-grid" style="display:grid; grid-template-columns:1.6fr 1.1fr; gap:20px; margin-bottom:20px;">
+              <!-- Infographic 1: Monthly PM Completion Trend -->
+              <div class="chart-container-card" style="margin-bottom:0;">
+                <div class="chart-card-header">
+                  <div>
+                    <h4 class="chart-card-title">Monthly PM Completion Trend</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:2px 0 0 0;">Historical completed maintenance count (Last 12 Months)</p>
+                  </div>
+                </div>
+                <div style="position:relative; height:260px; width:100%;">
+                  <canvas id="chartPMCompletionTrend"></canvas>
+                </div>
+              </div>
+
+              <!-- Infographic 2: Maintenance Type Distribution -->
+              <div class="chart-container-card" style="margin-bottom:0;">
+                <div class="chart-card-header">
+                  <div>
+                    <h4 class="chart-card-title">Maintenance Type Distribution</h4>
+                    <p style="font-size:12px; color:var(--text-muted); margin:2px 0 0 0;">Scheduled vs. Unscheduled PM workload ratio</p>
+                  </div>
+                </div>
+                <div style="position:relative; height:260px; width:100%; display:flex; align-items:center; justify-content:center;">
+                  <canvas id="chartPMTypeDistribution"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 2: Full Width Infographic (PM Completion by Machine) -->
+            <div class="chart-container-card" style="margin-bottom:20px;">
+              <div class="chart-card-header">
+                <div>
+                  <h4 class="chart-card-title">PM Completion by Machine</h4>
+                  <p style="font-size:12px; color:var(--text-muted); margin:2px 0 0 0;">Top 5 machines ranked by completed preventive maintenance volume</p>
+                </div>
+              </div>
+              <div style="position:relative; height:240px; width:100%;">
+                <canvas id="chartPMMachineCompletion"></canvas>
               </div>
             </div>
           </div>
@@ -2084,6 +2144,259 @@
         <button type="button" id="changeMyPasswordSubmitBtn" onclick="window.submitMyPasswordChange()" class="btn-primary" style="padding:9px 22px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; background:var(--accent-primary); color:#fff;">
           Update Password
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL 1: CREATE MAINTENANCE RECORD (ADMIN ONLY)
+       =================================================================== -->
+  <div id="createPMRecordModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:620px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Create Maintenance Record</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Register a new preventive maintenance task in PM DATABASE</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="createPMAlert" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:500;"></div>
+        <form id="createPMForm" novalidate autocomplete="off">
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div class="form-group">
+              <label class="form-label" for="createPMPmCode" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">PM Code</label>
+              <input type="text" id="createPMPmCode" class="form-input" value="Auto-generated (e.g. PM-0001)" readonly disabled
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; background:#F1F5F9; color:#64748B;">
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">Unique sequential code issued by server.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="createPMMachine" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Machine / Section <span style="color:#E53E3E;">*</span></label>
+              <select id="createPMMachine" class="form-input" required
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <option value="">Select Machine...</option>
+                <option value="VIM 01">VIM 01</option>
+                <option value="VIM 02">VIM 02</option>
+                <option value="VIM 03">VIM 03</option>
+                <option value="VIM 04">VIM 04</option>
+                <option value="VIM 05">VIM 05</option>
+                <option value="VIM 06">VIM 06</option>
+                <option value="VIM 07">VIM 07</option>
+                <option value="VIM 08">VIM 08</option>
+                <option value="VIM 09">VIM 09</option>
+                <option value="VIM 10">VIM 10</option>
+                <option value="VIM 11">VIM 11</option>
+                <option value="VIM 12">VIM 12</option>
+                <option value="VIM 13">VIM 13</option>
+                <option value="VIM 14">VIM 14</option>
+                <option value="VIM 15">VIM 15</option>
+                <option value="Turn Table + KUKA">Turn Table + KUKA</option>
+                <option value="Robot Arm 1">Robot Arm 1</option>
+                <option value="Robot Arm 2">Robot Arm 2</option>
+                <option value="Oven">Oven</option>
+                <option value="Compressor">Compressor</option>
+                <option value="Cooling Tower">Cooling Tower</option>
+                <option value="Crane">Crane</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div class="form-group">
+              <label class="form-label" for="createPMType" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Maintenance Type <span style="color:#E53E3E;">*</span></label>
+              <select id="createPMType" class="form-input" required
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <option value="Scheduled">Scheduled</option>
+                <option value="Unscheduled">Unscheduled</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="createPMScheduledDate" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Scheduled Date <span style="color:#E53E3E;">*</span></label>
+              <input type="date" id="createPMScheduledDate" class="form-input" required
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="createPMTaskTitle" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Task Title <span style="color:#E53E3E;">*</span></label>
+            <input type="text" id="createPMTaskTitle" class="form-input" placeholder="e.g. Monthly Hydraulic Filter Replacement &amp; Pressure Check" required
+              style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="createPMTaskDescription" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Task Description</label>
+            <textarea id="createPMTaskDescription" class="form-input" rows="3" placeholder="Provide step-by-step procedures, target torque values, or inspection criteria (optional)..."
+              style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
+          </div>
+
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div class="form-group">
+              <label class="form-label" for="createPMAssignedTech" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Assigned Technician <span style="color:#E53E3E;">*</span></label>
+              <select id="createPMAssignedTech" class="form-input" required
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <option value="">Loading Technicians...</option>
+              </select>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">Fetched from Firebase registered technicians.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="createPMCreatedBy" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Created By</label>
+              <input type="text" id="createPMCreatedBy" class="form-input" value="ADMIN" readonly disabled
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; background:#F1F5F9; color:#64748B;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:6px;">
+            <label class="form-label" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Initial Status</label>
+            <input type="text" value="Pending" readonly disabled
+              style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; background:#F1F5F9; color:#64748B;">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+        <button type="button" id="submitCreatePMBtn" onclick="window.submitCreatePMRecord()" class="btn-primary" style="padding:9px 22px; font-size:13px; font-weight:600;">
+          Create PM Record
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL 2: RESOLVE MAINTENANCE TASK
+       =================================================================== -->
+  <div id="resolvePMModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:620px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Resolve Maintenance Task</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Complete work details to close this preventive maintenance record</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Read-only Task Summary Card -->
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:12px 14px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span id="resolvePMPmCode" style="font-size:14px; font-weight:700; color:var(--accent-primary);">PM-0000</span>
+            <span id="resolvePMTypeBadge" class="status-badge status-badge-blue">Scheduled</span>
+          </div>
+          <div style="font-size:13.5px; font-weight:600; color:var(--navy-darkest); margin-bottom:6px;" id="resolvePMTitle">Task Title</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; color:#475569;">
+            <div><strong>Machine:</strong> <span id="resolvePMMachine">-</span></div>
+            <div><strong>Scheduled Date:</strong> <span id="resolvePMSchedDate">-</span></div>
+            <div><strong>Assigned Tech:</strong> <span id="resolvePMTech">-</span></div>
+            <div><strong>Status:</strong> <span class="status-badge status-badge-amber">Pending</span></div>
+          </div>
+        </div>
+
+        <div id="resolvePMAlert" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:500;"></div>
+
+        <form id="resolvePMForm" novalidate autocomplete="off">
+          <input type="hidden" id="resolvePMHiddenCode">
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="resolvePMCompletionTime" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Completion Date &amp; Time <span style="color:#E53E3E;">*</span></label>
+            <input type="datetime-local" id="resolvePMCompletionTime" class="form-input" required
+              style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">Recorded in Asia/Kuala_Lumpur (UTC+8) time zone.</div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="resolvePMWorkDetails" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Maintenance Work Details <span style="color:#E53E3E;">*</span></label>
+            <textarea id="resolvePMWorkDetails" class="form-input" rows="4" placeholder="Detail the servicing steps completed, parts cleaned/replaced, parameter adjustments, and equipment condition..." required
+              style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="resolvePMRemarks" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Remarks</label>
+            <textarea id="resolvePMRemarks" class="form-input" rows="2" placeholder="Additional observations, recommended next actions, or follow-up notes (optional)..."
+              style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; font-family:inherit; resize:vertical;"></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom:6px;">
+            <label class="form-label" for="resolvePMPhotoInput" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">After Maintenance Photo</label>
+            <div style="position:relative;">
+              <input type="file" id="resolvePMPhotoInput" accept="image/*" style="display:none;" onchange="window.handlePMPhotoSelect(event)">
+              <button type="button" class="btn-secondary" onclick="document.getElementById('resolvePMPhotoInput').click()" style="width:100%; padding:10px; font-size:13px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <span id="resolvePMPhotoFileName">Upload image (Optional)</span>
+              </button>
+            </div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">Reuses MMS authorized Google Drive photo upload service.</div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+        <button type="button" id="submitResolvePMBtn" onclick="window.submitResolvePMRecord()" class="btn-primary" style="padding:9px 22px; font-size:13px; font-weight:600; background:#10B981; border-color:#10B981;">
+          Confirm Complete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL 3: VIEW MAINTENANCE RECORD DETAILS (HISTORY)
+       =================================================================== -->
+  <div id="viewPMHistoryModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:620px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Maintenance Record Details</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Audited PM record retrieved from PM DATABASE</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #E2E8F0; padding-bottom:10px;">
+          <div>
+            <span id="viewPMPmCode" style="font-size:17px; font-weight:700; color:var(--accent-primary);">PM-0000</span>
+            <span id="viewPMType" class="status-badge status-badge-blue" style="margin-left:8px;">Scheduled</span>
+          </div>
+          <span class="status-badge status-badge-green">Completed</span>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Task Title</div>
+          <div id="viewPMTitle" style="font-size:14px; font-weight:600; color:var(--navy-darkest); margin-top:2px;">-</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; background:#F8FAFC; padding:12px; border-radius:8px; border:1px solid #E2E8F0; font-size:12.5px;">
+          <div><strong style="color:#64748B;">Machine:</strong> <div id="viewPMMachine" style="color:var(--text-primary); font-weight:600;">-</div></div>
+          <div><strong style="color:#64748B;">Scheduled Date:</strong> <div id="viewPMSchedDate" style="color:var(--text-primary); font-weight:600;">-</div></div>
+          <div><strong style="color:#64748B;">Assigned Technician:</strong> <div id="viewPMTech" style="color:var(--text-primary); font-weight:600;">-</div></div>
+          <div><strong style="color:#64748B;">Completed By:</strong> <div id="viewPMCompletedBy" style="color:var(--text-primary); font-weight:600;">-</div></div>
+          <div style="grid-column:1 / -1;"><strong style="color:#64748B;">Completion Date &amp; Time:</strong> <div id="viewPMCompletionTime" style="color:var(--text-primary); font-weight:600;">-</div></div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Task Description</div>
+          <div id="viewPMDesc" style="font-size:13px; color:var(--text-primary); margin-top:3px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:6px; padding:8px 10px; white-space:pre-wrap;">Not provided</div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Maintenance Work Details</div>
+          <div id="viewPMWorkDetails" style="font-size:13px; color:var(--text-primary); margin-top:3px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:6px; padding:8px 10px; white-space:pre-wrap;">-</div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Remarks</div>
+          <div id="viewPMRemarks" style="font-size:13px; color:var(--text-primary); margin-top:3px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:6px; padding:8px 10px; white-space:pre-wrap;">Not provided</div>
+        </div>
+
+        <div>
+          <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">After Maintenance Photo</div>
+          <div id="viewPMPhotoContainer" style="font-size:13px; color:#64748B;">Not provided</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end;">
+        <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
       </div>
     </div>
   </div>
