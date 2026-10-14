@@ -254,31 +254,16 @@ exports.handler = async function (event) {
     }
   }
 
-  // Fallback seed response if GAS is not yet linked in environment
+  // Return empty dataset if GAS is not configured in local environment (never demo records)
   return {
     statusCode: 200,
     headers,
     body: JSON.stringify({
       success: true,
       callerRole,
-      spareParts: [
-        { code: 'SP-301', name: 'Proximity Sensor M18 PNP (Omron)', category: 'Electrical & Sensors', location: 'Bin A-12', currentStock: 2, minStock: 5, unit: 'pcs', unitPrice: 125.00, supplier: 'Omron Industrial Automation' },
-        { code: 'SP-302', name: 'High Pressure Hydraulic Seal Kit 80mm', category: 'Hydraulics & Seals', location: 'Bin H-04', currentStock: 1, minStock: 4, unit: 'kits', unitPrice: 380.00, supplier: 'Parker Hannifin Malaysia' },
-        { code: 'SP-303', name: 'Timing Belt 8M-1200 Heavy Duty', category: 'Mechanical Transmission', location: 'Bin M-22', currentStock: 0, minStock: 3, unit: 'pcs', unitPrice: 95.00, supplier: 'Gates Power Transmission' },
-        { code: 'SP-304', name: 'Solid State Relay 40A 24VDC', category: 'Electrical & Controls', location: 'Bin E-09', currentStock: 15, minStock: 5, unit: 'pcs', unitPrice: 75.00, supplier: 'Schneider Electric' },
-        { code: 'SP-305', name: 'Pneumatic Solenoid Valve 5/2 Way', category: 'Pneumatics', location: 'Bin P-15', currentStock: 8, minStock: 4, unit: 'pcs', unitPrice: 160.00, supplier: 'SMC Pneumatics' },
-        { code: 'SP-306', name: 'Deep Groove Ball Bearing 6205-2RS', category: 'Bearings & Bushings', location: 'Bin B-01', currentStock: 22, minStock: 10, unit: 'pcs', unitPrice: 42.00, supplier: 'SKF Industrial' },
-        { code: 'SP-307', name: 'Industrial PLC Digital Input Module 16-ch', category: 'Automation & PLC', location: 'Bin PLC-03', currentStock: 6, minStock: 2, unit: 'pcs', unitPrice: 540.00, supplier: 'Siemens Industrial' },
-        { code: 'SP-308', name: 'Synthetic Gear Oil ISO VG 220 (20L Drum)', category: 'Lubricants & Fluids', location: 'Bay Lube-D', currentStock: 12, minStock: 4, unit: 'drums', unitPrice: 420.00, supplier: 'Mobil Industrial Lubricants' },
-        { code: 'SP-309', name: 'Viton High-Temp O-Ring Assortment Box', category: 'Hydraulics & Seals', location: 'Bin H-08', currentStock: 7, minStock: 3, unit: 'boxes', unitPrice: 110.00, supplier: 'Freudenberg Sealing' }
-      ],
-      stockMovements: callerRole === 'ADMIN' ? [
-        { id: 'MV-503', date: '2026-10-07 11:00 AM', partCode: 'SP-306', partName: 'Deep Groove Ball Bearing 6205-2RS', type: 'Stock In', qty: 10, previousStock: 12, updatedStock: 22, supplier: 'SKF Industrial', updatedBy: 'Siti Humairah', reference: 'PO-2026-0449' }
-      ] : [],
-      stockRequests: [
-        { requestId: 'REQ-501', requestDate: '2026-10-09 09:15 AM', requestedByStaffId: 'TECH-101', requestedByName: 'Razak bin Ismail', partCode: 'SP-301', partName: 'Proximity Sensor M18 PNP (Omron)', qtyRequested: 2, reason: 'Buffer restock', status: 'Issued', approvedBy: 'ADMIN', approvedDate: '2026-10-09 09:15 AM', issuedBy: 'Razak bin Ismail', issuedDate: '2026-10-09 09:15 AM', notes: 'Legacy Issued Record (Ref: WO-2026-101)' },
-        { requestId: 'REQ-502', requestDate: '2026-10-08 16:30 PM', requestedByStaffId: 'TECH-102', requestedByName: 'Kumar Sanjeev', partCode: 'SP-303', partName: 'Timing Belt 8M-1200 Heavy Duty', qtyRequested: 1, reason: 'Breakdown repair', status: 'Issued', approvedBy: 'ADMIN', approvedDate: '2026-10-08 16:30 PM', issuedBy: 'Kumar Sanjeev', issuedDate: '2026-10-08 16:30 PM', notes: 'Legacy Issued Record (Ref: WO-2026-098)' }
-      ].filter(r => callerRole === 'ADMIN' || r.requestedByStaffId === callerStaffId)
+      spareParts: [],
+      stockMovements: [],
+      stockRequests: []
     })
   };
 };

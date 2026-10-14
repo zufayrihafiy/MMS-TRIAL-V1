@@ -97,7 +97,8 @@ const SP_HEADERS = [
   'Unit Price (RM)',
   'Authorized Supplier',
   'Created At',
-  'Updated At'
+  'Updated At',
+  'Archive Status'
 ];
 
 const SM_HEADERS = [
@@ -243,6 +244,15 @@ function doPost(e) {
     }
     if (payload.action === 'adjustLimit' || payload.action === 'adjust-limit') {
       return handleAdjustLimit(payload);
+    }
+    if (payload.action === 'manageItem' || payload.action === 'manage-item') {
+      return handleManageSparePart(payload);
+    }
+    if (payload.action === 'deleteSparePart' || payload.action === 'delete-spare-part' || payload.action === 'delete-item') {
+      return handleDeleteSparePart(payload);
+    }
+    if (payload.action === 'cleanupDemoParts' || payload.action === 'cleanup-demo-parts') {
+      return handleCleanupDemoParts(payload);
     }
     if (payload.action === 'createStockRequest' || payload.action === 'create-stock-request') {
       return handleCreateStockRequest(payload);
@@ -1278,13 +1288,18 @@ function handleGetSpareParts(payload) {
   const supplierMap = {};
 
   if (spLastRow > 1) {
-    const spValues = spSheet.getRange(2, 1, spLastRow - 1, 11).getValues();
+    const numCols = Math.max(12, spSheet.getLastColumn());
+    const spValues = spSheet.getRange(2, 1, spLastRow - 1, numCols).getValues();
     for (let i = 0; i < spValues.length; i++) {
       const row = spValues[i];
       const code = String(row[0] || '').trim();
       if (!code) continue;
       const supplier = String(row[8] || '').trim();
       supplierMap[code] = supplier;
+
+      // Backward-compatible check for archived status in Column L (12th column)
+      const isArchived = row.length >= 12 && String(row[11] || '').trim().toLowerCase() === 'archived';
+      if (isArchived) continue;
 
       spareParts.push({
         code: code,
@@ -1681,6 +1696,341 @@ function handleAdjustLimit(payload) {
 
   } catch (err) {
     return createJsonResponse({ success: false, error: 'Failed to update minimum stock limit: ' + err.toString() }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Manage Spare Part (ADMIN ONLY - Combines item metadata edit and optional stock adjustment)
+ * Single validated backend operation under LockService.
+ * If stock is adjusted, logs to STOCK MOVEMENTS DATABASE.
+ * If only metadata/min limit is changed, does NOT create artificial stock movements.
+ */
+function handleManageSparePart(payload) {
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+  if (callerRole !== 'ADMIN') {
+    return createJsonResponse({
+      success: false,
+      error: 'Forbidden: Spare part management is restricted to Administrator accounts.'
+    }, 403);
+  }
+
+  const code = String(payload.code || '').trim().toUpperCase();
+  if (!code) {
+    return createJsonResponse({ success: false, error: 'Part code is required.' }, 400);
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database is busy. Please try again.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const spSheet = getOrInitSparePartsSheet(ss);
+    const lastRow = spSheet.getLastRow();
+
+    if (lastRow <= 1) {
+      return createJsonResponse({ success: false, error: 'No spare parts in database.' }, 404);
+    }
+
+    const numCols = Math.max(12, spSheet.getLastColumn());
+    const values = spSheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+    let rowIndex = -1;
+    let currentRow = null;
+
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0] || '').trim().toUpperCase() === code) {
+        rowIndex = i + 2;
+        currentRow = values[i];
+        break;
+      }
+    }
+
+    if (rowIndex === -1 || !currentRow) {
+      return createJsonResponse({ success: false, error: 'Spare part ' + code + ' not found.' }, 404);
+    }
+
+    const prevStock = Number(currentRow[4]) || 0;
+    const name = payload.name !== undefined ? String(payload.name).trim() : String(currentRow[1]).trim();
+    const category = payload.category !== undefined ? String(payload.category).trim() : String(currentRow[2]).trim();
+    const location = payload.location !== undefined ? String(payload.location).trim() : String(currentRow[3]).trim();
+    const minStock = payload.minStock !== undefined ? Math.max(0, parseInt(payload.minStock, 10)) : Number(currentRow[5]) || 0;
+    const unit = payload.unit !== undefined ? String(payload.unit).trim() : String(currentRow[6]).trim();
+    const unitPrice = payload.unitPrice !== undefined ? Math.max(0, parseFloat(payload.unitPrice)) : Number(currentRow[7]) || 0;
+    const supplier = payload.supplier !== undefined ? String(payload.supplier).trim() : String(currentRow[8]).trim();
+    const timestamp = formatCurrentTimestamp();
+
+    if (!name) {
+      return createJsonResponse({ success: false, error: 'Part Description is required.' }, 400);
+    }
+
+    // Check optional stock adjustment
+    const adjType = String(payload.adjustmentType || 'none').toLowerCase();
+    const adjQty = parseInt(payload.adjustmentQty, 10) || 0;
+    const adjReason = String(payload.adjustmentReason || '').trim();
+
+    let newStock = prevStock;
+    let movementCreated = false;
+
+    if (adjType === 'in' || adjType === 'stock-in' || adjType === 'stock in') {
+      if (adjQty <= 0) {
+        return createJsonResponse({ success: false, error: 'Adjustment quantity must be greater than zero.' }, 400);
+      }
+      if (!adjReason) {
+        return createJsonResponse({ success: false, error: 'Adjustment reason is required when adjusting stock quantity.' }, 400);
+      }
+      newStock = prevStock + adjQty;
+    } else if (adjType === 'out' || adjType === 'stock-out' || adjType === 'stock out') {
+      if (adjQty <= 0) {
+        return createJsonResponse({ success: false, error: 'Adjustment quantity must be greater than zero.' }, 400);
+      }
+      if (!adjReason) {
+        return createJsonResponse({ success: false, error: 'Adjustment reason is required when adjusting stock quantity.' }, 400);
+      }
+      if (prevStock - adjQty < 0) {
+        return createJsonResponse({
+          success: false,
+          error: 'Insufficient stock. Current stock: ' + prevStock + ' ' + unit + '. Cannot deduct ' + adjQty + ' ' + unit + '.'
+        }, 400);
+      }
+      newStock = prevStock - adjQty;
+    }
+
+    if (newStock < 0) {
+      return createJsonResponse({
+        success: false,
+        error: 'Updated stock balance cannot be negative.'
+      }, 400);
+    }
+
+    // Save metadata and updated stock to SPARE PARTS DATABASE
+    spSheet.getRange(rowIndex, 2).setValue(name);
+    spSheet.getRange(rowIndex, 3).setValue(category);
+    spSheet.getRange(rowIndex, 4).setValue(location);
+    spSheet.getRange(rowIndex, 5).setValue(newStock);
+    spSheet.getRange(rowIndex, 6).setValue(minStock);
+    spSheet.getRange(rowIndex, 7).setValue(unit);
+    spSheet.getRange(rowIndex, 8).setValue(unitPrice);
+    spSheet.getRange(rowIndex, 9).setValue(supplier);
+    spSheet.getRange(rowIndex, 11).setValue(timestamp);
+
+    // If stock changed, record official movement in STOCK MOVEMENTS DATABASE
+    if (adjType === 'in' || adjType === 'out' || adjType === 'stock in' || adjType === 'stock out') {
+      const smSheet = getOrInitStockMovementsSheet(ss);
+      const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
+      const movementTypeDisplay = adjType.includes('in') ? 'Stock In' : 'Stock Adjustment';
+      const signedAdjustment = adjType.includes('in') ? adjQty : -adjQty;
+
+      smSheet.appendRow([
+        mId,
+        timestamp,
+        code,
+        name,
+        movementTypeDisplay,
+        signedAdjustment,
+        prevStock,
+        newStock,
+        supplier,
+        payload.callerName || payload.callerStaffId || 'ADMIN',
+        adjReason
+      ]);
+      movementCreated = true;
+    }
+
+    return createJsonResponse({
+      success: true,
+      message: 'Spare part ' + code + ' updated successfully.',
+      part: {
+        code: code,
+        name: name,
+        category: category,
+        location: location,
+        currentStock: newStock,
+        minStock: minStock,
+        unit: unit,
+        unitPrice: unitPrice,
+        supplier: supplier,
+        updatedAt: timestamp
+      },
+      movementCreated: movementCreated
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to manage spare part: ' + err.toString() }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Delete or safely archive a spare part (ADMIN ONLY).
+ * If item has dependent records in STOCK REQUESTS or STOCK MOVEMENTS, safely archive.
+ * Otherwise, permanently delete row.
+ */
+function handleDeleteSparePart(payload) {
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+  if (callerRole !== 'ADMIN') {
+    return createJsonResponse({
+      success: false,
+      error: 'Forbidden: Deleting spare parts is restricted to Administrator accounts.'
+    }, 403);
+  }
+
+  const code = String(payload.code || '').trim().toUpperCase();
+  if (!code) {
+    return createJsonResponse({ success: false, error: 'Part code is required for deletion.' }, 400);
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database is busy. Please try again.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const spSheet = getOrInitSparePartsSheet(ss);
+    const lastRow = spSheet.getLastRow();
+
+    if (lastRow <= 1) {
+      return createJsonResponse({ success: false, error: 'No spare parts in database.' }, 404);
+    }
+
+    const values = spSheet.getRange(2, 1, lastRow - 1, 11).getValues();
+    let rowIndex = -1;
+
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0] || '').trim().toUpperCase() === code) {
+        rowIndex = i + 2;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      return createJsonResponse({ success: false, error: 'Spare part ' + code + ' not found.' }, 404);
+    }
+
+    // Check for references in STOCK REQUESTS DATABASE
+    let hasRequestRef = false;
+    const srSheet = ss.getSheetByName(SR_SHEET_NAME);
+    if (srSheet && srSheet.getLastRow() > 1) {
+      const srValues = srSheet.getRange(2, 5, srSheet.getLastRow() - 1, 1).getValues();
+      for (let j = 0; j < srValues.length; j++) {
+        if (String(srValues[j][0] || '').trim().toUpperCase() === code) {
+          hasRequestRef = true;
+          break;
+        }
+      }
+    }
+
+    // Check for references in STOCK MOVEMENTS DATABASE
+    let hasMovementRef = false;
+    const smSheet = ss.getSheetByName(SM_SHEET_NAME);
+    if (smSheet && smSheet.getLastRow() > 1) {
+      const smValues = smSheet.getRange(2, 3, smSheet.getLastRow() - 1, 1).getValues();
+      for (let k = 0; k < smValues.length; k++) {
+        if (String(smValues[k][0] || '').trim().toUpperCase() === code) {
+          hasMovementRef = true;
+          break;
+        }
+      }
+    }
+
+    const isReferenced = hasRequestRef || hasMovementRef;
+
+    if (isReferenced) {
+      // SAFE ARCHIVING: Mark Column L (12th column) as 'Archived'
+      spSheet.getRange(rowIndex, 12).setValue('Archived');
+      spSheet.getRange(rowIndex, 11).setValue(formatCurrentTimestamp());
+
+      return createJsonResponse({
+        success: true,
+        action: 'archived',
+        code: code,
+        message: 'Spare part ' + code + ' has historical audit records and was safely archived.'
+      }, 200);
+    } else {
+      // PERMANENT DELETION: Safe to remove entire row
+      spSheet.deleteRow(rowIndex);
+
+      return createJsonResponse({
+        success: true,
+        action: 'deleted',
+        code: code,
+        message: 'Spare part ' + code + ' was permanently deleted.'
+      }, 200);
+    }
+
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to delete spare part: ' + err.toString() }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Selective cleanup procedure for confirmed demo spare parts (SP-301 to SP-309).
+ * Requires explicit confirmation: payload.confirmed === true.
+ */
+function handleCleanupDemoParts(payload) {
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+  if (callerRole !== 'ADMIN') {
+    return createJsonResponse({
+      success: false,
+      error: 'Forbidden: Cleanup is restricted to Administrator accounts.'
+    }, 403);
+  }
+
+  if (payload.confirmed !== true) {
+    return createJsonResponse({
+      success: false,
+      error: 'Explicit confirmation (confirmed: true) is required to execute demo parts cleanup.'
+    }, 400);
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database is busy. Please try again.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const spSheet = getOrInitSparePartsSheet(ss);
+    const lastRow = spSheet.getLastRow();
+
+    if (lastRow <= 1) {
+      return createJsonResponse({ success: true, count: 0, removedCodes: [] }, 200);
+    }
+
+    const demoCodes = ['SP-301', 'SP-302', 'SP-303', 'SP-304', 'SP-305', 'SP-306', 'SP-307', 'SP-308', 'SP-309'];
+    const values = spSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    const removedCodes = [];
+
+    // Scan backwards to delete rows cleanly
+    for (let i = values.length - 1; i >= 0; i--) {
+      const code = String(values[i][0] || '').trim().toUpperCase();
+      if (demoCodes.indexOf(code) !== -1) {
+        spSheet.deleteRow(i + 2);
+        removedCodes.push(code);
+      }
+    }
+
+    return createJsonResponse({
+      success: true,
+      message: 'Demo spare parts cleanup completed. Removed: ' + removedCodes.join(', '),
+      count: removedCodes.length,
+      removedCodes: removedCodes
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to cleanup demo parts: ' + err.toString() }, 500);
   } finally {
     try { lock.releaseLock(); } catch (e) {}
   }

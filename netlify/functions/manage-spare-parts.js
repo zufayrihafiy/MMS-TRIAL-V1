@@ -220,6 +220,9 @@ exports.handler = async function (event) {
     'add-stock', 'addStock',
     'adjust-stock', 'adjustStock',
     'adjust-limit', 'adjustLimit',
+    'manage-item', 'manageItem',
+    'delete-item', 'deleteItem', 'deleteSparePart',
+    'cleanup-demo-parts', 'cleanupDemoParts',
     'approve-request', 'approveRequest',
     'reject-request', 'rejectRequest',
     'issue-stock', 'issueStock'
@@ -365,6 +368,62 @@ exports.handler = async function (event) {
       return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Request ID is required.' }) };
     }
     Object.assign(gasPayload, { requestId, issuedBy: callerStaffId });
+
+  } else if (action === 'manage-item' || action === 'manageItem') {
+    gasAction = 'manageItem';
+    const code = (body.code || '').trim().toUpperCase();
+    const name = (body.name || '').trim();
+    const category = (body.category || '').trim();
+    const location = (body.location || '').trim();
+    const supplier = (body.supplier || '').trim();
+    const unit = (body.unit || 'pcs').trim();
+    const unitPrice = parseFloat(body.unitPrice);
+    const minStock = parseInt(body.minStock, 10);
+    const adjustmentType = (body.adjustmentType || 'none').trim().toLowerCase();
+    const adjustmentQty = parseInt(body.adjustmentQty, 10) || 0;
+    const adjustmentReason = (body.adjustmentReason || '').trim();
+
+    if (!code) {
+      return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Part code is required.' }) };
+    }
+    if (!name) {
+      return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Part description is required.' }) };
+    }
+    if (isNaN(minStock) || minStock < 0) {
+      return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Minimum stock limit must be zero or a positive whole number.' }) };
+    }
+    if (isNaN(unitPrice) || unitPrice < 0) {
+      return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Unit price must be zero or a positive number.' }) };
+    }
+    if (adjustmentType === 'in' || adjustmentType === 'out') {
+      if (adjustmentQty <= 0) {
+        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Adjustment quantity must be greater than zero.' }) };
+      }
+      if (!adjustmentReason) {
+        return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Adjustment reason is required when adjusting stock quantity.' }) };
+      }
+    }
+
+    Object.assign(gasPayload, {
+      code, name, category, location, supplier, unit, unitPrice, minStock,
+      adjustmentType, adjustmentQty, adjustmentReason
+    });
+
+  } else if (action === 'delete-item' || action === 'deleteItem' || action === 'deleteSparePart') {
+    gasAction = 'deleteSparePart';
+    const code = (body.code || '').trim().toUpperCase();
+    if (!code) {
+      return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Part code is required for deletion.' }) };
+    }
+    Object.assign(gasPayload, { code });
+
+  } else if (action === 'cleanup-demo-parts' || action === 'cleanupDemoParts') {
+    gasAction = 'cleanupDemoParts';
+    const confirmed = body.confirmed === true;
+    if (!confirmed) {
+      return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Explicit confirmation required.' }) };
+    }
+    Object.assign(gasPayload, { confirmed: true });
 
   } else {
     return {

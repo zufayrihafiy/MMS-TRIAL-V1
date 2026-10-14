@@ -47,179 +47,9 @@
     technicians: [],
     breakdowns: [],
     preventiveMaintenance: [],
-    spareParts: [
-      {
-        code: 'SP-301',
-        name: 'Proximity Sensor M18 PNP (Omron)',
-        category: 'Electrical & Sensors',
-        currentStock: 2,
-        minStock: 5,
-        unit: 'pcs',
-        location: 'Bin A-12',
-        unitPrice: 125.00,
-        supplier: 'Omron Industrial Automation'
-      },
-      {
-        code: 'SP-302',
-        name: 'High Pressure Hydraulic Seal Kit 80mm',
-        category: 'Hydraulics & Seals',
-        currentStock: 1,
-        minStock: 4,
-        unit: 'kits',
-        location: 'Bin H-04',
-        unitPrice: 380.00,
-        supplier: 'Parker Hannifin Malaysia'
-      },
-      {
-        code: 'SP-303',
-        name: 'Timing Belt 8M-1200 Heavy Duty',
-        category: 'Mechanical Transmission',
-        currentStock: 0,
-        minStock: 3,
-        unit: 'pcs',
-        location: 'Bin M-22',
-        unitPrice: 95.00,
-        supplier: 'Gates Power Transmission'
-      },
-      {
-        code: 'SP-304',
-        name: 'Solid State Relay 40A 24VDC',
-        category: 'Electrical & Controls',
-        currentStock: 15,
-        minStock: 5,
-        unit: 'pcs',
-        location: 'Bin E-09',
-        unitPrice: 75.00,
-        supplier: 'Schneider Electric'
-      },
-      {
-        code: 'SP-305',
-        name: 'Pneumatic Solenoid Valve 5/2 Way',
-        category: 'Pneumatics',
-        currentStock: 8,
-        minStock: 4,
-        unit: 'pcs',
-        location: 'Bin P-15',
-        unitPrice: 160.00,
-        supplier: 'SMC Pneumatics'
-      },
-      {
-        code: 'SP-306',
-        name: 'Deep Groove Ball Bearing 6205-2RS',
-        category: 'Bearings & Bushings',
-        currentStock: 22,
-        minStock: 10,
-        unit: 'pcs',
-        location: 'Bin B-01',
-        unitPrice: 42.00,
-        supplier: 'SKF Industrial'
-      },
-      {
-        code: 'SP-307',
-        name: 'Industrial PLC Digital Input Module 16-ch',
-        category: 'Automation & PLC',
-        currentStock: 6,
-        minStock: 2,
-        unit: 'pcs',
-        location: 'Bin PLC-03',
-        unitPrice: 540.00,
-        supplier: 'Siemens Industrial'
-      },
-      {
-        code: 'SP-308',
-        name: 'Synthetic Gear Oil ISO VG 220 (20L Drum)',
-        category: 'Lubricants & Fluids',
-        currentStock: 12,
-        minStock: 4,
-        unit: 'drums',
-        location: 'Bay Lube-D',
-        unitPrice: 420.00,
-        supplier: 'Mobil Industrial Lubricants'
-      },
-      {
-        code: 'SP-309',
-        name: 'Viton High-Temp O-Ring Assortment Box',
-        category: 'Hydraulics & Seals',
-        currentStock: 7,
-        minStock: 3,
-        unit: 'boxes',
-        location: 'Bin H-08',
-        unitPrice: 110.00,
-        supplier: 'Freudenberg Sealing'
-      }
-    ],
-    stockMovements: [
-      {
-        id: 'MV-501',
-        date: '2026-10-09 09:15 AM',
-        partCode: 'SP-301',
-        partName: 'Proximity Sensor M18 PNP',
-        type: 'Issued',
-        qty: -2,
-        balance: 2,
-        reference: 'WO-2026-101',
-        handler: 'Razak bin Ismail'
-      },
-      {
-        id: 'MV-502',
-        date: '2026-10-08 16:30 PM',
-        partCode: 'SP-303',
-        partName: 'Timing Belt 8M-1200 Heavy Duty',
-        type: 'Issued',
-        qty: -1,
-        balance: 0,
-        reference: 'WO-2026-098',
-        handler: 'Kumar Sanjeev'
-      },
-      {
-        id: 'MV-503',
-        date: '2026-10-07 11:00 AM',
-        partCode: 'SP-306',
-        partName: 'Deep Groove Ball Bearing 6205-2RS',
-        type: 'Stock In',
-        qty: +10,
-        previousStock: 12,
-        updatedStock: 22,
-        balance: 22,
-        reference: 'PO-2026-0449',
-        supplier: 'SKF Industrial',
-        handler: 'Siti Humairah'
-      }
-    ],
-    stockRequests: [
-      {
-        requestId: 'REQ-501',
-        requestDate: '2026-10-09 09:15 AM',
-        requestedByStaffId: 'PN002',
-        requestedByName: 'Razak bin Ismail',
-        partCode: 'SP-301',
-        partName: 'Proximity Sensor M18 PNP (Omron)',
-        qtyRequested: 2,
-        reason: 'Buffer restock (Ref: WO-2026-101)',
-        status: 'Issued',
-        approvedBy: 'ADMIN',
-        approvedDate: '2026-10-09 09:15 AM',
-        issuedBy: 'Razak bin Ismail',
-        issuedDate: '2026-10-09 09:15 AM',
-        notes: 'Legacy Issued Record'
-      },
-      {
-        requestId: 'REQ-502',
-        requestDate: '2026-10-08 16:30 PM',
-        requestedByStaffId: 'TECH-102',
-        requestedByName: 'Kumar Sanjeev',
-        partCode: 'SP-303',
-        partName: 'Timing Belt 8M-1200 Heavy Duty',
-        qtyRequested: 1,
-        reason: 'Breakdown repair (Ref: WO-2026-098)',
-        status: 'Issued',
-        approvedBy: 'ADMIN',
-        approvedDate: '2026-10-08 16:30 PM',
-        issuedBy: 'Kumar Sanjeev',
-        issuedDate: '2026-10-08 16:30 PM',
-        notes: 'Legacy Issued Record'
-      }
-    ],
+    spareParts: [],
+    stockMovements: [],
+    stockRequests: [],
     notifications: [
       {
         id: 'NT-902',
@@ -232,12 +62,12 @@
       },
       {
         id: 'NT-903',
-        title: 'Low Spare Parts Alert',
-        message: 'Timing Belt 8M-1200 has reached 0 units. Stock re-order required immediately.',
+        title: 'Inventory Alert',
+        message: 'Low stock thresholds monitored automatically via Google Sheets backend.',
         time: '1 hr ago',
         unread: true,
         targetView: 'spareparts',
-        recordId: 'SP-303'
+        recordId: ''
       },
       {
         id: 'NT-904',
@@ -257,6 +87,10 @@
     'BD-2026-098', 'BD-2026-099', 'BD-2026-100',
     'BD-2026-101', 'BD-2026-102', 'BD-2026-103',
     'BD-2026-104', 'BD-2026-105'
+  ];
+  const KNOWN_DEMO_SP_CODES = [
+    'SP-301', 'SP-302', 'SP-303', 'SP-304', 'SP-305',
+    'SP-306', 'SP-307', 'SP-308', 'SP-309'
   ];
   let state = {};
 
@@ -289,14 +123,21 @@
           state.technicians = [];
         }
 
-        if (!Array.isArray(state.stockRequests) || state.stockRequests.length === 0) {
-          state.stockRequests = JSON.parse(JSON.stringify(INITIAL_STATE.stockRequests));
+        // Completely purge demo spare parts, movements, and requests from cached local storage
+        if (Array.isArray(state.spareParts)) {
+          state.spareParts = state.spareParts.filter(sp => !KNOWN_DEMO_SP_CODES.includes(sp.code));
+        } else {
+          state.spareParts = [];
         }
-        if (!Array.isArray(state.spareParts) || state.spareParts.length === 0) {
-          state.spareParts = JSON.parse(JSON.stringify(INITIAL_STATE.spareParts));
+        if (Array.isArray(state.stockMovements)) {
+          state.stockMovements = state.stockMovements.filter(mv => !KNOWN_DEMO_SP_CODES.includes(mv.partCode));
+        } else {
+          state.stockMovements = [];
         }
-        if (!Array.isArray(state.stockMovements) || state.stockMovements.length === 0) {
-          state.stockMovements = JSON.parse(JSON.stringify(INITIAL_STATE.stockMovements));
+        if (Array.isArray(state.stockRequests)) {
+          state.stockRequests = state.stockRequests.filter(req => !KNOWN_DEMO_SP_CODES.includes(req.partCode));
+        } else {
+          state.stockRequests = [];
         }
       } else {
         state = JSON.parse(JSON.stringify(INITIAL_STATE));
@@ -505,16 +346,8 @@
       spStockRequestTab.style.display = 'inline-block';
     }
 
-    // Technician Management Module access rules (ADMIN ONLY - PHASE 5)
-    const navTechs = document.getElementById('navLinkTechnicians');
-    if (navTechs) {
-      navTechs.style.display = isAdmin ? 'flex' : 'none';
-    }
-    const addTechBtn = document.getElementById('btnAddTechnicianBtn');
-    if (addTechBtn) {
-      addTechBtn.style.display = isAdmin ? 'inline-flex' : 'none';
-    }
-    if (!isAdmin && currentView === 'technicians') {
+    // Technician Management page has been removed from UI
+    if (currentView === 'technicians') {
       navigateTo('home');
     }
 
@@ -529,15 +362,9 @@
   let currentView = 'home';
 
   function navigateTo(viewName, filterParam) {
-    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
-    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
-
-    // Technicians cannot access Technician Management (ADMIN ONLY - PHASE 5)
-    if (viewName === 'technicians' && !isAdmin) {
-      showToast('Access Denied: Technician Management is restricted to Administrators only.', 'error');
-      if (currentView === 'technicians') {
-        navigateTo('home');
-      }
+    // Technician Management page removed from navigation: safely redirect to home
+    if (viewName === 'technicians') {
+      navigateTo('home');
       return;
     }
 
@@ -592,9 +419,6 @@
         }
       }
       fetchSparePartsFromBackend(true);
-    } else if (viewName === 'technicians') {
-      renderTechniciansView();
-      fetchTechniciansFromBackend(false);
     } else if (viewName === 'home') {
       updateKPICounters();
     }
@@ -3235,7 +3059,7 @@
 
       if (res.ok && result && result.success) {
         lastSparePartsFetchError = null;
-        if (Array.isArray(result.spareParts) && result.spareParts.length > 0) {
+        if (Array.isArray(result.spareParts)) {
           state.spareParts = result.spareParts;
         }
         if (Array.isArray(result.stockMovements)) {
@@ -3266,6 +3090,58 @@
       return { ok: false, error: errMsg };
     }
   }
+
+  /**
+   * Functional sync handler for each Spare Parts tab (Task 5)
+   * Fetches latest data from Google Sheets through Netlify Functions with loading indicator
+   * and concurrency locking.
+   */
+  let isSyncingSpareParts = false;
+  async function syncSparePartsTab(targetTab) {
+    if (isSyncingSpareParts) return;
+    isSyncingSpareParts = true;
+
+    const btnParts = document.getElementById('syncSparePartsBtn');
+    const btnMovements = document.getElementById('syncStockMovementsBtn');
+    const btnRequests = document.getElementById('syncStockRequestsBtn');
+
+    [btnParts, btnMovements, btnRequests].forEach(btn => {
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('syncing');
+      }
+    });
+
+    try {
+      const result = await fetchSparePartsFromBackend(true);
+      if (result && result.ok) {
+        if (targetTab === 'parts-list') {
+          showToast('Spare Parts List synchronized with Google Sheets.', 'success');
+        } else if (targetTab === 'stock-movement') {
+          showToast('Stock Movement History synchronized with Google Sheets.', 'success');
+        } else if (targetTab === 'stock-request') {
+          showToast('Stock Requests synchronized with Google Sheets.', 'success');
+        } else {
+          showToast('Inventory database synchronized successfully.', 'success');
+        }
+      } else {
+        const msg = (result && result.error) || 'Failed to fetch latest data.';
+        showToast(`Sync notice: ${msg}`, 'error');
+      }
+    } catch (err) {
+      console.error('[syncSparePartsTab] Error:', err);
+      showToast('Network error during synchronization.', 'error');
+    } finally {
+      [btnParts, btnMovements, btnRequests].forEach(btn => {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('syncing');
+        }
+      });
+      isSyncingSpareParts = false;
+    }
+  }
+  window.syncSparePartsTab = syncSparePartsTab;
 
   function renderSparePartsView() {
     renderSparePartsTable();
@@ -3315,11 +3191,28 @@
     const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
     const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
 
+    const tbody = document.getElementById('sparePartsTbody');
+    if (!tbody) return;
+
+    // Empty state requirement (Task 2 Requirement 7):
+    if (!state.spareParts || state.spareParts.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" style="text-align:center; padding:45px 20px; color:var(--text-muted);">
+            <div style="font-size:15px; font-weight:600; color:var(--navy-darkest); margin-bottom:4px;">No spare parts available.</div>
+            <div style="font-size:13px; color:var(--text-muted);">Click Add Stock to register a new spare part.</div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
     let list = (state.spareParts || []).filter(part => {
       const matchSearch = (part.name || '').toLowerCase().includes(searchVal) ||
         (part.code || '').toLowerCase().includes(searchVal) ||
         (part.category || '').toLowerCase().includes(searchVal) ||
-        (part.location || '').toLowerCase().includes(searchVal);
+        (part.location || '').toLowerCase().includes(searchVal) ||
+        (part.supplier || '').toLowerCase().includes(searchVal);
 
       if (!matchSearch) return false;
 
@@ -3336,81 +3229,80 @@
       return true;
     });
 
-    const tbody = document.getElementById('sparePartsTbody');
-    if (tbody) {
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No spare parts match your search or filter.</td></tr>`;
-      } else {
-        tbody.innerHTML = list.map(item => {
-          const currentStock = Number(item.currentStock) || 0;
-          const minStock = Number(item.minStock) || 0;
-
-          // Strict colour-based stock status indicators (Rule 1, 2, 3)
-          let badgeHtml = '';
-          if (currentStock === 0) {
-            // RULE 1: Stock = 0 -> RED (Light red bg, dark red text)
-            badgeHtml = `<span class="status-badge status-badge-red">OUT OF STOCK</span>`;
-          } else if (currentStock <= minStock) {
-            // RULE 2: Stock > 0 AND Stock <= Min Limit -> YELLOW / AMBER (Light yellow bg, amber text)
-            badgeHtml = `<span class="status-badge status-badge-amber">LOW STOCK</span>`;
-          } else {
-            // RULE 3: Stock > Min Limit -> GREEN (Light green bg, dark green text)
-            badgeHtml = `<span class="status-badge status-badge-green">IN STOCK</span>`;
-          }
-
-          // Action buttons ordered by role:
-          // ADMIN: [Adjust Stock] [Adjust Limit] [Request]
-          // TECHNICIAN: [Request] (Admin buttons completely hidden)
-          let actionButtonsHtml = '';
-          if (isAdmin) {
-            actionButtonsHtml = `
-              <div class="action-btn-group">
-                <button class="btn-table-action" onclick="window.openEditStockModal('${escapeHtml(item.code)}')">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                  Adjust Stock
-                </button>
-                <button class="btn-table-action" onclick="window.openAdjustLimitModal('${escapeHtml(item.code)}')">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-                  Adjust Limit
-                </button>
-                <button class="btn-table-action" onclick="window.openRequestStockModal('${escapeHtml(item.code)}')">
-                  Request
-                </button>
-              </div>
-            `;
-          } else {
-            actionButtonsHtml = `
-              <div class="action-btn-group">
-                <button class="btn-table-action" onclick="window.openRequestStockModal('${escapeHtml(item.code)}')">
-                  Request
-                </button>
-              </div>
-            `;
-          }
-
-          const unitPriceDisplay = typeof item.unitPrice === 'number' ? item.unitPrice.toFixed(2) : parseFloat(item.unitPrice || 0).toFixed(2);
-
-          return `
-            <tr>
-              <td><strong>${escapeHtml(item.code)}</strong></td>
-              <td>
-                <div style="font-weight:600; color:var(--navy-darkest);">${escapeHtml(item.name)}</div>
-                <div style="font-size:11.5px; color:var(--text-muted);">${escapeHtml(item.category || '')} • Loc: ${escapeHtml(item.location || '—')}</div>
-              </td>
-              <td>
-                <div style="font-size:15px; font-weight:700; color:${currentStock <= minStock ? 'var(--red-primary)' : 'var(--navy-darkest)'};">
-                  ${currentStock} <span style="font-size:12px; font-weight:500; color:var(--text-muted);">${escapeHtml(item.unit || 'pcs')}</span>
-                </div>
-                <div style="font-size:11px; color:var(--text-muted);">Min: ${minStock} ${escapeHtml(item.unit || 'pcs')}</div>
-              </td>
-              <td>${badgeHtml}</td>
-              <td>RM ${unitPriceDisplay}</td>
-              <td>${actionButtonsHtml}</td>
-            </tr>
-          `;
-        }).join('');
-      }
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">No spare parts match your search or filter.</td></tr>`;
+      return;
     }
+
+    tbody.innerHTML = list.map(item => {
+      const currentStock = Number(item.currentStock) || 0;
+      const minStock = Number(item.minStock) || 0;
+
+      // Strict colour-based stock status indicators (Rule 1, 2, 3)
+      let badgeHtml = '';
+      if (currentStock === 0) {
+        // RULE 1: Stock = 0 -> RED (Light red bg, dark red text)
+        badgeHtml = `<span class="status-badge status-badge-red">OUT OF STOCK</span>`;
+      } else if (currentStock <= minStock) {
+        // RULE 2: Stock > 0 AND Stock <= Min Limit -> YELLOW / AMBER (Light yellow bg, amber text)
+        badgeHtml = `<span class="status-badge status-badge-amber">LOW STOCK</span>`;
+      } else {
+        // RULE 3: Stock > Min Limit -> GREEN (Light green bg, dark green text)
+        badgeHtml = `<span class="status-badge status-badge-green">IN STOCK</span>`;
+      }
+
+      // Action buttons (Tasks 3, 4 & 8):
+      // ADMIN: [Manage Item] [Request] [Trash Icon]
+      // TECHNICIAN: [Request] (Admin buttons completely hidden)
+      let actionButtonsHtml = '';
+      if (isAdmin) {
+        actionButtonsHtml = `
+          <div class="action-btn-group" style="display:inline-flex; align-items:center; gap:6px;">
+            <button class="btn-table-action" onclick="window.openManageItemModal('${escapeHtml(item.code)}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              Manage Item
+            </button>
+            <button class="btn-table-action" onclick="window.openRequestStockModal('${escapeHtml(item.code)}')">
+              Request
+            </button>
+            <button class="btn-table-action btn-table-action-danger" onclick="window.openDeleteItemModal('${escapeHtml(item.code)}')" title="Delete Spare Part" style="color:#DC2626; border-color:#FECACA;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </button>
+          </div>
+        `;
+      } else {
+        actionButtonsHtml = `
+          <div class="action-btn-group">
+            <button class="btn-table-action" onclick="window.openRequestStockModal('${escapeHtml(item.code)}')">
+              Request
+            </button>
+          </div>
+        `;
+      }
+
+      const unitPriceDisplay = typeof item.unitPrice === 'number' ? item.unitPrice.toFixed(2) : parseFloat(item.unitPrice || 0).toFixed(2);
+
+      // Task 8 Table Structure (9 Columns):
+      // Part Code | Part Description | Category | Storage Location / Bin | Supplier | Stock Level | Status | Unit Price | Actions
+      return `
+        <tr>
+          <td><strong>${escapeHtml(item.code)}</strong></td>
+          <td><div style="font-weight:600; color:var(--navy-darkest);">${escapeHtml(item.name || '-')}</div></td>
+          <td>${escapeHtml(item.category || '-')}</td>
+          <td>${escapeHtml(item.location || '-')}</td>
+          <td>${escapeHtml(item.supplier || '-')}</td>
+          <td>
+            <div style="font-size:15px; font-weight:700; color:${currentStock <= minStock ? 'var(--red-primary)' : 'var(--navy-darkest)'};">
+              ${currentStock} <span style="font-size:12px; font-weight:500; color:var(--text-muted);">${escapeHtml(item.unit || 'pcs')}</span>
+            </div>
+            <div style="font-size:11px; color:var(--text-muted);">Min: ${minStock} ${escapeHtml(item.unit || 'pcs')}</div>
+          </td>
+          <td>${badgeHtml}</td>
+          <td>RM ${unitPriceDisplay}</td>
+          <td>${actionButtonsHtml}</td>
+        </tr>
+      `;
+    }).join('');
   }
 
   function renderStockMovementsTable() {
@@ -3700,7 +3592,6 @@
       const data = await res.json().catch(() => null);
       if (res.ok && data && data.success && Array.isArray(data.technicians)) {
         state.technicians = data.technicians;
-        renderTechniciansView();
         updateKPICounters();
         if (forceNotification) {
           showToast(`Synchronized ${data.technicians.length} technician records.`, 'success');
@@ -3724,587 +3615,6 @@
     }
   }
   window.fetchTechniciansFromBackend = fetchTechniciansFromBackend;
-
-  /**
-   * Render Technician Management view (Cards, summary KPIs, search/filter)
-   */
-  function renderTechniciansView() {
-    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
-    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
-    if (!isAdmin) {
-      return;
-    }
-
-    const gridEl = document.getElementById('techniciansGrid');
-    if (!gridEl) return;
-
-    const searchInput = document.getElementById('techSearchInput');
-    const filterSelect = document.getElementById('techStatusFilter');
-    const query = (searchInput ? searchInput.value : technicianSearchQuery).toLowerCase().trim();
-    const filterStatus = filterSelect ? filterSelect.value : technicianStatusFilter;
-
-    // Filter technicians
-    const allTechs = state.technicians || [];
-    let totalCount = allTechs.length;
-    let availableCount = 0;
-    let inJobCount = 0;
-    let inactiveCount = 0;
-
-    // Precalculate all metrics for accurate summary cards
-    const techsWithMetrics = allTechs.map(t => {
-      const metrics = calculateTechnicianMetrics(t);
-      if (metrics.computedStatus === 'Available') availableCount++;
-      else if (metrics.computedStatus === 'In Job') inJobCount++;
-      else if (metrics.computedStatus === 'Inactive') inactiveCount++;
-
-      return {
-        ...t,
-        ...metrics
-      };
-    });
-
-    // Update Phase 13 Summary Cards
-    const summaryTotalEl = document.getElementById('techSummaryTotal');
-    const summaryAvailEl = document.getElementById('techSummaryAvailable');
-    const summaryInJobEl = document.getElementById('techSummaryInJob');
-    const summaryInactEl = document.getElementById('techSummaryInactive');
-
-    if (summaryTotalEl) summaryTotalEl.textContent = totalCount;
-    if (summaryAvailEl) summaryAvailEl.textContent = availableCount;
-    if (summaryInJobEl) summaryInJobEl.textContent = inJobCount;
-    if (summaryInactEl) summaryInactEl.textContent = inactiveCount;
-
-    // Filter for display
-    const filteredTechs = techsWithMetrics.filter(t => {
-      // Status filter
-      if (filterStatus !== 'all' && t.computedStatus !== filterStatus) {
-        return false;
-      }
-
-      // Search query filter (matches name, techId, staffId, phone)
-      if (query) {
-        const nameMatch = (t.name || '').toLowerCase().includes(query);
-        const idMatch = (t.technicianId || '').toLowerCase().includes(query);
-        const staffMatch = (t.staffId || '').toLowerCase().includes(query);
-        const phoneMatch = (t.phoneNumber || '').toLowerCase().includes(query);
-        if (!nameMatch && !idMatch && !staffMatch && !phoneMatch) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    if (filteredTechs.length === 0) {
-      gridEl.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; background: #FFFFFF; border-radius: 10px; border: 1px solid #E2E8F0;">
-          <div style="font-size: 15px; font-weight: 600; color: var(--navy-darkest);">No technicians match your criteria</div>
-          <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
-            ${allTechs.length === 0 ? 'Click "+ Add Technician" above to register a new technician account.' : 'Try adjusting your search terms or status filter.'}
-          </div>
-        </div>
-      `;
-      return;
-    }
-
-    gridEl.innerHTML = filteredTechs.map(t => {
-      const initials = getInitials(t.name);
-      const safeId = escapeHtml(t.technicianId || `TECH-${t.staffId || '000'}`);
-      const safeName = escapeHtml(t.name || `Technician ${t.staffId}`);
-      const safePhone = escapeHtml(t.phoneNumber || '—');
-      const safeLastActive = escapeHtml(t.lastActive || '—');
-
-      return `
-        <div class="technician-card" id="tech-card-${safeId}">
-          <div class="tech-card-header">
-            <div class="tech-avatar">${initials}</div>
-            <div class="tech-header-info">
-              <div class="tech-name">${safeName}</div>
-              <div class="tech-meta">
-                <span class="tech-id-badge">${safeId}</span>
-                <span class="tech-role">${escapeHtml(t.role || 'Technician')}</span>
-              </div>
-            </div>
-            <div class="tech-status-wrapper">
-              <span class="status-badge ${t.statusBadgeClass}">${t.computedStatus}</span>
-            </div>
-          </div>
-
-          <div class="tech-card-body">
-            <div class="tech-info-row">
-              <span class="tech-label">Phone:</span>
-              <span class="tech-val" title="${safePhone}">${safePhone}</span>
-            </div>
-            <div class="tech-info-row">
-              <span class="tech-label">Last Active:</span>
-              <span class="tech-val">${safeLastActive}</span>
-            </div>
-            <div class="tech-info-row">
-              <span class="tech-label">Job Completed:</span>
-              <span class="tech-val tech-val-bold">${t.completedCount}</span>
-            </div>
-            <div class="tech-info-row">
-              <span class="tech-label">Current Job:</span>
-              <span class="tech-val ${t.activeJobCodes.length > 0 ? 'tech-val-bold' : ''}" style="${t.activeJobCodes.length > 0 ? 'color:var(--accent-primary);' : ''}">
-                ${escapeHtml(t.currentJobDisplay)}
-              </span>
-            </div>
-          </div>
-
-          <div class="tech-card-footer">
-            <button class="btn-table-action" onclick="window.openViewTechnicianModal('${safeId}')" title="View complete technician details">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-              View Details
-            </button>
-            <button class="btn-table-action" onclick="window.openEditTechnicianModal('${safeId}')" title="Edit technician profile">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              Edit
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-  window.renderTechniciansView = renderTechniciansView;
-
-  function filterTechnicians() {
-    renderTechniciansView();
-  }
-  window.filterTechnicians = filterTechnicians;
-
-  // -------------------------------------------------------------------------
-  // ADMIN MODALS: ADD, EDIT, VIEW TECHNICIAN (PHASE 12)
-  // -------------------------------------------------------------------------
-  function openAddTechnicianModal() {
-    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
-    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
-    if (!isAdmin) {
-      showToast('Access Denied: Restricted to Administrator accounts.', 'error');
-      return;
-    }
-
-    const modal = document.getElementById('addTechnicianModal');
-    const form = document.getElementById('addTechnicianForm');
-    const alertEl = document.getElementById('addTechAlert');
-    if (form) form.reset();
-    if (alertEl) { alertEl.style.display = 'none'; alertEl.innerHTML = ''; }
-
-    const statusSelect = document.getElementById('addTechStatus');
-    if (statusSelect) statusSelect.value = 'Active';
-
-    if (modal) modal.classList.add('active');
-  }
-  window.openAddTechnicianModal = openAddTechnicianModal;
-
-  async function submitAddTechnician() {
-    const token = sessionStorage.getItem('mmsAuthToken') || '';
-    if (!token) {
-      showToast('Authentication required.', 'error');
-      return;
-    }
-
-    const staffIdInput = document.getElementById('addTechStaffId');
-    const nameInput = document.getElementById('addTechName');
-    const phoneInput = document.getElementById('addTechPhone');
-    const statusInput = document.getElementById('addTechStatus');
-    const passwordInput = document.getElementById('addTechPassword');
-    const confirmPasswordInput = document.getElementById('addTechConfirmPassword');
-    const alertEl = document.getElementById('addTechAlert');
-    const submitBtn = document.getElementById('submitAddTechBtn');
-
-    const staffId = (staffIdInput ? staffIdInput.value : '').trim().toUpperCase();
-    const displayName = (nameInput ? nameInput.value : '').trim();
-    const phoneNumber = (phoneInput ? phoneInput.value : '').trim();
-    const accountStatus = (statusInput ? statusInput.value : 'Active');
-    const password = passwordInput ? passwordInput.value : '';
-    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
-
-    if (alertEl) alertEl.style.display = 'none';
-
-    if (!staffId) {
-      if (alertEl) {
-        alertEl.textContent = 'Staff ID is required.';
-        alertEl.style.display = 'block';
-        alertEl.style.background = '#FEE2E2';
-        alertEl.style.color = '#B91C1C';
-      }
-      return;
-    }
-
-    if (!displayName) {
-      if (alertEl) {
-        alertEl.textContent = 'Full Name is required.';
-        alertEl.style.display = 'block';
-        alertEl.style.background = '#FEE2E2';
-        alertEl.style.color = '#B91C1C';
-      }
-      return;
-    }
-
-    if (!isValidPassword(password)) {
-      if (alertEl) {
-        alertEl.textContent = MMS_PASSWORD_POLICY_MSG;
-        alertEl.style.display = 'block';
-        alertEl.style.background = '#FEE2E2';
-        alertEl.style.color = '#B91C1C';
-      }
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      if (alertEl) {
-        alertEl.textContent = 'Passwords do not match.';
-        alertEl.style.display = 'block';
-        alertEl.style.background = '#FEE2E2';
-        alertEl.style.color = '#B91C1C';
-      }
-      return;
-    }
-
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Creating...';
-    }
-
-    try {
-      const res = await fetch('/.netlify/functions/manage-technicians', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          action: 'create',
-          staffId,
-          displayName,
-          phoneNumber,
-          accountStatus,
-          password
-        })
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (res.ok && data && data.success) {
-        showToast(`Technician ${displayName} created successfully!`, 'success');
-        closeAllModals();
-        fetchTechniciansFromBackend(false);
-      } else if (data && data.partialFailure) {
-        if (alertEl) {
-          alertEl.innerHTML = `
-            <div><strong>Notice:</strong> ${escapeHtml(data.error || 'Technician created in Firebase Auth, but Google Sheets sync failed.')}</div>
-            <button type="button" class="btn-primary" onclick="window.retryTechnicianSync('${escapeHtml(data.firebaseUid)}', '${escapeHtml(data.technicianId)}', '${escapeHtml(data.name)}', '${escapeHtml(data.phoneNumber)}', '${escapeHtml(data.accountStatus)}', '${escapeHtml(data.staffId)}')"
-              style="margin-top:8px; padding:6px 14px; font-size:12px;">
-              Retry Sheets Sync
-            </button>
-          `;
-          alertEl.style.display = 'block';
-          alertEl.style.background = '#FEF3C7';
-          alertEl.style.color = '#92400E';
-        }
-        showToast('Technician created in Firebase Auth. Complete Google Sheets sync.', 'info');
-        fetchTechniciansFromBackend(false);
-      } else {
-        const errMsg = (data && data.error) || 'Failed to create technician account.';
-        if (alertEl) {
-          alertEl.textContent = errMsg;
-          alertEl.style.display = 'block';
-          alertEl.style.background = '#FEE2E2';
-          alertEl.style.color = '#B91C1C';
-        }
-        showToast(errMsg, 'error');
-      }
-    } catch (err) {
-      console.error('[submitAddTechnician] Error:', err);
-      if (alertEl) {
-        alertEl.textContent = 'Network error. Please try again.';
-        alertEl.style.display = 'block';
-        alertEl.style.background = '#FEE2E2';
-        alertEl.style.color = '#B91C1C';
-      }
-    } finally {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Create Technician';
-      }
-    }
-  }
-  window.submitAddTechnician = submitAddTechnician;
-
-  async function retryTechnicianSync(firebaseUid, technicianId, displayName, phoneNumber, accountStatus, staffId) {
-    const token = sessionStorage.getItem('mmsAuthToken') || '';
-    if (!token) return;
-
-    try {
-      const res = await fetch('/.netlify/functions/manage-technicians', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          action: 'retry-sync',
-          firebaseUid,
-          technicianId,
-          displayName,
-          phoneNumber,
-          accountStatus,
-          staffId
-        })
-      });
-
-      const data = await res.json().catch(() => null);
-      if (res.ok && data && data.success) {
-        showToast('Synchronization successful!', 'success');
-        closeAllModals();
-        fetchTechniciansFromBackend(false);
-      } else {
-        showToast('Retry sync failed: ' + ((data && data.error) || 'Unknown error'), 'error');
-      }
-    } catch (err) {
-      showToast('Network error retrying sync.', 'error');
-    }
-  }
-  window.retryTechnicianSync = retryTechnicianSync;
-
-  function openEditTechnicianModal(techId) {
-    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
-    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
-    if (!isAdmin) {
-      showToast('Access Denied: Restricted to Administrator accounts.', 'error');
-      return;
-    }
-
-    const tech = (state.technicians || []).find(t =>
-      (t.technicianId && t.technicianId.toUpperCase() === String(techId).toUpperCase()) ||
-      (t.staffId && t.staffId.toUpperCase() === String(techId).toUpperCase())
-    );
-
-    if (!tech) {
-      showToast('Technician record not found.', 'error');
-      return;
-    }
-
-    const modal = document.getElementById('editTechnicianModal');
-    const alertEl = document.getElementById('editTechAlert');
-    if (alertEl) { alertEl.style.display = 'none'; alertEl.innerHTML = ''; }
-
-    const idInput = document.getElementById('editTechId');
-    const uidInput = document.getElementById('editTechUid');
-    const staffIdInput = document.getElementById('editTechStaffId');
-    const nameInput = document.getElementById('editTechName');
-    const phoneInput = document.getElementById('editTechPhone');
-    const statusSelect = document.getElementById('editTechStatus');
-
-    if (idInput) idInput.value = tech.technicianId || `TECH-${tech.staffId || ''}`;
-    if (uidInput) uidInput.value = tech.firebaseUid || '';
-    if (staffIdInput) staffIdInput.value = tech.staffId || '';
-    if (nameInput) nameInput.value = tech.name || '';
-    if (phoneInput) phoneInput.value = tech.phoneNumber || '';
-    if (statusSelect) statusSelect.value = (tech.accountStatus === 'Inactive' || tech.disabled) ? 'Inactive' : 'Active';
-
-    if (modal) modal.classList.add('active');
-  }
-  window.openEditTechnicianModal = openEditTechnicianModal;
-
-  async function submitEditTechnician() {
-    const token = sessionStorage.getItem('mmsAuthToken') || '';
-    if (!token) return;
-
-    const idInput = document.getElementById('editTechId');
-    const uidInput = document.getElementById('editTechUid');
-    const staffIdInput = document.getElementById('editTechStaffId');
-    const nameInput = document.getElementById('editTechName');
-    const phoneInput = document.getElementById('editTechPhone');
-    const statusSelect = document.getElementById('editTechStatus');
-    const alertEl = document.getElementById('editTechAlert');
-    const submitBtn = document.getElementById('submitEditTechBtn');
-
-    const technicianId = (idInput ? idInput.value : '').trim();
-    const firebaseUid = (uidInput ? uidInput.value : '').trim();
-    const staffId = (staffIdInput ? staffIdInput.value : '').trim();
-    const displayName = (nameInput ? nameInput.value : '').trim();
-    const phoneNumber = (phoneInput ? phoneInput.value : '').trim();
-    const accountStatus = statusSelect ? statusSelect.value : 'Active';
-
-    if (!displayName) {
-      if (alertEl) {
-        alertEl.textContent = 'Full Name is required.';
-        alertEl.style.display = 'block';
-        alertEl.style.background = '#FEE2E2';
-        alertEl.style.color = '#B91C1C';
-      }
-      return;
-    }
-
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
-    }
-
-    try {
-      const res = await fetch('/.netlify/functions/manage-technicians', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          action: 'update',
-          firebaseUid,
-          technicianId,
-          staffId,
-          displayName,
-          phoneNumber,
-          accountStatus
-        })
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (res.ok && data && data.success) {
-        showToast('Technician details updated successfully!', 'success');
-        const target = (state.technicians || []).find(t =>
-          (t.technicianId && t.technicianId === technicianId) ||
-          (t.firebaseUid && t.firebaseUid === firebaseUid)
-        );
-        if (target) {
-          target.name = displayName;
-          target.phoneNumber = phoneNumber;
-          target.accountStatus = accountStatus;
-          target.disabled = accountStatus === 'Inactive';
-        }
-        closeAllModals();
-        renderTechniciansView();
-        fetchTechniciansFromBackend(false);
-      } else {
-        const errMsg = (data && data.error) || 'Failed to update technician.';
-        if (alertEl) {
-          alertEl.textContent = errMsg;
-          alertEl.style.display = 'block';
-          alertEl.style.background = '#FEE2E2';
-          alertEl.style.color = '#B91C1C';
-        }
-        showToast(errMsg, 'error');
-      }
-    } catch (err) {
-      console.error('[submitEditTechnician] Error:', err);
-      if (alertEl) {
-        alertEl.textContent = 'Network error saving changes.';
-        alertEl.style.display = 'block';
-        alertEl.style.background = '#FEE2E2';
-        alertEl.style.color = '#B91C1C';
-      }
-    } finally {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Save Changes';
-      }
-    }
-  }
-  window.submitEditTechnician = submitEditTechnician;
-
-  function openViewTechnicianModal(techId) {
-    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
-    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
-    if (!isAdmin) {
-      showToast('Access Denied: Restricted to Administrator accounts.', 'error');
-      return;
-    }
-
-    const tech = (state.technicians || []).find(t =>
-      (t.technicianId && t.technicianId.toUpperCase() === String(techId).toUpperCase()) ||
-      (t.staffId && t.staffId.toUpperCase() === String(techId).toUpperCase())
-    );
-
-    if (!tech) {
-      showToast('Technician record not found.', 'error');
-      return;
-    }
-
-    currentViewingTechId = tech.technicianId || tech.staffId;
-
-    const metrics = calculateTechnicianMetrics(tech);
-    const initials = getInitials(tech.name);
-
-    const avatarEl = document.getElementById('viewTechAvatar');
-    const nameEl = document.getElementById('viewTechName');
-    const badgeEl = document.getElementById('viewTechStatusBadge');
-    const idBadgeEl = document.getElementById('viewTechIdBadge');
-    const staffIdEl = document.getElementById('viewTechStaffId');
-    const phoneEl = document.getElementById('viewTechPhone');
-    const lastActiveEl = document.getElementById('viewTechLastActive');
-    const accountStatusEl = document.getElementById('viewTechAccountStatus');
-    const uidEl = document.getElementById('viewTechUid');
-    const activeJobsListEl = document.getElementById('viewTechActiveJobsList');
-    const bdCompletedEl = document.getElementById('viewTechBdCompleted');
-    const pmCompletedEl = document.getElementById('viewTechPmCompleted');
-    const totalCompletedEl = document.getElementById('viewTechTotalCompleted');
-
-    if (avatarEl) avatarEl.textContent = initials;
-    if (nameEl) nameEl.textContent = tech.name || `Technician ${tech.staffId}`;
-    if (badgeEl) {
-      badgeEl.className = `status-badge ${metrics.statusBadgeClass}`;
-      badgeEl.textContent = metrics.computedStatus;
-    }
-    if (idBadgeEl) idBadgeEl.textContent = tech.technicianId || `TECH-${tech.staffId || ''}`;
-    if (staffIdEl) staffIdEl.textContent = tech.staffId || '—';
-    if (phoneEl) phoneEl.textContent = tech.phoneNumber || '—';
-    if (lastActiveEl) lastActiveEl.textContent = tech.lastActive || '—';
-    if (accountStatusEl) accountStatusEl.textContent = tech.accountStatus || 'Active';
-    if (uidEl) uidEl.textContent = tech.firebaseUid || 'Not linked to Firebase UID';
-
-    if (bdCompletedEl) bdCompletedEl.textContent = metrics.completedBreakdowns.length;
-    if (pmCompletedEl) pmCompletedEl.textContent = metrics.completedPMs.length;
-    if (totalCompletedEl) totalCompletedEl.textContent = metrics.completedCount;
-
-    if (activeJobsListEl) {
-      const activeItems = [];
-      metrics.activeBreakdowns.forEach(b => {
-        activeItems.push(`
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #F1F5F9;">
-            <div>
-              <span class="status-badge status-badge-blue" style="font-size:11px;">${escapeHtml(b.id)}</span>
-              <span style="font-weight:600; color:var(--navy-darkest); margin-left:6px;">${escapeHtml(b.machine)}</span>
-              <span style="font-size:11.5px; color:var(--text-muted); margin-left:4px;">(${escapeHtml(b.problemCategory || 'Breakdown')})</span>
-            </div>
-            <span class="status-badge status-badge-amber" style="font-size:11px;">${escapeHtml(b.status || 'Active')}</span>
-          </div>
-        `);
-      });
-
-      metrics.activePMs.forEach(pm => {
-        activeItems.push(`
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #F1F5F9;">
-            <div>
-              <span class="status-badge status-badge-blue" style="font-size:11px;">${escapeHtml(pm.pmCode)}</span>
-              <span style="font-weight:600; color:var(--navy-darkest); margin-left:6px;">${escapeHtml(pm.machine)}</span>
-              <span style="font-size:11.5px; color:var(--text-muted); margin-left:4px;">(${escapeHtml(pm.taskTitle || 'PM')})</span>
-            </div>
-            <span class="status-badge status-badge-amber" style="font-size:11px;">${escapeHtml(pm.status || 'Scheduled')}</span>
-          </div>
-        `);
-      });
-
-      if (activeItems.length === 0) {
-        activeJobsListEl.innerHTML = `<span style="color:var(--text-muted);">None — No active Breakdown or PM jobs currently assigned.</span>`;
-      } else {
-        activeJobsListEl.innerHTML = activeItems.join('');
-      }
-    }
-
-    const modal = document.getElementById('viewTechnicianModal');
-    if (modal) modal.classList.add('active');
-  }
-  window.openViewTechnicianModal = openViewTechnicianModal;
-
-  function editFromViewModal() {
-    closeAllModals();
-    if (currentViewingTechId) {
-      openEditTechnicianModal(currentViewingTechId);
-    }
-  }
-  window.editFromViewModal = editFromViewModal;
 
   /**
    * Throttled activity updater: pings backend to update Last Active timestamp
@@ -5000,183 +4310,415 @@
     }
   }
 
-  // 2. ADJUST MINIMUM STOCK LIMIT (ADMIN ONLY)
-  let currentAdjustLimitPartCode = null;
-  function openAdjustLimitModal(partCode) {
+  // =========================================================================
+  // TASK 3: MANAGE SPARE PART (ADMIN ONLY) - Combined Metadata & Stock Control
+  // =========================================================================
+  let currentManagingPartCode = null;
+
+  function openManageItemModal(partCode) {
     const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
     const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
     if (!isAdmin) {
-      showToast('Access Denied: Adjusting minimum stock limit is restricted to Administrator accounts.', 'error');
+      showToast('Access Denied: Managing spare parts is restricted to Administrator accounts.', 'error');
       return;
     }
 
-    currentAdjustLimitPartCode = partCode;
+    currentManagingPartCode = partCode;
     const part = (state.spareParts || []).find(p => p.code === partCode);
-    if (!part) return;
+    if (!part) {
+      showToast('Spare part record not found.', 'error');
+      return;
+    }
 
-    document.getElementById('adjLimitPartCode').value = part.code;
-    document.getElementById('adjLimitPartName').value = part.name;
-    document.getElementById('adjLimitCurrentQty').value = `${part.currentStock} ${part.unit}`;
-    document.getElementById('adjLimitCurrentMin').value = `${part.minStock} ${part.unit}`;
-    document.getElementById('adjLimitNewMin').value = part.minStock;
+    // Populate modal inputs with existing item data
+    const codeEl = document.getElementById('manageItemPartCode');
+    const catEl = document.getElementById('manageItemCategory');
+    const nameEl = document.getElementById('manageItemPartName');
+    const locEl = document.getElementById('manageItemLocation');
+    const supEl = document.getElementById('manageItemSupplier');
+    const unitEl = document.getElementById('manageItemUnit');
+    const priceEl = document.getElementById('manageItemUnitPrice');
+    const minEl = document.getElementById('manageItemMinStock');
+    const curStockDisp = document.getElementById('manageItemCurrentStockDisplay');
+    const unitDisp = document.getElementById('manageItemUnitDisplay');
+    const adjTypeEl = document.getElementById('manageItemAdjType');
+    const adjQtyEl = document.getElementById('manageItemAdjQty');
+    const reasonGroup = document.getElementById('manageItemReasonGroup');
+    const adjReasonEl = document.getElementById('manageItemAdjReason');
+    const alertEl = document.getElementById('manageItemAlert');
+    const submitBtn = document.getElementById('manageItemSubmitBtn');
 
-    const modal = document.getElementById('adjustLimitModal');
+    if (codeEl) codeEl.value = part.code;
+    if (catEl) catEl.value = part.category || '';
+    if (nameEl) nameEl.value = part.name || '';
+    if (locEl) locEl.value = part.location || '';
+    if (supEl) supEl.value = part.supplier || '';
+    const partUnit = part.unit || 'pcs';
+    if (unitEl) unitEl.value = partUnit;
+    if (priceEl) priceEl.value = part.unitPrice !== undefined ? part.unitPrice : 0;
+    if (minEl) minEl.value = part.minStock !== undefined ? part.minStock : 0;
+
+    const currentStockNum = Number(part.currentStock) || 0;
+    if (curStockDisp) curStockDisp.textContent = currentStockNum;
+    if (unitDisp) unitDisp.textContent = partUnit;
+
+    if (adjTypeEl) adjTypeEl.value = 'none';
+    if (adjQtyEl) {
+      adjQtyEl.value = '';
+      adjQtyEl.disabled = true;
+      adjQtyEl.style.background = '#F1F5F9';
+    }
+    if (reasonGroup) reasonGroup.style.display = 'none';
+    if (adjReasonEl) adjReasonEl.value = '';
+    if (alertEl) {
+      alertEl.style.display = 'none';
+      alertEl.innerHTML = '';
+    }
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Changes';
+    }
+
+    updateManageItemStockCalc();
+
+    const modal = document.getElementById('manageItemModal');
     if (modal) modal.classList.add('active');
   }
+  window.openManageItemModal = openManageItemModal;
 
-  async function submitAdjustLimit(e) {
-    if (e) e.preventDefault();
-    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
-    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
-    if (!isAdmin) {
-      showToast('Access Denied: Adjusting minimum stock limit is restricted to Administrator accounts.', 'error');
-      return;
-    }
+  function updateManageItemStockCalc() {
+    const adjTypeEl = document.getElementById('manageItemAdjType');
+    const adjQtyEl = document.getElementById('manageItemAdjQty');
+    const reasonGroup = document.getElementById('manageItemReasonGroup');
+    const curStockDisp = document.getElementById('manageItemCurrentStockDisplay');
+    const calcCur = document.getElementById('calcCurrentStock');
+    const calcAdj = document.getElementById('calcAdjustmentQty');
+    const calcUpd = document.getElementById('calcUpdatedStock');
+    const warningEl = document.getElementById('stockNegativeWarning');
+    const submitBtn = document.getElementById('manageItemSubmitBtn');
 
-    if (!currentAdjustLimitPartCode) return;
-    const part = (state.spareParts || []).find(p => p.code === currentAdjustLimitPartCode);
-    if (!part) return;
+    const currentStock = parseInt(curStockDisp ? curStockDisp.textContent : '0', 10) || 0;
+    const adjType = adjTypeEl ? adjTypeEl.value : 'none';
 
-    const newMin = parseInt(document.getElementById('adjLimitNewMin')?.value, 10);
-    if (isNaN(newMin) || newMin < 0) {
-      showToast('Minimum stock limit must be zero or a positive whole number.', 'error');
-      return;
-    }
-
-    const submitBtn = document.getElementById('adjLimitSubmitBtn');
-    const spinner = document.getElementById('adjLimitSpinner');
-    if (submitBtn) submitBtn.disabled = true;
-    if (spinner) spinner.style.display = 'inline-block';
-
-    try {
-      const token = getStoredAuthToken() || '';
-      if (token) {
-        await fetch('/.netlify/functions/manage-spare-parts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            action: 'adjust-limit',
-            code: part.code,
-            newMinLimit: newMin
-          })
-        }).catch(err => console.warn('Backend sync warning:', err));
+    if (adjType === 'none') {
+      if (adjQtyEl) {
+        adjQtyEl.disabled = true;
+        adjQtyEl.value = '';
+        adjQtyEl.style.background = '#F1F5F9';
       }
-
-      // Update minimum limit strictly without modifying stock quantity or creating a movement record
-      part.minStock = newMin;
-      part.updatedAt = formatCurrentDateTime();
-
-      saveState();
-      closeAllModals();
-      renderSparePartsView();
-      showToast(`Minimum stock limit for ${part.code} updated to ${newMin} ${part.unit}!`, 'success');
-    } catch (err) {
-      showToast('Failed to update minimum stock limit: ' + err.message, 'error');
-    } finally {
+      if (reasonGroup) reasonGroup.style.display = 'none';
+      if (calcCur) calcCur.textContent = currentStock;
+      if (calcAdj) {
+        calcAdj.textContent = '± 0';
+        calcAdj.style.color = 'var(--text-muted)';
+      }
+      if (calcUpd) {
+        calcUpd.textContent = currentStock;
+        calcUpd.style.color = 'var(--accent-primary)';
+      }
+      if (warningEl) warningEl.style.display = 'none';
       if (submitBtn) submitBtn.disabled = false;
-      if (spinner) spinner.style.display = 'none';
-    }
-  }
-
-  // 3. ADJUST STOCK QUANTITY (ADMIN ONLY)
-  let currentEditingPartCode = null;
-  function openEditStockModal(partCode) {
-    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
-    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
-    if (!isAdmin) {
-      showToast('Access Denied: Adjusting stock quantity is restricted to Administrator accounts.', 'error');
       return;
     }
 
-    currentEditingPartCode = partCode;
-    const part = (state.spareParts || []).find(p => p.code === partCode);
-    if (!part) return;
+    if (adjQtyEl) {
+      adjQtyEl.disabled = false;
+      adjQtyEl.style.background = '#FFFFFF';
+    }
+    if (reasonGroup) reasonGroup.style.display = 'block';
 
-    document.getElementById('editStockPartCode').value = part.code;
-    document.getElementById('editStockPartName').value = part.name;
-    document.getElementById('editStockCurrentQty').value = part.currentStock;
-    document.getElementById('editStockAdjustment').value = 0;
-    const refInput = document.getElementById('editStockReference');
-    if (refInput) refInput.value = '';
+    let rawQty = parseInt(adjQtyEl ? adjQtyEl.value : '0', 10) || 0;
+    if (rawQty < 0) {
+      rawQty = Math.abs(rawQty);
+      if (adjQtyEl) adjQtyEl.value = rawQty;
+    }
 
-    const modal = document.getElementById('editStockModal');
-    if (modal) modal.classList.add('active');
+    let netAdj = adjType === 'in' ? rawQty : -rawQty;
+    const updatedStock = currentStock + netAdj;
+
+    if (calcCur) calcCur.textContent = currentStock;
+    if (calcAdj) {
+      calcAdj.textContent = (adjType === 'in' ? '+' : '-') + ' ' + rawQty;
+      calcAdj.style.color = adjType === 'in' ? '#166534' : '#DC2626';
+    }
+    if (calcUpd) {
+      calcUpd.textContent = updatedStock;
+    }
+
+    if (updatedStock < 0) {
+      if (calcUpd) calcUpd.style.color = '#DC2626';
+      if (warningEl) warningEl.style.display = 'block';
+      if (submitBtn) submitBtn.disabled = true;
+    } else {
+      if (calcUpd) calcUpd.style.color = 'var(--accent-primary)';
+      if (warningEl) warningEl.style.display = 'none';
+      if (submitBtn) submitBtn.disabled = false;
+    }
   }
+  window.updateManageItemStockCalc = updateManageItemStockCalc;
 
-  async function submitStockAdjustment(e) {
+  async function submitManageItem(e) {
     if (e) e.preventDefault();
     const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
     const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
     if (!isAdmin) {
-      showToast('Access Denied: Adjusting stock quantity is restricted to Administrator accounts.', 'error');
+      showToast('Access Denied: Managing spare parts is restricted to Administrator accounts.', 'error');
       return;
     }
 
-    if (!currentEditingPartCode) return;
-    const part = (state.spareParts || []).find(p => p.code === currentEditingPartCode);
+    if (!currentManagingPartCode) return;
+    const part = (state.spareParts || []).find(p => p.code === currentManagingPartCode);
     if (!part) return;
 
-    const adjustment = parseInt(document.getElementById('editStockAdjustment')?.value, 10) || 0;
-    const reference = (document.getElementById('editStockReference')?.value || 'Manual Adjustment').trim();
+    const alertEl = document.getElementById('manageItemAlert');
+    const submitBtn = document.getElementById('manageItemSubmitBtn');
 
-    if (adjustment === 0) {
-      closeAllModals();
+    function showError(msg) {
+      if (alertEl) {
+        alertEl.textContent = msg;
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#FEE2E2';
+        alertEl.style.color = '#B91C1C';
+      }
+      showToast(msg, 'error');
+    }
+
+    const name = (document.getElementById('manageItemPartName')?.value || '').trim();
+    const category = (document.getElementById('manageItemCategory')?.value || '').trim();
+    const location = (document.getElementById('manageItemLocation')?.value || '').trim();
+    const supplier = (document.getElementById('manageItemSupplier')?.value || '').trim();
+    const unit = (document.getElementById('manageItemUnit')?.value || 'pcs').trim();
+    const unitPrice = parseFloat(document.getElementById('manageItemUnitPrice')?.value);
+    const minStock = parseInt(document.getElementById('manageItemMinStock')?.value, 10);
+    const adjType = document.getElementById('manageItemAdjType')?.value || 'none';
+    const adjQty = parseInt(document.getElementById('manageItemAdjQty')?.value, 10) || 0;
+    const adjReason = (document.getElementById('manageItemAdjReason')?.value || '').trim();
+
+    if (!name || !category || !location || !supplier || !unit) {
+      showError('All required metadata fields must be filled.');
+      return;
+    }
+    if (isNaN(unitPrice) || unitPrice < 0) {
+      showError('Unit price must be zero or a positive numeric value.');
+      return;
+    }
+    if (isNaN(minStock) || minStock < 0) {
+      showError('Minimum stock limit must be zero or a positive whole number.');
       return;
     }
 
-    const previousStock = Number(part.currentStock) || 0;
-    const newStock = Math.max(0, previousStock + adjustment);
+    if (adjType === 'in' || adjType === 'out') {
+      if (adjQty <= 0) {
+        showError('Adjustment quantity must be greater than zero.');
+        return;
+      }
+      if (!adjReason) {
+        showError('Adjustment reason is required when adjusting stock.');
+        return;
+      }
+      const curStock = Number(part.currentStock) || 0;
+      if (adjType === 'out' && curStock - adjQty < 0) {
+        showError('Updated stock cannot become negative. Please reduce deduction quantity.');
+        return;
+      }
+    }
+
+    if (alertEl) alertEl.style.display = 'none';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
 
     try {
       const token = getStoredAuthToken() || '';
-      if (token) {
-        await fetch('/.netlify/functions/manage-spare-parts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            action: 'adjust-stock',
-            code: part.code,
-            adjustment,
-            reference
-          })
-        }).catch(err => console.warn('Backend sync warning:', err));
+      if (!token) {
+        showError('Authentication session expired. Please log in again.');
+        return;
       }
 
-      part.currentStock = newStock;
-      part.updatedAt = formatCurrentDateTime();
-
-      const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
-      const movementType = adjustment > 0 ? 'Stock In' : 'Stock Adjustment';
-
-      state.stockMovements.unshift({
-        id: mId,
-        date: formatCurrentDateTime(),
-        partCode: part.code,
-        partName: part.name,
-        type: movementType,
-        qty: adjustment,
-        previousStock,
-        updatedStock: newStock,
-        balance: newStock,
-        supplier: part.supplier,
-        updatedBy: state.currentUser.staffId || state.currentUser.name || 'ADMIN',
-        reference
+      const res = await fetch('/.netlify/functions/manage-spare-parts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'manage-item',
+          code: part.code,
+          name,
+          category,
+          location,
+          supplier,
+          unit,
+          unitPrice,
+          minStock,
+          adjustmentType: adjType,
+          adjustmentQty: (adjType === 'in' || adjType === 'out') ? adjQty : 0,
+          adjustmentReason: adjReason
+        })
       });
 
-      saveState();
-      closeAllModals();
-      renderSparePartsView();
-      showToast(`Stock updated for ${part.code} (New balance: ${newStock} ${part.unit})`, 'success');
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data && data.success) {
+        // Apply successful updates to local state
+        part.name = name;
+        part.category = category;
+        part.location = location;
+        part.supplier = supplier;
+        part.unit = unit;
+        part.unitPrice = unitPrice;
+        part.minStock = minStock;
+        part.updatedAt = formatCurrentDateTime();
+
+        if (data.updatedStock !== undefined) {
+          part.currentStock = data.updatedStock;
+        } else if (adjType === 'in') {
+          part.currentStock = (Number(part.currentStock) || 0) + adjQty;
+        } else if (adjType === 'out') {
+          part.currentStock = Math.max(0, (Number(part.currentStock) || 0) - adjQty);
+        }
+
+        if (data.movement) {
+          state.stockMovements.unshift(data.movement);
+        }
+
+        saveState();
+        closeAllModals();
+        renderSparePartsView();
+        showToast(`Spare part ${part.code} updated successfully.`, 'success');
+      } else {
+        const errMsg = (data && data.error) || 'Failed to save spare part changes to database.';
+        showError(errMsg);
+      }
     } catch (err) {
-      showToast('Failed to adjust stock: ' + err.message, 'error');
+      console.error('[submitManageItem] Error:', err);
+      showError('Network error connecting to backend service.');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Changes';
+      }
     }
   }
+  window.submitManageItem = submitManageItem;
+
+  // =========================================================================
+  // TASK 4: DELETE / ARCHIVE SPARE PART (ADMIN ONLY)
+  // =========================================================================
+  let currentDeletingPartCode = null;
+
+  function openDeleteItemModal(partCode) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Deleting spare parts is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    const part = (state.spareParts || []).find(p => p.code === partCode);
+    if (!part) {
+      showToast('Spare part record not found.', 'error');
+      return;
+    }
+
+    currentDeletingPartCode = partCode;
+
+    const codeEl = document.getElementById('deleteItemPartCode');
+    const nameEl = document.getElementById('deleteItemPartName');
+    const stockEl = document.getElementById('deleteItemCurrentStock');
+    const alertEl = document.getElementById('deleteItemAlert');
+    const confirmBtn = document.getElementById('deleteItemConfirmBtn');
+
+    if (codeEl) codeEl.textContent = part.code;
+    if (nameEl) nameEl.textContent = part.name;
+    if (stockEl) stockEl.textContent = `${part.currentStock} ${part.unit || 'pcs'}`;
+    if (alertEl) {
+      alertEl.style.display = 'none';
+      alertEl.innerHTML = '';
+    }
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Delete Item';
+    }
+
+    const modal = document.getElementById('deleteItemModal');
+    if (modal) modal.classList.add('active');
+  }
+  window.openDeleteItemModal = openDeleteItemModal;
+
+  async function confirmDeleteItem() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Deleting spare parts is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    if (!currentDeletingPartCode) return;
+
+    const alertEl = document.getElementById('deleteItemAlert');
+    const confirmBtn = document.getElementById('deleteItemConfirmBtn');
+
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Processing...';
+    }
+
+    try {
+      const token = getStoredAuthToken() || '';
+      if (!token) {
+        showToast('Authentication required.', 'error');
+        return;
+      }
+
+      const res = await fetch('/.netlify/functions/manage-spare-parts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'delete-item',
+          code: currentDeletingPartCode
+        })
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data && data.success) {
+        state.spareParts = (state.spareParts || []).filter(p => p.code !== currentDeletingPartCode);
+        saveState();
+        closeAllModals();
+        renderSparePartsView();
+        showToast(data.message || 'Spare part removed successfully.', 'success');
+      } else {
+        const errMsg = (data && data.error) || 'Failed to remove spare part.';
+        if (alertEl) {
+          alertEl.textContent = errMsg;
+          alertEl.style.display = 'block';
+          alertEl.style.background = '#FEE2E2';
+          alertEl.style.color = '#B91C1C';
+        }
+        showToast(errMsg, 'error');
+      }
+    } catch (err) {
+      console.error('[confirmDeleteItem] Error:', err);
+      if (alertEl) {
+        alertEl.textContent = 'Network error connecting to backend service.';
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#FEE2E2';
+        alertEl.style.color = '#B91C1C';
+      }
+      showToast('Network error during spare part removal.', 'error');
+    } finally {
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Delete Item';
+      }
+    }
+  }
+  window.confirmDeleteItem = confirmDeleteItem;
 
   // 4. REQUEST STOCK WORKFLOW (ADMIN & TECHNICIAN)
   function openRequestStockModal(partCode) {
@@ -5662,7 +5204,6 @@
     if (currentView === 'breakdown') renderBreakdownView();
     if (currentView === 'maintenance') renderMaintenanceView();
     if (currentView === 'spareparts') renderSparePartsView();
-    if (currentView === 'technicians') renderTechniciansView();
   }
 
   // =========================================================================
@@ -5714,17 +5255,24 @@
       populateStaffIdFromProfile();
     }
 
-    const editStockForm = document.getElementById('editStockForm');
-    if (editStockForm) editStockForm.addEventListener('submit', submitStockAdjustment);
+    const manageItemForm = document.getElementById('manageItemForm');
+    if (manageItemForm) manageItemForm.addEventListener('submit', submitManageItem);
 
     const addStockForm = document.getElementById('addStockForm');
     if (addStockForm) addStockForm.addEventListener('submit', submitAddStock);
 
-    const adjustLimitForm = document.getElementById('adjustLimitForm');
-    if (adjustLimitForm) adjustLimitForm.addEventListener('submit', submitAdjustLimit);
-
     const requestStockForm = document.getElementById('requestStockForm');
     if (requestStockForm) requestStockForm.addEventListener('submit', submitRequestStock);
+
+    // Spare Parts Tab Sync Buttons (Task 5)
+    const syncPartsBtn = document.getElementById('syncSparePartsBtn');
+    if (syncPartsBtn) syncPartsBtn.addEventListener('click', () => syncSparePartsTab('parts-list'));
+
+    const syncMovementsBtn = document.getElementById('syncStockMovementsBtn');
+    if (syncMovementsBtn) syncMovementsBtn.addEventListener('click', () => syncSparePartsTab('stock-movement'));
+
+    const syncRequestsBtn = document.getElementById('syncStockRequestsBtn');
+    if (syncRequestsBtn) syncRequestsBtn.addEventListener('click', () => syncSparePartsTab('stock-request'));
 
     const assignTechForm = document.getElementById('assignTechForm');
     if (assignTechForm) assignTechForm.addEventListener('submit', submitAssignTechnician);
@@ -5821,10 +5369,12 @@
   window.switchSparePartsTab = switchSparePartsTab;
   window.openAddStockModal = openAddStockModal;
   window.submitAddStock = submitAddStock;
-  window.openAdjustLimitModal = openAdjustLimitModal;
-  window.submitAdjustLimit = submitAdjustLimit;
-  window.openEditStockModal = openEditStockModal;
-  window.submitStockAdjustment = submitStockAdjustment;
+  window.openManageItemModal = openManageItemModal;
+  window.updateManageItemStockCalc = updateManageItemStockCalc;
+  window.submitManageItem = submitManageItem;
+  window.openDeleteItemModal = openDeleteItemModal;
+  window.confirmDeleteItem = confirmDeleteItem;
+  window.syncSparePartsTab = syncSparePartsTab;
   window.openRequestStockModal = openRequestStockModal;
   window.submitRequestStock = submitRequestStock;
   window.handleApproveStockRequest = handleApproveStockRequest;
