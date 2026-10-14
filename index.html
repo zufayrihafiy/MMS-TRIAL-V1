@@ -214,7 +214,7 @@
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
             </svg>
-            <span>Technicians List</span>
+            <span>Technician Management</span>
           </a>
         </nav>
       </div>
@@ -1108,20 +1108,27 @@
             </div>
 
             <div class="subview-actions">
-              <button class="btn-primary" onclick="window.openRequestStockModal('')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                Request Stock (Requisition)
+              <button id="addStockBtn" class="btn-primary admin-only" type="button" style="display:none; padding:7px 14px; font-size:13px; font-weight:600;" onclick="window.openAddStockModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                + Add Stock
+              </button>
+              <button class="btn-primary" type="button" style="padding:7px 14px; font-size:13px; font-weight:600;" onclick="window.openRequestStockModal('')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                + Request Stock (Requisition)
               </button>
             </div>
           </div>
 
           <!-- Module Tabs -->
           <div class="module-tabs-nav" id="sparepartsTabs">
-            <button class="module-tab-btn active" data-tab="parts-list" onclick="window.switchSparePartsTab('parts-list')">
+            <button class="module-tab-btn active" id="spTabPartsListBtn" data-tab="parts-list" onclick="window.switchSparePartsTab('parts-list')">
               Spare Parts List
             </button>
-            <button class="module-tab-btn" data-tab="stock-movement" onclick="window.switchSparePartsTab('stock-movement')">
+            <button class="module-tab-btn admin-only" id="spTabStockMovementBtn" data-tab="stock-movement" onclick="window.switchSparePartsTab('stock-movement')">
               Stock Movement History
+            </button>
+            <button class="module-tab-btn" id="spTabStockRequestBtn" data-tab="stock-request" onclick="window.switchSparePartsTab('stock-request')">
+              Stock Request
             </button>
           </div>
 
@@ -1138,7 +1145,7 @@
                   <label style="font-size:12.5px; font-weight:600; color:var(--text-muted);">Stock Filter:</label>
                   <select id="sparePartsFilter" class="filter-select">
                     <option value="all">All Inventory Items</option>
-                    <option value="low">Low Stock (â‰¤ Min Level)</option>
+                    <option value="low">Low Stock (≤ Min Level)</option>
                     <option value="out">Out of Stock (0 units)</option>
                     <option value="ok">In Stock (Healthy)</option>
                   </select>
@@ -1150,11 +1157,10 @@
                   <thead>
                     <tr>
                       <th>Part Code</th>
-                      <th>Part Description & Bin</th>
+                      <th>Part Description &amp; Bin</th>
                       <th>Stock Level</th>
                       <th>Status</th>
                       <th>Unit Price</th>
-                      <th>Authorized Supplier</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -1166,25 +1172,26 @@
             </div>
           </div>
 
-          <!-- TAB 2: STOCK MOVEMENT HISTORY -->
-          <div id="sp-tab-stock-movement" class="spareparts-tab-content" style="display:none;">
+          <!-- TAB 2: STOCK MOVEMENT HISTORY (ADMIN ONLY) -->
+          <div id="sp-tab-stock-movement" class="spareparts-tab-content admin-only" style="display:none;">
             <div class="data-table-container">
               <div class="table-toolbar">
-                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Inventory Movement Audit Trail</h3>
+                <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Stock Movement History (Admin Audit Log)</h3>
                 <span class="status-badge status-badge-blue">Live Ledger</span>
               </div>
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
-                      <th>Movement ID</th>
-                      <th>Timestamp</th>
-                      <th>Part Code & Name</th>
-                      <th>Type</th>
-                      <th>Qty Change</th>
-                      <th>New Balance</th>
-                      <th>Reference Job / PO</th>
-                      <th>Authorized By</th>
+                      <th>Date &amp; Time</th>
+                      <th>Part Code</th>
+                      <th>Part Description</th>
+                      <th>Movement Type</th>
+                      <th>Quantity</th>
+                      <th>Previous Stock</th>
+                      <th>Updated Stock</th>
+                      <th>Authorized Supplier</th>
+                      <th>Updated By</th>
                     </tr>
                   </thead>
                   <tbody id="stockMovementTbody">
@@ -1195,10 +1202,42 @@
             </div>
           </div>
 
+          <!-- TAB 3: STOCK REQUEST -->
+          <div id="sp-tab-stock-request" class="spareparts-tab-content" style="display:none;">
+            <div class="data-table-container">
+              <div class="table-toolbar">
+                <div>
+                  <h3 style="font-size:15px; font-weight:700; color:var(--navy-darkest);">Stock Requisition &amp; Issuance</h3>
+                  <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Track, approve and issue spare part requests</div>
+                </div>
+                <span class="status-badge status-badge-blue">Request Workflow</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Request ID</th>
+                      <th>Request Date &amp; Time</th>
+                      <th>Requested By</th>
+                      <th>Part Code</th>
+                      <th>Part Description</th>
+                      <th>Quantity Requested</th>
+                      <th>Request Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stockRequestTbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
         </section>
 
         <!-- ===============================================================
-             VIEW: TECHNICIANS DIRECTORY (Connected via KPI 4)
+             VIEW: TECHNICIAN MANAGEMENT (ADMIN ONLY - PHASES 5, 7, 12, 13)
              =============================================================== -->
         <section id="view-technicians" class="subview-container">
           <div class="subview-header">
@@ -1206,19 +1245,101 @@
               <div class="breadcrumb-nav">
                 <span class="breadcrumb-link" onclick="window.navigateTo('home')">Home</span>
                 <span>/</span>
-                <span>Technicians</span>
+                <span>Technician Management</span>
               </div>
               <div class="subview-title-group">
-                <h2>Total Registered Technicians</h2>
+                <h2>Technician Management</h2>
               </div>
             </div>
 
-            <div class="subview-actions">
-              <span class="status-badge status-badge-blue">8 Active on Roster</span>
+            <div class="subview-actions" style="display:flex; gap:10px; align-items:center;">
+              <button class="btn-sync-action" id="btnSyncTechnicians" onclick="window.fetchTechniciansFromBackend(true)" title="Sync technician roster from database">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                Sync
+              </button>
+              <button class="btn-primary" id="btnAddTechnicianBtn" onclick="window.openAddTechnicianModal()" style="display:flex; align-items:center; gap:6px; padding:8px 16px; font-size:13px; font-weight:600;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                + Add Technician
+              </button>
             </div>
           </div>
 
-          <!-- 8 Technicians Grid -->
+          <!-- PHASE 13: DASHBOARD SUMMARY CARDS -->
+          <div class="technician-summary-cards" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:20px;">
+            <div class="kpi-card" style="padding:16px 20px;">
+              <div class="kpi-left-group">
+                <div class="kpi-icon-circle kpi-icon-blue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <div class="kpi-text-group">
+                  <div id="techSummaryTotal" class="kpi-value" style="font-size:24px;">0</div>
+                  <div class="kpi-label">Total Registered</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi-card" style="padding:16px 20px;">
+              <div class="kpi-left-group">
+                <div class="kpi-icon-circle kpi-icon-green">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                </div>
+                <div class="kpi-text-group">
+                  <div id="techSummaryAvailable" class="kpi-value" style="font-size:24px; color:var(--green-primary);">0</div>
+                  <div class="kpi-label">Available</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi-card" style="padding:16px 20px;">
+              <div class="kpi-left-group">
+                <div class="kpi-icon-circle kpi-icon-blue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <div class="kpi-text-group">
+                  <div id="techSummaryInJob" class="kpi-value" style="font-size:24px; color:var(--accent-primary);">0</div>
+                  <div class="kpi-label">In Job</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi-card" style="padding:16px 20px;">
+              <div class="kpi-left-group">
+                <div class="kpi-icon-circle" style="background:#F1F5F9; color:#64748B;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                </div>
+                <div class="kpi-text-group">
+                  <div id="techSummaryInactive" class="kpi-value" style="font-size:24px; color:#64748B;">0</div>
+                  <div class="kpi-label">Inactive</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOOLBAR: SEARCH & STATUS FILTER (Phase 12) -->
+          <div class="data-table-container" style="padding:14px 18px; margin-bottom:20px; border-radius:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; gap:12px; align-items:center; flex:1; max-width:550px;">
+                <div style="position:relative; width:100%;">
+                  <input type="text" id="techSearchInput" class="form-input" placeholder="Search technician by name, ID, phone..." oninput="window.filterTechnicians()"
+                    style="width:100%; box-sizing:border-box; padding:9px 12px 9px 34px; border:1px solid #CBD5E0; border-radius:8px; font-size:13px;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" style="position:absolute; left:11px; top:50%; transform:translateY(-50%);">
+                    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+              </div>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <label for="techStatusFilter" style="font-size:12.5px; font-weight:600; color:var(--text-muted);">Status:</label>
+                <select id="techStatusFilter" class="form-input" onchange="window.filterTechnicians()" style="padding:8px 12px; font-size:13px; border-radius:8px; border:1px solid #CBD5E0;">
+                  <option value="all">All Statuses</option>
+                  <option value="Available">Available (Green)</option>
+                  <option value="In Job">In Job (Blue)</option>
+                  <option value="Inactive">Inactive (Grey)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- TECHNICIANS GRID -->
           <div class="technician-grid" id="techniciansGrid">
             <!-- Populated by JS -->
           </div>
@@ -1657,13 +1778,97 @@
   </div>
 
   <!-- ===================================================================
-       MODAL: EDIT / ADJUST STOCK
+       MODAL: ADD NEW SPARE PART STOCK (ADMIN ONLY)
+       =================================================================== -->
+  <div id="addStockModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-header">
+        <h3 class="modal-title">+ Add New Spare Part Stock</h3>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <form id="addStockForm">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="addStockPartCode">Part Code <span class="required-star">*</span></label>
+              <input type="text" id="addStockPartCode" class="form-control" placeholder="e.g. SP-310" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="addStockCategory">Category <span class="required-star">*</span></label>
+              <select id="addStockCategory" class="form-control" required>
+                <option value="" disabled selected>-- Select Category --</option>
+                <option value="Mechanical Transmission">Mechanical Transmission</option>
+                <option value="Electrical & Sensors">Electrical & Sensors</option>
+                <option value="Electrical & Controls">Electrical & Controls</option>
+                <option value="Hydraulics & Seals">Hydraulics & Seals</option>
+                <option value="Pneumatics">Pneumatics</option>
+                <option value="Bearings & Bushings">Bearings & Bushings</option>
+                <option value="Automation & PLC">Automation & PLC</option>
+                <option value="Lubricants & Fluids">Lubricants & Fluids</option>
+                <option value="Other">Other Consumables</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="addStockPartName">Part Description <span class="required-star">*</span></label>
+            <input type="text" id="addStockPartName" class="form-control" placeholder="e.g. Heavy Duty Timing Belt 8M-1200" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="addStockLocation">Storage Location / Bin <span class="required-star">*</span></label>
+              <input type="text" id="addStockLocation" class="form-control" placeholder="e.g. Bin M-24" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="addStockUnit">Unit of Measurement <span class="required-star">*</span></label>
+              <input type="text" id="addStockUnit" class="form-control" placeholder="e.g. pcs, kits, drums, boxes" value="pcs" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="addStockInitialQty">Initial Stock Quantity <span class="required-star">*</span></label>
+              <input type="number" id="addStockInitialQty" class="form-control" min="0" step="1" value="0" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="addStockMinLimit">Minimum Stock Limit <span class="required-star">*</span></label>
+              <input type="number" id="addStockMinLimit" class="form-control" min="0" step="1" value="5" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="addStockUnitPrice">Unit Price (RM) <span class="required-star">*</span></label>
+              <input type="number" id="addStockUnitPrice" class="form-control" min="0" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="addStockSupplier">Authorized Supplier <span class="required-star">*</span></label>
+              <input type="text" id="addStockSupplier" class="form-control" placeholder="e.g. Omron Industrial Automation" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary" id="addStockSubmitBtn">
+            <span class="btn-spinner" id="addStockSpinner" style="display:none;"></span>
+            Save Stock
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: EDIT / ADJUST STOCK QUANTITY (ADMIN ONLY)
        =================================================================== -->
   <div id="editStockModal" class="modal-overlay">
     <div class="modal-box">
       <div class="modal-header">
         <h3 class="modal-title">Adjust Spare Part Stock</h3>
-        <button class="modal-close-btn" type="button">
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
@@ -1672,7 +1877,7 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Part Code</label>
-              <input type="text" id="editStockPartCode" class="form-control" readonly style="background:#F1F5F9;">
+              <input type="text" id="editStockPartCode" class="form-control" readonly style="background:#F1F5F9; font-weight:700;">
             </div>
             <div class="form-group">
               <label class="form-label">Current Quantity</label>
@@ -1687,19 +1892,71 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="editStockAdjustment">Quantity Adjustment (+ or -) *</label>
+              <label class="form-label" for="editStockAdjustment">Quantity Adjustment (+ or -) <span class="required-star">*</span></label>
               <input type="number" id="editStockAdjustment" class="form-control" value="0" placeholder="+5 or -2" required>
               <small style="color:var(--text-muted); font-size:11px;">e.g., enter 5 to receive stock, or -2 for manual scrap/issue</small>
             </div>
             <div class="form-group">
-              <label class="form-label" for="editStockMinQty">Minimum Threshold (Alert Trigger) *</label>
-              <input type="number" id="editStockMinQty" class="form-control" required>
+              <label class="form-label" for="editStockReference">Reference Note</label>
+              <input type="text" id="editStockReference" class="form-control" placeholder="e.g. PO-2026-99 or Buffer restock">
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
-          <button type="submit" class="btn-primary">Save Changes & Recalculate KPI</button>
+          <button type="submit" class="btn-primary" id="editStockSubmitBtn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: ADJUST MINIMUM STOCK LIMIT (ADMIN ONLY)
+       =================================================================== -->
+  <div id="adjustLimitModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Adjust Minimum Stock Limit</h3>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <form id="adjustLimitForm">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Part Code</label>
+              <input type="text" id="adjLimitPartCode" class="form-control" readonly style="background:#F1F5F9; font-weight:700;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Current Stock Quantity</label>
+              <input type="text" id="adjLimitCurrentQty" class="form-control" readonly style="background:#F1F5F9; font-weight:700;">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Part Description</label>
+            <input type="text" id="adjLimitPartName" class="form-control" readonly style="background:#F1F5F9;">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Current Minimum Limit</label>
+              <input type="text" id="adjLimitCurrentMin" class="form-control" readonly style="background:#F1F5F9;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="adjLimitNewMin">New Minimum Stock Limit <span class="required-star">*</span></label>
+              <input type="number" id="adjLimitNewMin" class="form-control" min="0" step="1" required style="font-weight:700;">
+              <small style="color:var(--text-muted); font-size:11px;">Must be a valid positive whole number or 0</small>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary" id="adjLimitSubmitBtn">
+            <span class="btn-spinner" id="adjLimitSpinner" style="display:none;"></span>
+            Save Changes
+          </button>
         </div>
       </form>
     </div>
@@ -1709,10 +1966,10 @@
        MODAL: REQUEST STOCK (REQUISITION)
        =================================================================== -->
   <div id="requestStockModal" class="modal-overlay">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width:540px;">
       <div class="modal-header">
-        <h3 class="modal-title">Submit Spare Part Purchase Requisition</h3>
-        <button class="modal-close-btn" type="button">
+        <h3 class="modal-title">Request Spare Part Stock</h3>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
@@ -1720,28 +1977,108 @@
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="reqStockPartCode">Part Code / Item *</label>
-              <input type="text" id="reqStockPartCode" class="form-control" placeholder="e.g. SP-303" required>
+              <label class="form-label">Request ID</label>
+              <input type="text" id="reqStockId" class="form-control" readonly style="background:#F1F5F9; font-weight:700;">
             </div>
             <div class="form-group">
-              <label class="form-label" for="reqStockQty">Requested Quantity *</label>
-              <input type="number" id="reqStockQty" class="form-control" min="1" value="5" required>
+              <label class="form-label">Request Date &amp; Time</label>
+              <input type="text" id="reqStockDateTime" class="form-control" readonly style="background:#F1F5F9;">
             </div>
           </div>
+
           <div class="form-group">
-            <label class="form-label" for="reqStockPartName">Part Name / Specifications</label>
-            <input type="text" id="reqStockPartName" class="form-control" placeholder="e.g. Heavy Duty Timing Belt 8M">
+            <label class="form-label">Requested By</label>
+            <input type="text" id="reqStockRequestedBy" class="form-control" readonly style="background:#F1F5F9;">
           </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="reqStockPartCode">Part Code <span class="required-star">*</span></label>
+              <input type="text" id="reqStockPartCode" class="form-control" readonly style="background:#F1F5F9; font-weight:700;" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reqStockQty">Quantity Requested <span class="required-star">*</span></label>
+              <input type="number" id="reqStockQty" class="form-control" min="1" step="1" value="1" required style="font-weight:700;">
+            </div>
+          </div>
+
           <div class="form-group">
-            <label class="form-label" for="reqStockReason">Reason for Request / Urgency</label>
-            <textarea id="reqStockReason" class="form-control" rows="2" placeholder="e.g. Stock at zero units; required for Stamping Press PM overhaul next Tuesday."></textarea>
+            <label class="form-label">Part Description</label>
+            <input type="text" id="reqStockPartName" class="form-control" readonly style="background:#F1F5F9;">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="reqStockReason">Reason / Remarks <span class="required-star">*</span></label>
+            <textarea id="reqStockReason" class="form-control" rows="2" placeholder="e.g. Critical breakdown replacement or PM overhaul buffer" required></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
-          <button type="submit" class="btn-primary">Submit Purchase Request</button>
+          <button type="submit" class="btn-primary" id="reqStockSubmitBtn">
+            <span class="btn-spinner" id="reqStockSpinner" style="display:none;"></span>
+            Submit Request
+          </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: STOCK REQUEST DETAILS (READ-ONLY)
+       =================================================================== -->
+  <div id="stockRequestDetailModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:540px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Stock Request Details</h3>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; background:#F8FAFC; border:1px solid var(--border-light); border-radius:8px; padding:12px;">
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Request ID</div>
+            <div id="detailReqId" style="font-weight:800; font-size:14px; color:var(--navy-darkest); margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Status</div>
+            <div id="detailReqStatus" style="margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Request Date</div>
+            <div id="detailReqDate" style="font-size:13px; margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Requested By</div>
+            <div id="detailReqBy" style="font-size:13px; font-weight:600; margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Part Code</div>
+            <div id="detailReqCode" style="font-weight:700; font-size:13px; margin-top:2px;">—</div>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Quantity Requested</div>
+            <div id="detailReqQty" style="font-weight:700; font-size:14px; color:var(--navy-darkest); margin-top:2px;">—</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Part Description</div>
+          <div id="detailReqName" style="padding:8px 12px; background:#F8FAFC; border:1px solid var(--border-light); border-radius:6px; font-size:13px;">—</div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Reason / Remarks</div>
+          <div id="detailReqReason" style="padding:8px 12px; background:#F8FAFC; border:1px solid var(--border-light); border-radius:6px; font-size:13px; min-height:48px;">—</div>
+        </div>
+
+        <div id="detailApprovalSection" style="background:#F1F5F9; border-radius:6px; padding:10px 12px; font-size:12px; color:var(--text-body);">
+          <!-- Dynamic approval / issue notes -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
     </div>
   </div>
 
@@ -2398,6 +2735,240 @@
         </div>
       </div>
       <div class="modal-footer" style="display:flex; justify-content:flex-end;">
+        <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: ADD TECHNICIAN (ADMIN ONLY - PHASES 4, 12)
+       =================================================================== -->
+  <div id="addTechnicianModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:540px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Add Technician Account</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Create Firebase account and synchronize with TECHNICIAN DATABASE</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="addTechAlert" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:500;"></div>
+        <form id="addTechnicianForm" novalidate autocomplete="off">
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div class="form-group">
+              <label class="form-label" for="addTechStaffId" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Staff ID <span style="color:#E53E3E;">*</span></label>
+              <input type="text" id="addTechStaffId" class="form-input" placeholder="e.g. PN003" autocomplete="off" spellcheck="false" autocapitalize="characters" required
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">ID used for login: <code>staffid@mms.internal</code></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="addTechPhone" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Phone Number</label>
+              <input type="tel" id="addTechPhone" class="form-input" placeholder="e.g. +60 12-345 6789"
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="addTechName" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Full Name <span style="color:#E53E3E;">*</span></label>
+            <input type="text" id="addTechName" class="form-input" placeholder="e.g. Muhammad Farhan" autocomplete="off" required
+              style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+          </div>
+
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div class="form-group">
+              <label class="form-label" for="addTechRole" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Role</label>
+              <input type="text" id="addTechRole" class="form-input" value="Technician" readonly disabled
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; background:#F1F5F9; color:#64748B;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="addTechStatus" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Account Status <span style="color:#E53E3E;">*</span></label>
+              <select id="addTechStatus" class="form-input" required
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="addTechPassword" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Password <span style="color:#E53E3E;">*</span></label>
+            <div style="position:relative;">
+              <input type="password" id="addTechPassword" class="form-input" placeholder="Min. 8 chars, letter + number" autocomplete="new-password" required
+                style="width:100%; box-sizing:border-box; padding:9px 38px 9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+              <button type="button" onclick="window.togglePasswordField('addTechPassword', 'eyeAddTechPw')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted);" aria-label="Toggle password visibility">
+                <svg id="eyeAddTechPw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">
+              <strong>Password Policy:</strong> Minimum 8 characters &bull; At least one letter &bull; At least one number.
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:4px;">
+            <label class="form-label" for="addTechConfirmPassword" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Confirm Password <span style="color:#E53E3E;">*</span></label>
+            <div style="position:relative;">
+              <input type="password" id="addTechConfirmPassword" class="form-input" placeholder="Re-enter password" autocomplete="new-password" required
+                style="width:100%; box-sizing:border-box; padding:9px 38px 9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+              <button type="button" onclick="window.togglePasswordField('addTechConfirmPassword', 'eyeAddTechConfirmPw')" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted);" aria-label="Toggle password visibility">
+                <svg id="eyeAddTechConfirmPw" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+        <button type="button" id="submitAddTechBtn" onclick="window.submitAddTechnician()" class="btn-primary" style="padding:9px 22px; font-size:13px; font-weight:600;">
+          Create Technician
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: EDIT TECHNICIAN (ADMIN ONLY - PHASE 12)
+       =================================================================== -->
+  <div id="editTechnicianModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:540px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Edit Technician</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Update technician profile details and status</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="editTechAlert" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:8px; font-size:13px; font-weight:500;"></div>
+        <form id="editTechnicianForm" novalidate autocomplete="off">
+          <input type="hidden" id="editTechUid">
+
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div class="form-group">
+              <label class="form-label" for="editTechId" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Technician ID</label>
+              <input type="text" id="editTechId" class="form-input" readonly disabled
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; background:#F1F5F9; color:#64748B;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editTechStaffId" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Staff ID</label>
+              <input type="text" id="editTechStaffId" class="form-input" readonly disabled
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; background:#F1F5F9; color:#64748B;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="editTechName" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Full Name <span style="color:#E53E3E;">*</span></label>
+            <input type="text" id="editTechName" class="form-input" placeholder="e.g. Muhammad Farhan" autocomplete="off" required
+              style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" for="editTechPhone" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Phone Number</label>
+            <input type="tel" id="editTechPhone" class="form-input" placeholder="e.g. +60 12-345 6789"
+              style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+          </div>
+
+          <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+            <div class="form-group">
+              <label class="form-label" for="editTechRole" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Role</label>
+              <input type="text" id="editTechRole" class="form-input" value="Technician" readonly disabled
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px; background:#F1F5F9; color:#64748B;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="editTechStatus" style="font-size:13px; font-weight:600; color:var(--text-primary); display:block; margin-bottom:6px;">Account Status <span style="color:#E53E3E;">*</span></label>
+              <select id="editTechStatus" class="form-input" required
+                style="width:100%; box-sizing:border-box; padding:9px 12px; border:1px solid #CBD5E0; border-radius:7px; font-size:13px;">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:10px 12px; font-size:12px; color:var(--text-muted);">
+            &bull; Job Completed count, Last Active, and Current Job are computed dynamically from actual work orders and cannot be manually modified.
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+        <button type="button" id="submitEditTechBtn" onclick="window.submitEditTechnician()" class="btn-primary" style="padding:9px 22px; font-size:13px; font-weight:600;">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       MODAL: VIEW TECHNICIAN DETAILS (ADMIN ONLY - PHASES 7, 10, 11, 12)
+       =================================================================== -->
+  <div id="viewTechnicianModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:580px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Technician Profile</h3>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Complete record from Firebase Authentication &amp; Google Sheets</div>
+        </div>
+        <button class="modal-close-btn" type="button" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid #E2E8F0;">
+          <div id="viewTechAvatar" class="tech-avatar" style="width:56px; height:56px; font-size:20px; margin-bottom:0;">TF</div>
+          <div style="flex:1;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <h4 id="viewTechName" style="font-size:16px; font-weight:700; color:var(--navy-darkest); margin:0;">-</h4>
+              <span id="viewTechStatusBadge" class="status-badge status-badge-green">Available</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; margin-top:4px;">
+              <span id="viewTechIdBadge" style="font-size:11.5px; font-weight:700; background:#E2E8F0; color:#334155; padding:2px 8px; border-radius:4px;">TECH-000</span>
+              <span style="font-size:12px; color:var(--text-muted);">Role: Technician</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; background:#F8FAFC; padding:12px 14px; border-radius:8px; border:1px solid #E2E8F0; font-size:12.5px;">
+          <div><strong style="color:#64748B;">Staff ID:</strong> <div id="viewTechStaffId" style="color:var(--text-primary); font-weight:600;">-</div></div>
+          <div><strong style="color:#64748B;">Phone Number:</strong> <div id="viewTechPhone" style="color:var(--text-primary); font-weight:600;">-</div></div>
+          <div><strong style="color:#64748B;">Last Active:</strong> <div id="viewTechLastActive" style="color:var(--text-primary); font-weight:600;">-</div></div>
+          <div><strong style="color:#64748B;">Account Status:</strong> <div id="viewTechAccountStatus" style="color:var(--text-primary); font-weight:600;">Active</div></div>
+          <div style="grid-column: 1 / -1;"><strong style="color:#64748B;">Firebase UID:</strong> <div id="viewTechUid" style="color:#64748B; font-family:monospace; font-size:11px; word-break:break-all;">-</div></div>
+        </div>
+
+        <!-- Work Orders Activity Summary -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Current Assigned Work Orders</div>
+          <div id="viewTechActiveJobsList" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; padding:10px 12px; font-size:13px;">
+            None
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Completed Work Orders Summary</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+            <div style="background:#F1F5F9; border-radius:8px; padding:10px; text-align:center;">
+              <div id="viewTechBdCompleted" style="font-size:18px; font-weight:700; color:var(--navy-darkest);">0</div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Breakdowns Done</div>
+            </div>
+            <div style="background:#F1F5F9; border-radius:8px; padding:10px; text-align:center;">
+              <div id="viewTechPmCompleted" style="font-size:18px; font-weight:700; color:var(--navy-darkest);">0</div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">PM Done</div>
+            </div>
+            <div style="background:#EDFDF5; border:1px solid #A7F3D0; border-radius:8px; padding:10px; text-align:center;">
+              <div id="viewTechTotalCompleted" style="font-size:18px; font-weight:700; color:var(--green-primary);">0</div>
+              <div style="font-size:11px; color:#065F46; margin-top:2px; font-weight:600;">Total Completed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn-secondary" onclick="window.editFromViewModal()">
+          Edit Details
+        </button>
         <button type="button" class="btn-secondary modal-cancel-btn">Close</button>
       </div>
     </div>

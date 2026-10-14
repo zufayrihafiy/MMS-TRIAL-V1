@@ -409,7 +409,34 @@ exports.handler = async function (event, context) {
         };
       }
 
-      // 5. Success: account and claims verified
+      // 5. If role is TECHNICIAN, sync to Google Sheets TECHNICIAN DATABASE
+      if (assignedRole === 'TECHNICIAN') {
+        const GAS_URL = process.env.GOOGLE_APPS_SCRIPT_URL;
+        const mmsApiKey = process.env.MMS_API_KEY;
+        if (GAS_URL && mmsApiKey) {
+          try {
+            await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                apiKey: mmsApiKey,
+                action: 'saveTechnician',
+                firebaseUid: createdUid,
+                technicianId: `TECH-${normalizedStaffId}`,
+                staffId: normalizedStaffId,
+                name: resolvedName,
+                role: 'Technician',
+                phoneNumber: '',
+                accountStatus: 'Active'
+              })
+            });
+          } catch (syncErr) {
+            console.warn('[manage-users] Google Sheets technician sync notice:', syncErr.message);
+          }
+        }
+      }
+
+      // 6. Success: account and claims verified
       return {
         statusCode: 200,
         headers,

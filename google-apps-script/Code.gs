@@ -50,7 +50,24 @@
 
 const SHEET_NAME = 'BD DATABASE';
 const PM_SHEET_NAME = 'PM DATABASE';
+const SP_SHEET_NAME = 'SPARE PARTS DATABASE';
+const SM_SHEET_NAME = 'STOCK MOVEMENTS DATABASE';
+const SR_SHEET_NAME = 'STOCK REQUESTS DATABASE';
+const TECH_SHEET_NAME = 'TECHNICIAN DATABASE';
 const DRIVE_FOLDER_NAME = 'MMS Breakdown Photos';
+
+const TECH_HEADERS = [
+  'Technician ID',
+  'Firebase UID',
+  'Full Name',
+  'Role',
+  'Phone Number',
+  'Account Status',
+  'Last Active',
+  'Created At',
+  'Updated At'
+];
+
 const PM_HEADERS = [
   'PM Code',
   'Machine / Section',
@@ -67,6 +84,51 @@ const PM_HEADERS = [
   'Remarks',
   'After Maintenance Photo URL',
   'Completed By Staff ID'
+];
+
+const SP_HEADERS = [
+  'Part Code',
+  'Part Description',
+  'Category',
+  'Storage Location',
+  'Current Stock',
+  'Minimum Stock Limit',
+  'Unit',
+  'Unit Price (RM)',
+  'Authorized Supplier',
+  'Created At',
+  'Updated At'
+];
+
+const SM_HEADERS = [
+  'Movement ID',
+  'Date & Time',
+  'Part Code',
+  'Part Description',
+  'Movement Type',
+  'Quantity',
+  'Previous Stock',
+  'Updated Stock',
+  'Authorized Supplier',
+  'Updated By',
+  'Reference'
+];
+
+const SR_HEADERS = [
+  'Request ID',
+  'Request Date',
+  'Requested By Staff ID',
+  'Requested By Name',
+  'Part Code',
+  'Part Description',
+  'Quantity Requested',
+  'Reason',
+  'Status',
+  'Approved By',
+  'Approved Date',
+  'Issued By',
+  'Issued Date',
+  'Notes'
 ];
 
 /**
@@ -165,6 +227,56 @@ function doPost(e) {
     // =========================================================================
     if (payload.action === 'resolvePMRecord' || payload.action === 'resolve-pm') {
       return handleResolvePMRecord(payload);
+    }
+
+    // =========================================================================
+    // ACTION 7: SPARE PARTS INVENTORY MODULE
+    // =========================================================================
+    if (payload.action === 'getSpareParts' || payload.action === 'get-spare-parts') {
+      return handleGetSpareParts(payload);
+    }
+    if (payload.action === 'addStockPart' || payload.action === 'add-stock-part') {
+      return handleAddStockPart(payload);
+    }
+    if (payload.action === 'adjustStock' || payload.action === 'adjust-stock') {
+      return handleAdjustStock(payload);
+    }
+    if (payload.action === 'adjustLimit' || payload.action === 'adjust-limit') {
+      return handleAdjustLimit(payload);
+    }
+    if (payload.action === 'createStockRequest' || payload.action === 'create-stock-request') {
+      return handleCreateStockRequest(payload);
+    }
+    if (payload.action === 'updateStockRequestStatus' || payload.action === 'update-stock-request-status') {
+      return handleUpdateStockRequestStatus(payload);
+    }
+    if (payload.action === 'issueStock' || payload.action === 'issue-stock') {
+      return handleIssueStock(payload);
+    }
+
+    // =========================================================================
+    // ACTION 8: TECHNICIAN MANAGEMENT MODULE
+    // =========================================================================
+    if (payload.action === 'getTechnicians' || payload.action === 'get-technicians') {
+      return handleGetTechniciansGas(payload);
+    }
+    if (payload.action === 'saveTechnician' || payload.action === 'save-technician') {
+      return handleSaveTechnicianGas(payload);
+    }
+    if (payload.action === 'updateTechnicianActivity' || payload.action === 'update-technician-activity') {
+      return handleRecordTechnicianActivityGas(payload);
+    }
+
+    // =========================================================================
+    // ACTION 9: SAFE WORKSHEET INITIALIZATION (initializeMMSNewSheets)
+    // =========================================================================
+    if (payload.action === 'initializeMMSNewSheets' || payload.action === 'initNewSheets') {
+      const initReport = initializeMMSNewSheets();
+      return createJsonResponse({
+        success: true,
+        message: 'MMS worksheets verified and initialized (empty data rows).',
+        report: initReport
+      }, 200);
     }
 
     // =========================================================================
@@ -1011,6 +1123,1147 @@ function handleResolvePMRecord(payload) {
       success: false,
       error: 'Failed to resolve PM record: ' + err.toString()
     }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * ============================================================================
+ * MODULE: SPARE PARTS INVENTORY, MOVEMENTS & STOCK REQUESTS
+ * ============================================================================
+ */
+
+/**
+ * Helper to format timestamp
+ */
+function formatCurrentTimestamp() {
+  const now = new Date();
+  const pad = function(n) { return n < 10 ? '0' + n : n; };
+  return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + ' ' +
+    pad(now.getHours()) + ':' + pad(now.getMinutes());
+}
+
+/**
+ * Safe standalone initialization function for MMS worksheets:
+ * - SPARE PARTS DATABASE
+ * - STOCK MOVEMENTS DATABASE
+ * - STOCK REQUESTS DATABASE
+ * - TECHNICIAN DATABASE
+ *
+ * Guarantees:
+ * 1. Uses the existing MMS DATABASE spreadsheet via SpreadsheetApp.getActiveSpreadsheet().
+ * 2. Calls the four existing worksheet initializers:
+ *    - getOrInitSparePartsSheet
+ *    - getOrInitStockMovementsSheet
+ *    - getOrInitStockRequestsSheet
+ *    - getOrInitTechnicianSheet
+ * 3. Creates only missing worksheets.
+ * 4. Inserts standardized headers, applies header style, and freezes row 1.
+ * 5. Leaves all data rows completely EMPTY (zero demo/sample records).
+ * 6. Never modifies, overwrites, or deletes BD DATABASE or PM DATABASE records.
+ * 7. If a worksheet already exists, it is untouched (idempotent, safe to run multiple times).
+ *
+ * @param {Spreadsheet} [customSpreadsheet] Optional spreadsheet reference for testing/automation.
+ * @returns {Object} Report detailing the status of each worksheet.
+ */
+function initializeMMSNewSheets(customSpreadsheet) {
+  const ss = customSpreadsheet || SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    throw new Error('MMS Spreadsheet not found. Ensure this script is bound to the MMS spreadsheet or pass an active spreadsheet instance.');
+  }
+
+  const existingSheetNames = ss.getSheets().map(function(s) { return s.getName(); });
+  const report = {
+    timestamp: new Date().toISOString(),
+    spreadsheetName: ss.getName(),
+    sheets: {}
+  };
+
+  const initializers = [
+    { name: SP_SHEET_NAME, fn: getOrInitSparePartsSheet },
+    { name: SM_SHEET_NAME, fn: getOrInitStockMovementsSheet },
+    { name: SR_SHEET_NAME, fn: getOrInitStockRequestsSheet },
+    { name: TECH_SHEET_NAME, fn: getOrInitTechnicianSheet }
+  ];
+
+  for (let i = 0; i < initializers.length; i++) {
+    const item = initializers[i];
+    const existed = existingSheetNames.indexOf(item.name) !== -1;
+    const sheet = item.fn(ss);
+    report.sheets[item.name] = {
+      status: existed ? 'EXISTING_UNTOUCHED' : 'CREATED_EMPTY',
+      headersConfigured: true,
+      lastRow: sheet.getLastRow(),
+      lastColumn: sheet.getLastColumn()
+    };
+  }
+
+  Logger.log('initializeMMSNewSheets summary: ' + JSON.stringify(report, null, 2));
+  return report;
+}
+
+/**
+ * Get or initialize SPARE PARTS DATABASE worksheet.
+ * Creates the worksheet with standardized headers if missing, leaving all data rows empty.
+ * Does not overwrite or clear existing worksheets.
+ */
+function getOrInitSparePartsSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SP_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SP_SHEET_NAME);
+    sheet.appendRow(SP_HEADERS);
+    const headerRange = sheet.getRange(1, 1, 1, SP_HEADERS.length);
+    headerRange.setBackground('#062641');
+    headerRange.setFontColor('#FFFFFF');
+    headerRange.setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Get or initialize STOCK MOVEMENTS DATABASE worksheet.
+ * Creates the worksheet with standardized headers if missing, leaving all data rows empty.
+ * Does not overwrite or clear existing worksheets.
+ */
+function getOrInitStockMovementsSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SM_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SM_SHEET_NAME);
+    sheet.appendRow(SM_HEADERS);
+    const headerRange = sheet.getRange(1, 1, 1, SM_HEADERS.length);
+    headerRange.setBackground('#062641');
+    headerRange.setFontColor('#FFFFFF');
+    headerRange.setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Get or initialize STOCK REQUESTS DATABASE worksheet.
+ * Creates the worksheet with standardized headers if missing, leaving all data rows empty.
+ * Does not overwrite or clear existing worksheets.
+ */
+function getOrInitStockRequestsSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SR_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SR_SHEET_NAME);
+    sheet.appendRow(SR_HEADERS);
+    const headerRange = sheet.getRange(1, 1, 1, SR_HEADERS.length);
+    headerRange.setBackground('#062641');
+    headerRange.setFontColor('#FFFFFF');
+    headerRange.setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Authenticated retrieval of Spare Parts, Stock Movements, and Stock Requests
+ */
+function handleGetSpareParts(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+  const callerStaffId = String(payload.callerStaffId || '').trim().toUpperCase();
+
+  // 1. Fetch Spare Parts
+  const spSheet = getOrInitSparePartsSheet(ss);
+  const spLastRow = spSheet.getLastRow();
+  const spareParts = [];
+  const supplierMap = {};
+
+  if (spLastRow > 1) {
+    const spValues = spSheet.getRange(2, 1, spLastRow - 1, 11).getValues();
+    for (let i = 0; i < spValues.length; i++) {
+      const row = spValues[i];
+      const code = String(row[0] || '').trim();
+      if (!code) continue;
+      const supplier = String(row[8] || '').trim();
+      supplierMap[code] = supplier;
+
+      spareParts.push({
+        code: code,
+        name: String(row[1] || '').trim(),
+        category: String(row[2] || '').trim(),
+        location: String(row[3] || '').trim(),
+        currentStock: Number(row[4]) || 0,
+        minStock: Number(row[5]) || 0,
+        unit: String(row[6] || 'pcs').trim(),
+        unitPrice: Number(row[7]) || 0,
+        supplier: supplier,
+        createdAt: formatCellDate(row[9]),
+        updatedAt: formatCellDate(row[10])
+      });
+    }
+  }
+
+  // 2. Fetch Stock Movements (ADMIN ONLY)
+  // Technician cannot access Stock Movement History
+  let stockMovements = [];
+  if (callerRole === 'ADMIN') {
+    const smSheet = getOrInitStockMovementsSheet(ss);
+    const smLastRow = smSheet.getLastRow();
+    if (smLastRow > 1) {
+      const smValues = smSheet.getRange(2, 1, smLastRow - 1, 11).getValues();
+      for (let i = 0; i < smValues.length; i++) {
+        const row = smValues[i];
+        const mId = String(row[0] || '').trim();
+        if (!mId) continue;
+        const pCode = String(row[2] || '').trim();
+        const mType = String(row[4] || '').trim();
+
+        // Only display 'Stock In' and 'Stock Adjustment' in this table.
+        // Technician issued records are displayed under Stock Request.
+        if (mType === 'Issued') {
+          continue;
+        }
+
+        const resolvedSupplier = supplierMap[pCode] || String(row[8] || '').trim() || 'N/A';
+
+        stockMovements.push({
+          id: mId,
+          date: formatCellDate(row[1]),
+          partCode: pCode,
+          partName: String(row[3] || '').trim(),
+          type: mType,
+          qty: Number(row[5]) || 0,
+          previousStock: Number(row[6]) || 0,
+          updatedStock: Number(row[7]) || 0,
+          supplier: resolvedSupplier,
+          updatedBy: String(row[9] || '').trim(),
+          reference: String(row[10] || '').trim()
+        });
+      }
+    }
+  }
+
+  // 3. Fetch Stock Requests (ADMIN views all, TECHNICIAN views own requests only)
+  const srSheet = getOrInitStockRequestsSheet(ss);
+  const srLastRow = srSheet.getLastRow();
+  const stockRequests = [];
+
+  if (srLastRow > 1) {
+    const srValues = srSheet.getRange(2, 1, srLastRow - 1, 14).getValues();
+    for (let i = 0; i < srValues.length; i++) {
+      const row = srValues[i];
+      const rId = String(row[0] || '').trim();
+      if (!rId) continue;
+
+      const reqStaffId = String(row[2] || '').trim().toUpperCase();
+
+      // Enforce role-based visibility:
+      // Technician accounts can only view their own requests!
+      if (callerRole === 'TECHNICIAN' && reqStaffId !== callerStaffId) {
+        continue;
+      }
+
+      stockRequests.push({
+        requestId: rId,
+        requestDate: formatCellDate(row[1]),
+        requestedByStaffId: reqStaffId,
+        requestedByName: String(row[3] || '').trim(),
+        partCode: String(row[4] || '').trim(),
+        partName: String(row[5] || '').trim(),
+        qtyRequested: Number(row[6]) || 0,
+        reason: String(row[7] || '').trim(),
+        status: String(row[8] || 'Pending').trim(),
+        approvedBy: String(row[9] || '').trim(),
+        approvedDate: formatCellDate(row[10]),
+        issuedBy: String(row[11] || '').trim(),
+        issuedDate: formatCellDate(row[12]),
+        notes: String(row[13] || '').trim()
+      });
+    }
+  }
+
+  return createJsonResponse({
+    success: true,
+    callerRole: callerRole,
+    spareParts: spareParts,
+    stockMovements: stockMovements,
+    stockRequests: stockRequests
+  }, 200);
+}
+
+/**
+ * Add a new spare part to SPARE PARTS DATABASE (ADMIN ONLY)
+ */
+function handleAddStockPart(payload) {
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+  const callerStaffId = String(payload.callerStaffId || '').trim().toUpperCase();
+
+  if (callerRole !== 'ADMIN') {
+    return createJsonResponse({
+      success: false,
+      error: 'Forbidden: Adding new spare parts is restricted to Administrator accounts.'
+    }, 403);
+  }
+
+  const code = String(payload.code || '').trim().toUpperCase();
+  const name = String(payload.name || '').trim();
+  const category = String(payload.category || '').trim();
+  const location = String(payload.location || '').trim();
+  const currentStock = Math.max(0, parseInt(payload.currentStock, 10) || 0);
+  const minStock = Math.max(0, parseInt(payload.minStock, 10) || 0);
+  const unit = String(payload.unit || 'pcs').trim();
+  const unitPrice = Math.max(0, parseFloat(payload.unitPrice) || 0);
+  const supplier = String(payload.supplier || '').trim();
+
+  if (!code || !name || !category || !location || !unit || !supplier) {
+    return createJsonResponse({
+      success: false,
+      error: 'Validation Error: All spare part fields are required.'
+    }, 400);
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({
+      success: false,
+      error: 'Database is currently busy. Please try again.'
+    }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = getOrInitSparePartsSheet(ss);
+    const lastRow = sheet.getLastRow();
+
+    // Check for duplicate part code
+    if (lastRow > 1) {
+      const existingCodes = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (let i = 0; i < existingCodes.length; i++) {
+        if (String(existingCodes[i][0] || '').trim().toUpperCase() === code) {
+          return createJsonResponse({
+            success: false,
+            error: 'Duplicate Part Code: A spare part with code "' + code + '" already exists.'
+          }, 400);
+        }
+      }
+    }
+
+    const timestamp = formatCurrentTimestamp();
+    sheet.appendRow([
+      code,
+      name,
+      category,
+      location,
+      currentStock,
+      minStock,
+      unit,
+      unitPrice,
+      supplier,
+      timestamp,
+      timestamp
+    ]);
+
+    // If initial stock is greater than 0, record initial Stock In movement
+    if (currentStock > 0) {
+      const smSheet = getOrInitStockMovementsSheet(ss);
+      const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
+      smSheet.appendRow([
+        mId,
+        timestamp,
+        code,
+        name,
+        'Stock In',
+        currentStock,
+        0,
+        currentStock,
+        supplier,
+        callerStaffId || 'ADMIN',
+        'Initial Stock Setup'
+      ]);
+    }
+
+    return createJsonResponse({
+      success: true,
+      message: 'Spare part ' + code + ' successfully added to database.',
+      part: {
+        code: code,
+        name: name,
+        category: category,
+        location: location,
+        currentStock: currentStock,
+        minStock: minStock,
+        unit: unit,
+        unitPrice: unitPrice,
+        supplier: supplier
+      }
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({
+      success: false,
+      error: 'Failed to add spare part: ' + err.toString()
+    }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Adjust stock quantity (ADMIN ONLY)
+ */
+function handleAdjustStock(payload) {
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+  const callerStaffId = String(payload.callerStaffId || '').trim().toUpperCase();
+
+  if (callerRole !== 'ADMIN') {
+    return createJsonResponse({
+      success: false,
+      error: 'Forbidden: Stock quantity adjustments are restricted to Administrator accounts.'
+    }, 403);
+  }
+
+  const code = String(payload.code || '').trim().toUpperCase();
+  const adjustment = parseInt(payload.adjustment, 10);
+  const reference = String(payload.reference || 'Manual Adjustment').trim();
+
+  if (!code) {
+    return createJsonResponse({ success: false, error: 'Part code is required.' }, 400);
+  }
+  if (isNaN(adjustment) || adjustment === 0) {
+    return createJsonResponse({ success: false, error: 'Valid non-zero adjustment quantity is required.' }, 400);
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database is busy. Please try again.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = getOrInitSparePartsSheet(ss);
+    const lastRow = sheet.getLastRow();
+
+    if (lastRow <= 1) {
+      return createJsonResponse({ success: false, error: 'No spare parts in database.' }, 404);
+    }
+
+    const values = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
+    let rowIndex = -1;
+    let partData = null;
+
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0] || '').trim().toUpperCase() === code) {
+        rowIndex = i + 2;
+        partData = values[i];
+        break;
+      }
+    }
+
+    if (rowIndex === -1 || !partData) {
+      return createJsonResponse({ success: false, error: 'Spare part ' + code + ' not found.' }, 404);
+    }
+
+    const prevStock = Number(partData[4]) || 0;
+    const newStock = Math.max(0, prevStock + adjustment);
+    const partName = String(partData[1] || '').trim();
+    const supplier = String(partData[8] || '').trim();
+    const timestamp = formatCurrentTimestamp();
+
+    // Update Current Stock (Column E) & Updated At (Column K)
+    sheet.getRange(rowIndex, 5).setValue(newStock);
+    sheet.getRange(rowIndex, 11).setValue(timestamp);
+
+    // Record Stock Movement
+    const smSheet = getOrInitStockMovementsSheet(ss);
+    const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
+    const movementType = adjustment > 0 ? 'Stock In' : 'Stock Adjustment';
+
+    smSheet.appendRow([
+      mId,
+      timestamp,
+      code,
+      partName,
+      movementType,
+      adjustment,
+      prevStock,
+      newStock,
+      supplier,
+      callerStaffId || 'ADMIN',
+      reference
+    ]);
+
+    return createJsonResponse({
+      success: true,
+      code: code,
+      previousStock: prevStock,
+      newStock: newStock,
+      message: 'Stock updated for ' + code + ' (New balance: ' + newStock + ')'
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to adjust stock: ' + err.toString() }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Adjust minimum stock limit (ADMIN ONLY)
+ * IMPORTANT: MUST NOT create a stock movement transaction!
+ */
+function handleAdjustLimit(payload) {
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+
+  if (callerRole !== 'ADMIN') {
+    return createJsonResponse({
+      success: false,
+      error: 'Forbidden: Adjusting minimum stock limit is restricted to Administrator accounts.'
+    }, 403);
+  }
+
+  const code = String(payload.code || '').trim().toUpperCase();
+  const newMinLimit = parseInt(payload.newMinLimit, 10);
+
+  if (!code) {
+    return createJsonResponse({ success: false, error: 'Part code is required.' }, 400);
+  }
+  if (isNaN(newMinLimit) || newMinLimit < 0) {
+    return createJsonResponse({ success: false, error: 'Minimum limit must be zero or a positive whole number.' }, 400);
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database is busy. Please try again.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = getOrInitSparePartsSheet(ss);
+    const lastRow = sheet.getLastRow();
+
+    if (lastRow <= 1) {
+      return createJsonResponse({ success: false, error: 'No spare parts in database.' }, 404);
+    }
+
+    const values = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
+    let rowIndex = -1;
+    let partData = null;
+
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0] || '').trim().toUpperCase() === code) {
+        rowIndex = i + 2;
+        partData = values[i];
+        break;
+      }
+    }
+
+    if (rowIndex === -1 || !partData) {
+      return createJsonResponse({ success: false, error: 'Spare part ' + code + ' not found.' }, 404);
+    }
+
+    const timestamp = formatCurrentTimestamp();
+    // Update Minimum Stock Limit (Column F) & Updated At (Column K)
+    // DO NOT modify current stock or create any stock movement!
+    sheet.getRange(rowIndex, 6).setValue(newMinLimit);
+    sheet.getRange(rowIndex, 11).setValue(timestamp);
+
+    return createJsonResponse({
+      success: true,
+      code: code,
+      newMinLimit: newMinLimit,
+      message: 'Minimum stock limit for ' + code + ' updated to ' + newMinLimit
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to update minimum stock limit: ' + err.toString() }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Submit a stock request (ADMIN or TECHNICIAN)
+ */
+function handleCreateStockRequest(payload) {
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+  const callerStaffId = String(payload.callerStaffId || '').trim().toUpperCase();
+  const callerName = String(payload.callerName || '').trim();
+
+  if (callerRole !== 'ADMIN' && callerRole !== 'TECHNICIAN') {
+    return createJsonResponse({ success: false, error: 'Unauthorized: Access restricted.' }, 403);
+  }
+
+  const partCode = String(payload.partCode || '').trim().toUpperCase();
+  const partDescription = String(payload.partDescription || '').trim();
+  const qtyRequested = parseInt(payload.qtyRequested, 10);
+  const reason = String(payload.reason || '').trim();
+
+  if (!partCode) {
+    return createJsonResponse({ success: false, error: 'Part code is required.' }, 400);
+  }
+  if (isNaN(qtyRequested) || qtyRequested <= 0) {
+    return createJsonResponse({ success: false, error: 'Quantity requested must be a positive whole number.' }, 400);
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database is busy. Please try again.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const srSheet = getOrInitStockRequestsSheet(ss);
+    const lastRow = srSheet.getLastRow();
+
+    // Determine next unique Request ID (REQ-1001+)
+    let maxIdNum = 1000;
+    if (lastRow > 1) {
+      const idValues = srSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (let i = 0; i < idValues.length; i++) {
+        const val = String(idValues[i][0] || '').trim();
+        const match = val.match(/^REQ-(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxIdNum) maxIdNum = num;
+        }
+      }
+    }
+    const newRequestId = 'REQ-' + (maxIdNum + 1);
+    const timestamp = formatCurrentTimestamp();
+
+    srSheet.appendRow([
+      newRequestId,
+      timestamp,
+      callerStaffId,
+      callerName || callerStaffId,
+      partCode,
+      partDescription,
+      qtyRequested,
+      reason,
+      'Pending',
+      '',
+      '',
+      '',
+      '',
+      ''
+    ]);
+
+    return createJsonResponse({
+      success: true,
+      requestId: newRequestId,
+      message: 'Stock request ' + newRequestId + ' submitted successfully.'
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to create stock request: ' + err.toString() }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Approve or Reject a stock request (ADMIN ONLY)
+ */
+function handleUpdateStockRequestStatus(payload) {
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+  const callerStaffId = String(payload.callerStaffId || '').trim().toUpperCase();
+
+  if (callerRole !== 'ADMIN') {
+    return createJsonResponse({
+      success: false,
+      error: 'Forbidden: Request approvals and rejections are restricted to Administrator accounts.'
+    }, 403);
+  }
+
+  const requestId = String(payload.requestId || '').trim().toUpperCase();
+  const newStatus = String(payload.newStatus || '').trim();
+
+  if (!requestId) {
+    return createJsonResponse({ success: false, error: 'Request ID is required.' }, 400);
+  }
+  if (newStatus !== 'Approved' && newStatus !== 'Rejected') {
+    return createJsonResponse({ success: false, error: 'Status must be Approved or Rejected.' }, 400);
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database is busy. Please try again.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const srSheet = getOrInitStockRequestsSheet(ss);
+    const lastRow = srSheet.getLastRow();
+
+    if (lastRow <= 1) {
+      return createJsonResponse({ success: false, error: 'No stock requests found.' }, 404);
+    }
+
+    const values = srSheet.getRange(2, 1, lastRow - 1, 14).getValues();
+    let rowIndex = -1;
+    let reqData = null;
+
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0] || '').trim().toUpperCase() === requestId) {
+        rowIndex = i + 2;
+        reqData = values[i];
+        break;
+      }
+    }
+
+    if (rowIndex === -1 || !reqData) {
+      return createJsonResponse({ success: false, error: 'Stock request ' + requestId + ' not found.' }, 404);
+    }
+
+    const currentStatus = String(reqData[8] || '').trim();
+    if (currentStatus === 'Issued') {
+      return createJsonResponse({ success: false, error: 'Cannot modify a request that has already been Issued.' }, 400);
+    }
+
+    const timestamp = formatCurrentTimestamp();
+    // Update Status (Column I), Approved By (Column J), Approved Date (Column K)
+    srSheet.getRange(rowIndex, 9).setValue(newStatus);
+    srSheet.getRange(rowIndex, 10).setValue(callerStaffId || 'ADMIN');
+    srSheet.getRange(rowIndex, 11).setValue(timestamp);
+
+    return createJsonResponse({
+      success: true,
+      requestId: requestId,
+      status: newStatus,
+      message: 'Request ' + requestId + ' marked as ' + newStatus + '.'
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to update request: ' + err.toString() }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Issue Stock for an Approved request (ADMIN ONLY)
+ * Strictly verifies available stock, prevents double deduction, deducts stock under lock.
+ */
+function handleIssueStock(payload) {
+  const callerRole = String(payload.callerRole || '').trim().toUpperCase();
+  const callerStaffId = String(payload.callerStaffId || '').trim().toUpperCase();
+
+  if (callerRole !== 'ADMIN') {
+    return createJsonResponse({
+      success: false,
+      error: 'Forbidden: Issuing stock is restricted to Administrator accounts.'
+    }, 403);
+  }
+
+  const requestId = String(payload.requestId || '').trim().toUpperCase();
+  if (!requestId) {
+    return createJsonResponse({ success: false, error: 'Request ID is required.' }, 400);
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database is busy. Please try again.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const srSheet = getOrInitStockRequestsSheet(ss);
+    const spSheet = getOrInitSparePartsSheet(ss);
+    const smSheet = getOrInitStockMovementsSheet(ss);
+
+    const srLastRow = srSheet.getLastRow();
+    if (srLastRow <= 1) {
+      return createJsonResponse({ success: false, error: 'No stock requests found.' }, 404);
+    }
+
+    // 1. Locate Request Record
+    const srValues = srSheet.getRange(2, 1, srLastRow - 1, 14).getValues();
+    let reqRowIndex = -1;
+    let reqData = null;
+
+    for (let i = 0; i < srValues.length; i++) {
+      if (String(srValues[i][0] || '').trim().toUpperCase() === requestId) {
+        reqRowIndex = i + 2;
+        reqData = srValues[i];
+        break;
+      }
+    }
+
+    if (reqRowIndex === -1 || !reqData) {
+      return createJsonResponse({ success: false, error: 'Stock request ' + requestId + ' not found.' }, 404);
+    }
+
+    const currentStatus = String(reqData[8] || '').trim();
+    if (currentStatus === 'Issued') {
+      return createJsonResponse({
+        success: false,
+        error: 'Duplicate Issue Prevented: Stock for request ' + requestId + ' has already been issued.'
+      }, 400);
+    }
+    if (currentStatus !== 'Approved') {
+      return createJsonResponse({
+        success: false,
+        error: 'Cannot issue stock for request ' + requestId + ' with status "' + currentStatus + '". Request must be Approved first.'
+      }, 400);
+    }
+
+    const partCode = String(reqData[4] || '').trim().toUpperCase();
+    const partName = String(reqData[5] || '').trim();
+    const qtyRequested = parseInt(reqData[6], 10) || 0;
+
+    if (qtyRequested <= 0) {
+      return createJsonResponse({ success: false, error: 'Invalid requested quantity: ' + qtyRequested }, 400);
+    }
+
+    // 2. Locate Spare Part in SPARE PARTS DATABASE
+    const spLastRow = spSheet.getLastRow();
+    if (spLastRow <= 1) {
+      return createJsonResponse({ success: false, error: 'Spare parts database is empty.' }, 404);
+    }
+
+    const spValues = spSheet.getRange(2, 1, spLastRow - 1, 11).getValues();
+    let partRowIndex = -1;
+    let partData = null;
+
+    for (let i = 0; i < spValues.length; i++) {
+      if (String(spValues[i][0] || '').trim().toUpperCase() === partCode) {
+        partRowIndex = i + 2;
+        partData = spValues[i];
+        break;
+      }
+    }
+
+    if (partRowIndex === -1 || !partData) {
+      return createJsonResponse({ success: false, error: 'Spare part ' + partCode + ' not found in inventory.' }, 404);
+    }
+
+    const currentStock = Number(partData[4]) || 0;
+    const unit = String(partData[6] || 'pcs').trim();
+    const supplier = String(partData[8] || '').trim();
+
+    // Verify sufficient stock (prevent negative stock!)
+    if (currentStock < qtyRequested) {
+      return createJsonResponse({
+        success: false,
+        error: 'Insufficient stock for ' + partCode + '. Available: ' + currentStock + ' ' + unit + ', Requested: ' + qtyRequested + ' ' + unit + '.'
+      }, 400);
+    }
+
+    const newStock = currentStock - qtyRequested;
+    const timestamp = formatCurrentTimestamp();
+
+    // 3. Deduct stock from SPARE PARTS DATABASE (Column E & Column K)
+    spSheet.getRange(partRowIndex, 5).setValue(newStock);
+    spSheet.getRange(partRowIndex, 11).setValue(timestamp);
+
+    // 4. Update request status to 'Issued' (Columns I, L, M)
+    srSheet.getRange(reqRowIndex, 9).setValue('Issued');
+    srSheet.getRange(reqRowIndex, 12).setValue(callerStaffId || 'ADMIN');
+    srSheet.getRange(reqRowIndex, 13).setValue(timestamp);
+
+    // 5. Append audit log entry in STOCK MOVEMENTS DATABASE
+    const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
+    smSheet.appendRow([
+      mId,
+      timestamp,
+      partCode,
+      partName,
+      'Issued',
+      -qtyRequested,
+      currentStock,
+      newStock,
+      supplier,
+      callerStaffId || 'ADMIN',
+      requestId
+    ]);
+
+    return createJsonResponse({
+      success: true,
+      requestId: requestId,
+      partCode: partCode,
+      issuedQty: qtyRequested,
+      previousStock: currentStock,
+      newStock: newStock,
+      message: 'Successfully issued ' + qtyRequested + ' ' + unit + ' of ' + partCode + '. New balance: ' + newStock + ' ' + unit + '.'
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to issue stock: ' + err.toString() }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * ============================================================================
+ * TECHNICIAN DATABASE MODULE (COLUMNS A TO I)
+ * ============================================================================
+ * Column A: Technician ID
+ * Column B: Firebase UID
+ * Column C: Full Name
+ * Column D: Role
+ * Column E: Phone Number
+ * Column F: Account Status
+ * Column G: Last Active
+ * Column H: Created At
+ * Column I: Updated At
+ */
+
+/**
+ * Get or initialize TECHNICIAN DATABASE worksheet.
+ */
+function getOrInitTechnicianSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TECH_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(TECH_SHEET_NAME);
+    sheet.appendRow(TECH_HEADERS);
+    const headerRange = sheet.getRange(1, 1, 1, TECH_HEADERS.length);
+    headerRange.setBackground('#062641');
+    headerRange.setFontColor('#FFFFFF');
+    headerRange.setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Retrieve all technician records from TECHNICIAN DATABASE
+ */
+function handleGetTechniciansGas(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(TECH_SHEET_NAME);
+  if (!sheet) {
+    return createJsonResponse({
+      success: true,
+      count: 0,
+      data: []
+    }, 200);
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return createJsonResponse({
+      success: true,
+      count: 0,
+      data: []
+    }, 200);
+  }
+
+  const values = sheet.getRange(2, 1, lastRow - 1, TECH_HEADERS.length).getValues();
+  const records = values.map(function(row) {
+    return {
+      technicianId: String(row[0] || '').trim(),
+      firebaseUid: String(row[1] || '').trim(),
+      name: String(row[2] || '').trim(),
+      role: String(row[3] || 'Technician').trim(),
+      phoneNumber: String(row[4] || '').trim(),
+      accountStatus: String(row[5] || 'Active').trim(),
+      lastActive: formatCellDate(row[6]),
+      createdAt: formatCellDate(row[7]),
+      updatedAt: formatCellDate(row[8])
+    };
+  }).filter(function(r) { return r.technicianId || r.firebaseUid; });
+
+  return createJsonResponse({
+    success: true,
+    count: records.length,
+    data: records
+  }, 200);
+}
+
+/**
+ * Create or update a technician record in TECHNICIAN DATABASE.
+ * Linked by Firebase UID as the primary reference.
+ */
+function handleSaveTechnicianGas(payload) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database busy, lock acquisition timed out.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = getOrInitTechnicianSheet(ss);
+
+    const firebaseUid = String(payload.firebaseUid || '').trim();
+    const name = String(payload.name || payload.displayName || '').trim();
+    const role = String(payload.role || 'Technician').trim();
+    const phoneNumber = String(payload.phoneNumber || payload.phone || '').trim();
+    const accountStatus = String(payload.accountStatus || payload.status || 'Active').trim();
+    const timestamp = formatCurrentTimestamp();
+
+    if (!name) {
+      return createJsonResponse({ success: false, error: 'Technician Full Name is required.' }, 400);
+    }
+
+    const lastRow = sheet.getLastRow();
+    let existingRowIndex = -1;
+    let existingTechId = '';
+    let existingCreatedAt = '';
+    let existingLastActive = '';
+
+    if (lastRow > 1) {
+      const values = sheet.getRange(2, 1, lastRow - 1, TECH_HEADERS.length).getValues();
+      for (let i = 0; i < values.length; i++) {
+        const rowTechId = String(values[i][0] || '').trim();
+        const rowUid = String(values[i][1] || '').trim();
+
+        // Match by Firebase UID (primary key) or existing technician ID
+        if ((firebaseUid && rowUid === firebaseUid) ||
+            (payload.technicianId && rowTechId === String(payload.technicianId).trim())) {
+          existingRowIndex = i + 2;
+          existingTechId = rowTechId;
+          existingCreatedAt = formatCellDate(values[i][7]);
+          existingLastActive = formatCellDate(values[i][6]);
+          break;
+        }
+      }
+    }
+
+    let finalTechId = existingTechId;
+
+    if (existingRowIndex > 0) {
+      // UPDATE existing technician record (preserve Created At and Last Active)
+      if (firebaseUid) sheet.getRange(existingRowIndex, 2).setValue(firebaseUid);
+      sheet.getRange(existingRowIndex, 3).setValue(name);
+      sheet.getRange(existingRowIndex, 4).setValue(role);
+      sheet.getRange(existingRowIndex, 5).setValue(phoneNumber);
+      sheet.getRange(existingRowIndex, 6).setValue(accountStatus);
+      sheet.getRange(existingRowIndex, 9).setValue(timestamp);
+
+      return createJsonResponse({
+        success: true,
+        action: 'updated',
+        technician: {
+          technicianId: finalTechId,
+          firebaseUid: firebaseUid,
+          name: name,
+          role: role,
+          phoneNumber: phoneNumber,
+          accountStatus: accountStatus,
+          lastActive: existingLastActive,
+          createdAt: existingCreatedAt,
+          updatedAt: timestamp
+        }
+      }, 200);
+    } else {
+      // CREATE new technician record
+      if (!finalTechId) {
+        if (payload.technicianId) {
+          finalTechId = String(payload.technicianId).trim();
+        } else if (payload.staffId) {
+          finalTechId = 'TECH-' + String(payload.staffId).trim().toUpperCase();
+        } else {
+          finalTechId = 'TECH-' + String(Math.max(1, lastRow)).padStart(3, '0');
+        }
+      }
+
+      sheet.appendRow([
+        finalTechId,
+        firebaseUid,
+        name,
+        role,
+        phoneNumber,
+        accountStatus,
+        '',
+        timestamp,
+        timestamp
+      ]);
+
+      return createJsonResponse({
+        success: true,
+        action: 'created',
+        technician: {
+          technicianId: finalTechId,
+          firebaseUid: firebaseUid,
+          name: name,
+          role: role,
+          phoneNumber: phoneNumber,
+          accountStatus: accountStatus,
+          lastActive: '',
+          createdAt: timestamp,
+          updatedAt: timestamp
+        }
+      }, 200);
+    }
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to save technician: ' + err.toString() }, 500);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * Record technician application activity timestamp (throttled).
+ */
+function handleRecordTechnicianActivityGas(payload) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(5000);
+  } catch (lockErr) {
+    return createJsonResponse({ success: false, error: 'Database busy, lock acquisition timed out.' }, 503);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(TECH_SHEET_NAME);
+    if (!sheet) {
+      return createJsonResponse({ success: false, notFound: true, message: 'Technician database not initialized.' }, 404);
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      return createJsonResponse({ success: false, notFound: true, message: 'No technician records.' }, 404);
+    }
+
+    const firebaseUid = String(payload.firebaseUid || '').trim();
+    const technicianId = String(payload.technicianId || '').trim();
+    const staffId = String(payload.staffId || '').trim().toUpperCase();
+    const timestamp = payload.timestamp || formatCurrentTimestamp();
+
+    const values = sheet.getRange(2, 1, lastRow - 1, TECH_HEADERS.length).getValues();
+    let foundRowIndex = -1;
+
+    for (let i = 0; i < values.length; i++) {
+      const rowTechId = String(values[i][0] || '').trim();
+      const rowUid = String(values[i][1] || '').trim();
+
+      if ((firebaseUid && rowUid === firebaseUid) ||
+          (technicianId && rowTechId === technicianId) ||
+          (staffId && (rowTechId === staffId || rowTechId === 'TECH-' + staffId))) {
+        foundRowIndex = i + 2;
+        break;
+      }
+    }
+
+    if (foundRowIndex === -1) {
+      return createJsonResponse({ success: false, notFound: true, message: 'Technician not found for activity update.' }, 404);
+    }
+
+    sheet.getRange(foundRowIndex, 7).setValue(timestamp); // Col G: Last Active
+    sheet.getRange(foundRowIndex, 9).setValue(timestamp); // Col I: Updated At
+
+    return createJsonResponse({
+      success: true,
+      lastActive: timestamp
+    }, 200);
+
+  } catch (err) {
+    return createJsonResponse({ success: false, error: 'Failed to record technician activity: ' + err.toString() }, 500);
   } finally {
     try { lock.releaseLock(); } catch (e) {}
   }

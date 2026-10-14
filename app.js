@@ -44,104 +44,7 @@
         department: 'Shift B Maintenance Crew'
       }
     ],
-    technicians: [
-      {
-        id: 'TECH-101',
-        name: 'Siti Humairah',
-        initials: 'SH',
-        role: 'Lead Automation Engineer',
-        skills: 'PLC, SCADA, Robotics',
-        shift: 'Shift A (07:00 - 15:30)',
-        status: 'On Duty',
-        activeJob: 'Supervision & Plant Audit',
-        completedJobs: 48,
-        contact: '+60 12-882 1920'
-      },
-      {
-        id: 'TECH-102',
-        name: 'Ahmad Firdaus',
-        initials: 'AF',
-        role: 'Senior Mechanical Engineer',
-        skills: 'Hydraulics, CNC Spindles, Turbines',
-        shift: 'Shift A (07:00 - 15:30)',
-        status: 'Available',
-        activeJob: 'None (Standby)',
-        completedJobs: 62,
-        contact: '+60 13-441 5521'
-      },
-      {
-        id: 'TECH-103',
-        name: 'Razak bin Ismail',
-        initials: 'RI',
-        role: 'Hydraulics Specialist',
-        skills: 'Pneumatics, Press Hydraulics, Seals',
-        shift: 'Shift B (15:00 - 23:30)',
-        status: 'Available',
-        activeJob: 'None (Standby)',
-        completedJobs: 89,
-        contact: '+60 19-332 7789'
-      },
-      {
-        id: 'TECH-104',
-        name: 'Chen Wei Liang',
-        initials: 'CW',
-        role: 'Robotics & Control Tech',
-        skills: 'Fanuc, Kuka, Laser Sensors',
-        shift: 'Shift A (07:00 - 15:30)',
-        status: 'In Job',
-        activeJob: 'PM-803 (Robot Calibration)',
-        completedJobs: 54,
-        contact: '+60 17-220 9012'
-      },
-      {
-        id: 'TECH-105',
-        name: 'Kumar Sanjeev',
-        initials: 'KS',
-        role: 'Mechanical Overhaul Tech',
-        skills: 'Gearboxes, Alignments, Bearings',
-        shift: 'Shift A (07:00 - 15:30)',
-        status: 'Available',
-        activeJob: 'None (Standby)',
-        completedJobs: 73,
-        contact: '+60 16-554 3310'
-      },
-      {
-        id: 'TECH-106',
-        name: 'Daniel Tan',
-        initials: 'DT',
-        role: 'Condition Monitoring Analyst',
-        skills: 'Vibration Analysis, Thermography',
-        shift: 'Shift B (15:00 - 23:30)',
-        status: 'Available',
-        activeJob: 'None (Standby)',
-        completedJobs: 39,
-        contact: '+60 14-883 2291'
-      },
-      {
-        id: 'TECH-107',
-        name: 'Nurul Huda',
-        initials: 'NH',
-        role: 'Instrumentation Engineer',
-        skills: 'PID Tuning, Calibrators, Flow Meters',
-        shift: 'Shift A (07:00 - 15:30)',
-        status: 'Available',
-        activeJob: 'None (Standby)',
-        completedJobs: 51,
-        contact: '+60 18-991 4402'
-      },
-      {
-        id: 'TECH-108',
-        name: 'Farhan Azman',
-        initials: 'FA',
-        role: 'Electrical Maintenance Tech',
-        skills: 'Switchgears, Motors, Inverters',
-        shift: 'Shift C (23:00 - 07:30)',
-        status: 'Available',
-        activeJob: 'Night Shift Roster',
-        completedJobs: 66,
-        contact: '+60 11-209 8831'
-      }
-    ],
+    technicians: [],
     breakdowns: [],
     preventiveMaintenance: [],
     spareParts: [
@@ -273,11 +176,48 @@
         date: '2026-10-07 11:00 AM',
         partCode: 'SP-306',
         partName: 'Deep Groove Ball Bearing 6205-2RS',
-        type: 'Received',
+        type: 'Stock In',
         qty: +10,
+        previousStock: 12,
+        updatedStock: 22,
         balance: 22,
         reference: 'PO-2026-0449',
+        supplier: 'SKF Industrial',
         handler: 'Siti Humairah'
+      }
+    ],
+    stockRequests: [
+      {
+        requestId: 'REQ-501',
+        requestDate: '2026-10-09 09:15 AM',
+        requestedByStaffId: 'PN002',
+        requestedByName: 'Razak bin Ismail',
+        partCode: 'SP-301',
+        partName: 'Proximity Sensor M18 PNP (Omron)',
+        qtyRequested: 2,
+        reason: 'Buffer restock (Ref: WO-2026-101)',
+        status: 'Issued',
+        approvedBy: 'ADMIN',
+        approvedDate: '2026-10-09 09:15 AM',
+        issuedBy: 'Razak bin Ismail',
+        issuedDate: '2026-10-09 09:15 AM',
+        notes: 'Legacy Issued Record'
+      },
+      {
+        requestId: 'REQ-502',
+        requestDate: '2026-10-08 16:30 PM',
+        requestedByStaffId: 'TECH-102',
+        requestedByName: 'Kumar Sanjeev',
+        partCode: 'SP-303',
+        partName: 'Timing Belt 8M-1200 Heavy Duty',
+        qtyRequested: 1,
+        reason: 'Breakdown repair (Ref: WO-2026-098)',
+        status: 'Issued',
+        approvedBy: 'ADMIN',
+        approvedDate: '2026-10-08 16:30 PM',
+        issuedBy: 'Kumar Sanjeev',
+        issuedDate: '2026-10-08 16:30 PM',
+        notes: 'Legacy Issued Record'
       }
     ],
     notifications: [
@@ -339,14 +279,24 @@
         } else {
           state.preventiveMaintenance = [];
         }
-        // Clean any demo activeJobs in technicians list
+        // Completely purge demo technicians from cached local storage
         if (Array.isArray(state.technicians)) {
-          state.technicians.forEach(t => {
-            if (t.activeJob && KNOWN_DEMO_BD_IDS.some(id => t.activeJob.includes(id))) {
-              t.activeJob = 'None (Standby)';
-              t.status = 'Available';
-            }
+          state.technicians = state.technicians.filter(t => {
+            const id = (t.technicianId || t.id || '').toUpperCase();
+            return !id.startsWith('TECH-10');
           });
+        } else {
+          state.technicians = [];
+        }
+
+        if (!Array.isArray(state.stockRequests) || state.stockRequests.length === 0) {
+          state.stockRequests = JSON.parse(JSON.stringify(INITIAL_STATE.stockRequests));
+        }
+        if (!Array.isArray(state.spareParts) || state.spareParts.length === 0) {
+          state.spareParts = JSON.parse(JSON.stringify(INITIAL_STATE.spareParts));
+        }
+        if (!Array.isArray(state.stockMovements) || state.stockMovements.length === 0) {
+          state.stockMovements = JSON.parse(JSON.stringify(INITIAL_STATE.stockMovements));
         }
       } else {
         state = JSON.parse(JSON.stringify(INITIAL_STATE));
@@ -537,6 +487,40 @@
         switchMaintenanceTab('pm-schedule');
       }
     }
+
+    // Spare Parts Module access rules
+    const addStockBtn = document.getElementById('addStockBtn');
+    if (addStockBtn) {
+      addStockBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    }
+    const spStockMovementTab = document.getElementById('spTabStockMovementBtn');
+    if (spStockMovementTab) {
+      spStockMovementTab.style.display = isAdmin ? 'inline-block' : 'none';
+      if (!isAdmin && activeSparePartsTab === 'stock-movement') {
+        switchSparePartsTab('parts-list');
+      }
+    }
+    const spStockRequestTab = document.getElementById('spTabStockRequestBtn');
+    if (spStockRequestTab) {
+      spStockRequestTab.style.display = 'inline-block';
+    }
+
+    // Technician Management Module access rules (ADMIN ONLY - PHASE 5)
+    const navTechs = document.getElementById('navLinkTechnicians');
+    if (navTechs) {
+      navTechs.style.display = isAdmin ? 'flex' : 'none';
+    }
+    const addTechBtn = document.getElementById('btnAddTechnicianBtn');
+    if (addTechBtn) {
+      addTechBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+    }
+    if (!isAdmin && currentView === 'technicians') {
+      navigateTo('home');
+    }
+
+    if (currentView === 'spareparts') {
+      renderSparePartsView();
+    }
   }
 
   // =========================================================================
@@ -545,7 +529,22 @@
   let currentView = 'home';
 
   function navigateTo(viewName, filterParam) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+
+    // Technicians cannot access Technician Management (ADMIN ONLY - PHASE 5)
+    if (viewName === 'technicians' && !isAdmin) {
+      showToast('Access Denied: Technician Management is restricted to Administrators only.', 'error');
+      if (currentView === 'technicians') {
+        navigateTo('home');
+      }
+      return;
+    }
+
     currentView = viewName;
+    if (typeof recordUserActivityThrottled === 'function') {
+      recordUserActivityThrottled();
+    }
 
     // Hide all view containers
     document.querySelectorAll('.subview-container').forEach(el => {
@@ -592,8 +591,10 @@
           renderSparePartsTable();
         }
       }
+      fetchSparePartsFromBackend(true);
     } else if (viewName === 'technicians') {
       renderTechniciansView();
+      fetchTechniciansFromBackend(false);
     } else if (viewName === 'home') {
       updateKPICounters();
     }
@@ -3213,16 +3214,79 @@
   }
 
   // =========================================================================
-  // 8. MODULE 3: SPARE PARTS INVENTORY
+  // 8. MODULE 3: SPARE PARTS INVENTORY, MOVEMENTS & REQUESTS
   // =========================================================================
   let activeSparePartsTab = 'parts-list';
+  let lastSparePartsFetchError = null;
+
+  /**
+   * Fetch live Spare Parts records from backend via Netlify Function
+   */
+  async function fetchSparePartsFromBackend(silent = false) {
+    const token = getStoredAuthToken() || '';
+    if (!token) return { ok: false, error: 'Not authenticated' };
+
+    try {
+      const res = await fetch('/.netlify/functions/get-spare-parts', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const result = await res.json().catch(() => null);
+
+      if (res.ok && result && result.success) {
+        lastSparePartsFetchError = null;
+        if (Array.isArray(result.spareParts) && result.spareParts.length > 0) {
+          state.spareParts = result.spareParts;
+        }
+        if (Array.isArray(result.stockMovements)) {
+          state.stockMovements = result.stockMovements;
+        }
+        if (Array.isArray(result.stockRequests)) {
+          state.stockRequests = result.stockRequests;
+        }
+        saveState();
+        renderSparePartsView();
+        return { ok: true, count: state.spareParts.length };
+      } else {
+        const errMsg = (result && (result.error || result.message)) || `Server returned HTTP ${res.status}`;
+        lastSparePartsFetchError = errMsg;
+        if (!silent) {
+          showToast('Spare Parts Sync Error: ' + errMsg, 'error');
+        }
+        renderSparePartsView();
+        return { ok: false, error: errMsg };
+      }
+    } catch (e) {
+      const errMsg = 'Network connection failed: ' + e.message;
+      lastSparePartsFetchError = errMsg;
+      if (!silent) {
+        showToast('Spare Parts Sync Error: ' + errMsg, 'error');
+      }
+      renderSparePartsView();
+      return { ok: false, error: errMsg };
+    }
+  }
 
   function renderSparePartsView() {
     renderSparePartsTable();
-    renderStockMovementsTable();
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (isAdmin) {
+      renderStockMovementsTable();
+    }
+    renderStockRequestsTable();
   }
 
   function switchSparePartsTab(tabName) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+
+    // Technicians must not be able to access Stock Movement History through direct URL or navigation!
+    if (tabName === 'stock-movement' && !isAdmin) {
+      showToast('Access Denied: Stock Movement History is restricted to Administrator accounts.', 'error');
+      tabName = 'parts-list';
+    }
+
     activeSparePartsTab = tabName;
     document.querySelectorAll('#sparepartsTabs .module-tab-btn').forEach(btn => {
       if (btn.getAttribute('data-tab') === tabName) {
@@ -3238,26 +3302,36 @@
 
     const targetTab = document.getElementById(`sp-tab-${tabName}`);
     if (targetTab) targetTab.style.display = 'block';
+
+    if (tabName === 'parts-list') renderSparePartsTable();
+    else if (tabName === 'stock-movement' && isAdmin) renderStockMovementsTable();
+    else if (tabName === 'stock-request') renderStockRequestsTable();
   }
 
   function renderSparePartsTable() {
     const searchVal = (document.getElementById('sparePartsSearch')?.value || '').toLowerCase();
     const filterVal = document.getElementById('sparePartsFilter')?.value || 'all';
 
-    let list = state.spareParts.filter(part => {
-      const matchSearch = part.name.toLowerCase().includes(searchVal) ||
-        part.code.toLowerCase().includes(searchVal) ||
-        part.category.toLowerCase().includes(searchVal) ||
-        part.location.toLowerCase().includes(searchVal);
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+
+    let list = (state.spareParts || []).filter(part => {
+      const matchSearch = (part.name || '').toLowerCase().includes(searchVal) ||
+        (part.code || '').toLowerCase().includes(searchVal) ||
+        (part.category || '').toLowerCase().includes(searchVal) ||
+        (part.location || '').toLowerCase().includes(searchVal);
 
       if (!matchSearch) return false;
 
+      const currentStock = Number(part.currentStock) || 0;
+      const minStock = Number(part.minStock) || 0;
+
       if (filterVal === 'low') {
-        return part.currentStock <= part.minStock;
+        return currentStock > 0 && currentStock <= minStock;
       } else if (filterVal === 'out') {
-        return part.currentStock === 0;
+        return currentStock === 0;
       } else if (filterVal === 'ok') {
-        return part.currentStock > part.minStock;
+        return currentStock > minStock;
       }
       return true;
     });
@@ -3265,45 +3339,73 @@
     const tbody = document.getElementById('sparePartsTbody');
     if (tbody) {
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No spare parts match your search or filter.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No spare parts match your search or filter.</td></tr>`;
       } else {
         tbody.innerHTML = list.map(item => {
+          const currentStock = Number(item.currentStock) || 0;
+          const minStock = Number(item.minStock) || 0;
+
+          // Strict colour-based stock status indicators (Rule 1, 2, 3)
           let badgeHtml = '';
-          if (item.currentStock === 0) {
+          if (currentStock === 0) {
+            // RULE 1: Stock = 0 -> RED (Light red bg, dark red text)
             badgeHtml = `<span class="status-badge status-badge-red">OUT OF STOCK</span>`;
-          } else if (item.currentStock <= item.minStock) {
+          } else if (currentStock <= minStock) {
+            // RULE 2: Stock > 0 AND Stock <= Min Limit -> YELLOW / AMBER (Light yellow bg, amber text)
             badgeHtml = `<span class="status-badge status-badge-amber">LOW STOCK</span>`;
           } else {
+            // RULE 3: Stock > Min Limit -> GREEN (Light green bg, dark green text)
             badgeHtml = `<span class="status-badge status-badge-green">IN STOCK</span>`;
           }
 
+          // Action buttons ordered by role:
+          // ADMIN: [Adjust Stock] [Adjust Limit] [Request]
+          // TECHNICIAN: [Request] (Admin buttons completely hidden)
+          let actionButtonsHtml = '';
+          if (isAdmin) {
+            actionButtonsHtml = `
+              <div class="action-btn-group">
+                <button class="btn-table-action" onclick="window.openEditStockModal('${escapeHtml(item.code)}')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                  Adjust Stock
+                </button>
+                <button class="btn-table-action" onclick="window.openAdjustLimitModal('${escapeHtml(item.code)}')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                  Adjust Limit
+                </button>
+                <button class="btn-table-action" onclick="window.openRequestStockModal('${escapeHtml(item.code)}')">
+                  Request
+                </button>
+              </div>
+            `;
+          } else {
+            actionButtonsHtml = `
+              <div class="action-btn-group">
+                <button class="btn-table-action" onclick="window.openRequestStockModal('${escapeHtml(item.code)}')">
+                  Request
+                </button>
+              </div>
+            `;
+          }
+
+          const unitPriceDisplay = typeof item.unitPrice === 'number' ? item.unitPrice.toFixed(2) : parseFloat(item.unitPrice || 0).toFixed(2);
+
           return `
             <tr>
-              <td><strong>${item.code}</strong></td>
+              <td><strong>${escapeHtml(item.code)}</strong></td>
               <td>
                 <div style="font-weight:600; color:var(--navy-darkest);">${escapeHtml(item.name)}</div>
-                <div style="font-size:11.5px; color:var(--text-muted);">${escapeHtml(item.category)} • Loc: ${item.location}</div>
+                <div style="font-size:11.5px; color:var(--text-muted);">${escapeHtml(item.category || '')} • Loc: ${escapeHtml(item.location || '—')}</div>
               </td>
               <td>
-                <div style="font-size:15px; font-weight:700; color:${item.currentStock <= item.minStock ? 'var(--red-primary)' : 'var(--navy-darkest)'};">
-                  ${item.currentStock} <span style="font-size:12px; font-weight:500; color:var(--text-muted);">${item.unit}</span>
+                <div style="font-size:15px; font-weight:700; color:${currentStock <= minStock ? 'var(--red-primary)' : 'var(--navy-darkest)'};">
+                  ${currentStock} <span style="font-size:12px; font-weight:500; color:var(--text-muted);">${escapeHtml(item.unit || 'pcs')}</span>
                 </div>
-                <div style="font-size:11px; color:var(--text-muted);">Min: ${item.minStock} ${item.unit}</div>
+                <div style="font-size:11px; color:var(--text-muted);">Min: ${minStock} ${escapeHtml(item.unit || 'pcs')}</div>
               </td>
               <td>${badgeHtml}</td>
-              <td>RM ${item.unitPrice.toFixed(2)}</td>
-              <td>${escapeHtml(item.supplier)}</td>
-              <td>
-                <div class="action-btn-group">
-                  <button class="btn-table-action" onclick="window.openEditStockModal('${item.code}')">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                    Adjust Stock
-                  </button>
-                  <button class="btn-table-action" onclick="window.openRequestStockModal('${item.code}')">
-                    Request
-                  </button>
-                </div>
-              </td>
+              <td>RM ${unitPriceDisplay}</td>
+              <td>${actionButtonsHtml}</td>
             </tr>
           `;
         }).join('');
@@ -3312,61 +3414,926 @@
   }
 
   function renderStockMovementsTable() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
     const tbody = document.getElementById('stockMovementTbody');
-    if (tbody) {
-      tbody.innerHTML = state.stockMovements.map(m => `
-        <tr>
-          <td><strong>${m.id}</strong></td>
-          <td>${m.date}</td>
-          <td>
-            <strong>${m.partCode}</strong> - ${escapeHtml(m.partName)}
-          </td>
-          <td>
-            <span class="status-badge ${m.type === 'Received' ? 'status-badge-green' : 'status-badge-blue'}">
-              ${m.type}
-            </span>
-          </td>
-          <td style="font-weight:700; color:${m.qty > 0 ? '#10B981' : 'var(--red-primary)'};">
-            ${m.qty > 0 ? '+' + m.qty : m.qty}
-          </td>
-          <td>${m.balance}</td>
-          <td>${escapeHtml(m.reference)}</td>
-          <td>${escapeHtml(m.handler)}</td>
-        </tr>
-      `).join('');
+    if (!tbody) return;
+
+    if (!isAdmin) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--red-primary);">Access Denied: Stock Movement History is restricted to Administrator accounts.</td></tr>`;
+      return;
     }
+
+    // Filter to only Stock In and Stock Adjustment
+    // Technician-requested issued stock is displayed under Stock Request instead
+    const filteredMovements = (state.stockMovements || []).filter(m => {
+      const typeLower = (m.type || '').toLowerCase();
+      return typeLower === 'stock in' || typeLower === 'stock adjustment' || typeLower === 'received' || typeLower === 'manual adjustment';
+    });
+
+    if (filteredMovements.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-muted);">No stock movements recorded.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filteredMovements.map(m => {
+      // Authorized Supplier retrieved from Spare Parts database linked by Part Code
+      const part = (state.spareParts || []).find(p => p.code === m.partCode);
+      const supplierName = (part && part.supplier) || m.supplier || 'N/A';
+      const isPositive = Number(m.qty) > 0;
+      const typeDisplay = (m.type === 'Received' || m.type === 'Stock In') ? 'Stock In' : 'Stock Adjustment';
+      const badgeClass = typeDisplay === 'Stock In' ? 'status-badge-green' : 'status-badge-blue';
+
+      const prev = m.previousStock !== undefined ? m.previousStock : '—';
+      const updated = m.updatedStock !== undefined ? m.updatedStock : (m.balance !== undefined ? m.balance : '—');
+
+      return `
+        <tr>
+          <td>${escapeHtml(m.date || '—')}</td>
+          <td><strong>${escapeHtml(m.partCode)}</strong></td>
+          <td>${escapeHtml(m.partName || (part && part.name) || '—')}</td>
+          <td><span class="status-badge ${badgeClass}">${typeDisplay}</span></td>
+          <td style="font-weight:700; color:${isPositive ? '#10B981' : 'var(--red-primary)'};">
+            ${isPositive ? '+' + m.qty : m.qty}
+          </td>
+          <td>${prev}</td>
+          <td style="font-weight:700; color:var(--navy-darkest);">${updated}</td>
+          <td>${escapeHtml(supplierName)}</td>
+          <td>${escapeHtml(m.updatedBy || m.handler || 'ADMIN')}</td>
+        </tr>
+      `;
+    }).join('');
   }
 
-  // =========================================================================
-  // 9. TECHNICIANS DIRECTORY VIEW (KPI 4 Link)
-  // =========================================================================
-  function renderTechniciansView() {
-    const gridEl = document.getElementById('techniciansGrid');
-    if (gridEl) {
-      gridEl.innerHTML = state.technicians.map(t => {
-        let statusBadge = 'status-badge-green';
-        if (t.status === 'In Job') statusBadge = 'status-badge-blue';
-        if (t.status === 'On Duty') statusBadge = 'status-badge-amber';
+  function renderStockRequestsTable() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    const currentStaffId = (state.currentUser ? (state.currentUser.staffId || state.currentUser.id || '') : '').toUpperCase();
 
-        return `
-          <div class="technician-card">
-            <div class="tech-avatar">${t.initials}</div>
-            <div class="tech-name">${escapeHtml(t.name)}</div>
-            <div class="tech-skill">${escapeHtml(t.role)}</div>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">${escapeHtml(t.skills)}</div>
-            <span class="status-badge ${statusBadge}" style="margin-top:10px;">
-              ${t.status}
-            </span>
-            <div class="tech-shift-badge">${escapeHtml(t.shift)}</div>
-            <div class="tech-footer">
-              <span>Active: ${escapeHtml(t.activeJob)}</span>
-              <span>Jobs: ${t.completedJobs}</span>
+    const tbody = document.getElementById('stockRequestTbody');
+    if (!tbody) return;
+
+    let requests = state.stockRequests || [];
+    // Technicians view own requests only
+    if (!isAdmin) {
+      requests = requests.filter(r => (r.requestedByStaffId || '').toUpperCase() === currentStaffId);
+    }
+
+    if (requests.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">No stock requests found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = requests.map(r => {
+      let statusBadge = '';
+      const st = (r.status || 'Pending').toLowerCase();
+      if (st === 'pending') {
+        statusBadge = `<span class="status-badge status-badge-amber">Pending</span>`;
+      } else if (st === 'approved') {
+        statusBadge = `<span class="status-badge status-badge-blue">Approved</span>`;
+      } else if (st === 'rejected') {
+        statusBadge = `<span class="status-badge status-badge-red">Rejected</span>`;
+      } else if (st === 'issued') {
+        statusBadge = `<span class="status-badge status-badge-green">Issued</span>`;
+      } else {
+        statusBadge = `<span class="status-badge status-badge-grey">${escapeHtml(r.status)}</span>`;
+      }
+
+      let actionsHtml = '';
+      if (isAdmin) {
+        if (st === 'pending') {
+          actionsHtml = `
+            <div class="action-btn-group">
+              <button class="btn-table-action" style="color:#059669; font-weight:600;" onclick="window.handleApproveStockRequest('${escapeHtml(r.requestId)}')">
+                Approve
+              </button>
+              <button class="btn-table-action" style="color:var(--red-primary); font-weight:600;" onclick="window.handleRejectStockRequest('${escapeHtml(r.requestId)}')">
+                Reject
+              </button>
+              <button class="btn-table-action" onclick="window.openStockRequestDetail('${escapeHtml(r.requestId)}')">
+                Details
+              </button>
             </div>
+          `;
+        } else if (st === 'approved') {
+          actionsHtml = `
+            <div class="action-btn-group">
+              <button class="btn-table-action" style="color:#2563EB; font-weight:700;" onclick="window.handleIssueStockRequest('${escapeHtml(r.requestId)}')">
+                Issue Stock
+              </button>
+              <button class="btn-table-action" onclick="window.openStockRequestDetail('${escapeHtml(r.requestId)}')">
+                Details
+              </button>
+            </div>
+          `;
+        } else {
+          actionsHtml = `
+            <div class="action-btn-group">
+              <button class="btn-table-action" onclick="window.openStockRequestDetail('${escapeHtml(r.requestId)}')">
+                Details
+              </button>
+            </div>
+          `;
+        }
+      } else {
+        actionsHtml = `
+          <div class="action-btn-group">
+            <button class="btn-table-action" onclick="window.openStockRequestDetail('${escapeHtml(r.requestId)}')">
+              Details
+            </button>
           </div>
         `;
-      }).join('');
+      }
+
+      return `
+        <tr>
+          <td><strong>${escapeHtml(r.requestId)}</strong></td>
+          <td>${escapeHtml(r.requestDate || '—')}</td>
+          <td>
+            <div style="font-weight:600; color:var(--navy-darkest);">${escapeHtml(r.requestedByName || r.requestedByStaffId || 'Staff')}</div>
+            <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(r.requestedByStaffId || '')}</div>
+          </td>
+          <td><strong>${escapeHtml(r.partCode)}</strong></td>
+          <td>${escapeHtml(r.partName || '—')}</td>
+          <td style="font-size:14px; font-weight:700; color:var(--navy-darkest);">${r.qtyRequested}</td>
+          <td>${statusBadge}</td>
+          <td>${actionsHtml}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // =========================================================================
+  // 9. TECHNICIAN MANAGEMENT MODULE (ADMIN ONLY - PHASES 5-13)
+  // =========================================================================
+  let technicianSearchQuery = '';
+  let technicianStatusFilter = 'all';
+  let currentViewingTechId = null;
+
+  /**
+   * Helper to match technician to work order assignedTech field.
+   * Matches by staffId, name, technicianId, or firebaseUid.
+   */
+  function isWorkOrderAssignedToTech(assignedTechStr, tech) {
+    if (!assignedTechStr || !tech) return false;
+    const assigned = String(assignedTechStr).trim().toUpperCase();
+    if (!assigned || assigned === 'UNASSIGNED' || assigned === 'NOT ASSIGNED' || assigned === 'NONE' || assigned === '—') return false;
+
+    const staffId = String(tech.staffId || '').trim().toUpperCase();
+    const name = String(tech.name || '').trim().toUpperCase();
+    const techId = String(tech.technicianId || '').trim().toUpperCase();
+    const uid = String(tech.firebaseUid || '').trim().toUpperCase();
+
+    if (staffId && assigned === staffId) return true;
+    if (name && assigned === name) return true;
+    if (techId && assigned === techId) return true;
+    if (uid && assigned === uid) return true;
+
+    // Check substring matches (e.g. "Staff PN002" or "Ahmad Firdaus (PN002)")
+    if (staffId && (assigned.includes(staffId) || assigned.replace(/\s+/g, '').includes(staffId))) return true;
+    if (name && assigned.includes(name)) return true;
+    if (techId && assigned.includes(techId)) return true;
+
+    return false;
+  }
+
+  /**
+   * Calculate dynamic metrics for a technician:
+   * - Active Jobs (Breakdowns + PM)
+   * - Completed Jobs (Breakdowns + PM)
+   * - Status: Inactive, In Job, Available
+   */
+  function calculateTechnicianMetrics(tech) {
+    const activeBreakdowns = (state.breakdowns || []).filter(b => {
+      const isCompleted = String(b.status || '').trim().toLowerCase() === 'completed';
+      return !isCompleted && isWorkOrderAssignedToTech(b.assignedTech, tech);
+    });
+
+    const activePMs = (state.preventiveMaintenance || []).filter(pm => {
+      const isCompleted = String(pm.status || '').trim().toLowerCase() === 'completed';
+      return !isCompleted && (isWorkOrderAssignedToTech(pm.assignedTech, tech) || isWorkOrderAssignedToTech(pm.assignedStaffId, tech));
+    });
+
+    const completedBreakdowns = (state.breakdowns || []).filter(b => {
+      const isCompleted = String(b.status || '').trim().toLowerCase() === 'completed';
+      return isCompleted && isWorkOrderAssignedToTech(b.assignedTech, tech);
+    });
+
+    const completedPMs = (state.preventiveMaintenance || []).filter(pm => {
+      const isCompleted = String(pm.status || '').trim().toLowerCase() === 'completed';
+      return isCompleted && (isWorkOrderAssignedToTech(pm.assignedTech, tech) || isWorkOrderAssignedToTech(pm.assignedStaffId, tech));
+    });
+
+    const activeJobCodes = [
+      ...activeBreakdowns.map(b => b.id || 'BD'),
+      ...activePMs.map(pm => pm.pmCode || 'PM')
+    ];
+
+    const completedCount = completedBreakdowns.length + completedPMs.length;
+
+    // Phase 8: Technician Status calculation
+    // Inactive: Technician account is disabled / Inactive
+    // In Job: Technician has at least one active Breakdown or PM work order
+    // Available: Technician account is active and has no active assigned work order
+    let computedStatus = 'Available';
+    let statusBadgeClass = 'status-badge-green';
+
+    if (String(tech.accountStatus || '').trim().toLowerCase() === 'inactive' || tech.disabled === true) {
+      computedStatus = 'Inactive';
+      statusBadgeClass = 'status-badge-grey';
+    } else if (activeJobCodes.length > 0) {
+      computedStatus = 'In Job';
+      statusBadgeClass = 'status-badge-blue';
+    } else {
+      computedStatus = 'Available';
+      statusBadgeClass = 'status-badge-green';
+    }
+
+    // Phase 11: Current Job formatting
+    let currentJobDisplay = 'None';
+    if (activeJobCodes.length === 1) {
+      currentJobDisplay = activeJobCodes[0];
+    } else if (activeJobCodes.length > 1) {
+      currentJobDisplay = `${activeJobCodes.length} Active Jobs`;
+    }
+
+    return {
+      activeBreakdowns,
+      activePMs,
+      completedBreakdowns,
+      completedPMs,
+      activeJobCodes,
+      completedCount,
+      computedStatus,
+      statusBadgeClass,
+      currentJobDisplay
+    };
+  }
+
+  /**
+   * Fetch technicians from serverless endpoint (ADMIN ONLY)
+   */
+  async function fetchTechniciansFromBackend(forceNotification) {
+    const token = sessionStorage.getItem('mmsAuthToken') || '';
+    if (!token) return;
+
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) return;
+
+    const syncBtn = document.getElementById('btnSyncTechnicians');
+    if (syncBtn) {
+      syncBtn.disabled = true;
+      syncBtn.classList.add('syncing');
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/manage-technicians', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: 'list' })
+      });
+
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.success && Array.isArray(data.technicians)) {
+        state.technicians = data.technicians;
+        renderTechniciansView();
+        updateKPICounters();
+        if (forceNotification) {
+          showToast(`Synchronized ${data.technicians.length} technician records.`, 'success');
+        }
+      } else {
+        if (forceNotification) {
+          const errMsg = (data && data.error) || 'Failed to sync technicians.';
+          showToast(`Sync notice: ${errMsg}`, 'error');
+        }
+      }
+    } catch (err) {
+      console.warn('[fetchTechniciansFromBackend] Request error:', err);
+      if (forceNotification) {
+        showToast('Network error syncing technicians.', 'error');
+      }
+    } finally {
+      if (syncBtn) {
+        syncBtn.disabled = false;
+        syncBtn.classList.remove('syncing');
+      }
     }
   }
+  window.fetchTechniciansFromBackend = fetchTechniciansFromBackend;
+
+  /**
+   * Render Technician Management view (Cards, summary KPIs, search/filter)
+   */
+  function renderTechniciansView() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      return;
+    }
+
+    const gridEl = document.getElementById('techniciansGrid');
+    if (!gridEl) return;
+
+    const searchInput = document.getElementById('techSearchInput');
+    const filterSelect = document.getElementById('techStatusFilter');
+    const query = (searchInput ? searchInput.value : technicianSearchQuery).toLowerCase().trim();
+    const filterStatus = filterSelect ? filterSelect.value : technicianStatusFilter;
+
+    // Filter technicians
+    const allTechs = state.technicians || [];
+    let totalCount = allTechs.length;
+    let availableCount = 0;
+    let inJobCount = 0;
+    let inactiveCount = 0;
+
+    // Precalculate all metrics for accurate summary cards
+    const techsWithMetrics = allTechs.map(t => {
+      const metrics = calculateTechnicianMetrics(t);
+      if (metrics.computedStatus === 'Available') availableCount++;
+      else if (metrics.computedStatus === 'In Job') inJobCount++;
+      else if (metrics.computedStatus === 'Inactive') inactiveCount++;
+
+      return {
+        ...t,
+        ...metrics
+      };
+    });
+
+    // Update Phase 13 Summary Cards
+    const summaryTotalEl = document.getElementById('techSummaryTotal');
+    const summaryAvailEl = document.getElementById('techSummaryAvailable');
+    const summaryInJobEl = document.getElementById('techSummaryInJob');
+    const summaryInactEl = document.getElementById('techSummaryInactive');
+
+    if (summaryTotalEl) summaryTotalEl.textContent = totalCount;
+    if (summaryAvailEl) summaryAvailEl.textContent = availableCount;
+    if (summaryInJobEl) summaryInJobEl.textContent = inJobCount;
+    if (summaryInactEl) summaryInactEl.textContent = inactiveCount;
+
+    // Filter for display
+    const filteredTechs = techsWithMetrics.filter(t => {
+      // Status filter
+      if (filterStatus !== 'all' && t.computedStatus !== filterStatus) {
+        return false;
+      }
+
+      // Search query filter (matches name, techId, staffId, phone)
+      if (query) {
+        const nameMatch = (t.name || '').toLowerCase().includes(query);
+        const idMatch = (t.technicianId || '').toLowerCase().includes(query);
+        const staffMatch = (t.staffId || '').toLowerCase().includes(query);
+        const phoneMatch = (t.phoneNumber || '').toLowerCase().includes(query);
+        if (!nameMatch && !idMatch && !staffMatch && !phoneMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    if (filteredTechs.length === 0) {
+      gridEl.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; background: #FFFFFF; border-radius: 10px; border: 1px solid #E2E8F0;">
+          <div style="font-size: 15px; font-weight: 600; color: var(--navy-darkest);">No technicians match your criteria</div>
+          <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+            ${allTechs.length === 0 ? 'Click "+ Add Technician" above to register a new technician account.' : 'Try adjusting your search terms or status filter.'}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    gridEl.innerHTML = filteredTechs.map(t => {
+      const initials = getInitials(t.name);
+      const safeId = escapeHtml(t.technicianId || `TECH-${t.staffId || '000'}`);
+      const safeName = escapeHtml(t.name || `Technician ${t.staffId}`);
+      const safePhone = escapeHtml(t.phoneNumber || '—');
+      const safeLastActive = escapeHtml(t.lastActive || '—');
+
+      return `
+        <div class="technician-card" id="tech-card-${safeId}">
+          <div class="tech-card-header">
+            <div class="tech-avatar">${initials}</div>
+            <div class="tech-header-info">
+              <div class="tech-name">${safeName}</div>
+              <div class="tech-meta">
+                <span class="tech-id-badge">${safeId}</span>
+                <span class="tech-role">${escapeHtml(t.role || 'Technician')}</span>
+              </div>
+            </div>
+            <div class="tech-status-wrapper">
+              <span class="status-badge ${t.statusBadgeClass}">${t.computedStatus}</span>
+            </div>
+          </div>
+
+          <div class="tech-card-body">
+            <div class="tech-info-row">
+              <span class="tech-label">Phone:</span>
+              <span class="tech-val" title="${safePhone}">${safePhone}</span>
+            </div>
+            <div class="tech-info-row">
+              <span class="tech-label">Last Active:</span>
+              <span class="tech-val">${safeLastActive}</span>
+            </div>
+            <div class="tech-info-row">
+              <span class="tech-label">Job Completed:</span>
+              <span class="tech-val tech-val-bold">${t.completedCount}</span>
+            </div>
+            <div class="tech-info-row">
+              <span class="tech-label">Current Job:</span>
+              <span class="tech-val ${t.activeJobCodes.length > 0 ? 'tech-val-bold' : ''}" style="${t.activeJobCodes.length > 0 ? 'color:var(--accent-primary);' : ''}">
+                ${escapeHtml(t.currentJobDisplay)}
+              </span>
+            </div>
+          </div>
+
+          <div class="tech-card-footer">
+            <button class="btn-table-action" onclick="window.openViewTechnicianModal('${safeId}')" title="View complete technician details">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              View Details
+            </button>
+            <button class="btn-table-action" onclick="window.openEditTechnicianModal('${safeId}')" title="Edit technician profile">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              Edit
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  window.renderTechniciansView = renderTechniciansView;
+
+  function filterTechnicians() {
+    renderTechniciansView();
+  }
+  window.filterTechnicians = filterTechnicians;
+
+  // -------------------------------------------------------------------------
+  // ADMIN MODALS: ADD, EDIT, VIEW TECHNICIAN (PHASE 12)
+  // -------------------------------------------------------------------------
+  function openAddTechnicianModal() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    const modal = document.getElementById('addTechnicianModal');
+    const form = document.getElementById('addTechnicianForm');
+    const alertEl = document.getElementById('addTechAlert');
+    if (form) form.reset();
+    if (alertEl) { alertEl.style.display = 'none'; alertEl.innerHTML = ''; }
+
+    const statusSelect = document.getElementById('addTechStatus');
+    if (statusSelect) statusSelect.value = 'Active';
+
+    if (modal) modal.classList.add('active');
+  }
+  window.openAddTechnicianModal = openAddTechnicianModal;
+
+  async function submitAddTechnician() {
+    const token = sessionStorage.getItem('mmsAuthToken') || '';
+    if (!token) {
+      showToast('Authentication required.', 'error');
+      return;
+    }
+
+    const staffIdInput = document.getElementById('addTechStaffId');
+    const nameInput = document.getElementById('addTechName');
+    const phoneInput = document.getElementById('addTechPhone');
+    const statusInput = document.getElementById('addTechStatus');
+    const passwordInput = document.getElementById('addTechPassword');
+    const confirmPasswordInput = document.getElementById('addTechConfirmPassword');
+    const alertEl = document.getElementById('addTechAlert');
+    const submitBtn = document.getElementById('submitAddTechBtn');
+
+    const staffId = (staffIdInput ? staffIdInput.value : '').trim().toUpperCase();
+    const displayName = (nameInput ? nameInput.value : '').trim();
+    const phoneNumber = (phoneInput ? phoneInput.value : '').trim();
+    const accountStatus = (statusInput ? statusInput.value : 'Active');
+    const password = passwordInput ? passwordInput.value : '';
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
+
+    if (alertEl) alertEl.style.display = 'none';
+
+    if (!staffId) {
+      if (alertEl) {
+        alertEl.textContent = 'Staff ID is required.';
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#FEE2E2';
+        alertEl.style.color = '#B91C1C';
+      }
+      return;
+    }
+
+    if (!displayName) {
+      if (alertEl) {
+        alertEl.textContent = 'Full Name is required.';
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#FEE2E2';
+        alertEl.style.color = '#B91C1C';
+      }
+      return;
+    }
+
+    if (!isValidPassword(password)) {
+      if (alertEl) {
+        alertEl.textContent = MMS_PASSWORD_POLICY_MSG;
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#FEE2E2';
+        alertEl.style.color = '#B91C1C';
+      }
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      if (alertEl) {
+        alertEl.textContent = 'Passwords do not match.';
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#FEE2E2';
+        alertEl.style.color = '#B91C1C';
+      }
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating...';
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/manage-technicians', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'create',
+          staffId,
+          displayName,
+          phoneNumber,
+          accountStatus,
+          password
+        })
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data && data.success) {
+        showToast(`Technician ${displayName} created successfully!`, 'success');
+        closeAllModals();
+        fetchTechniciansFromBackend(false);
+      } else if (data && data.partialFailure) {
+        if (alertEl) {
+          alertEl.innerHTML = `
+            <div><strong>Notice:</strong> ${escapeHtml(data.error || 'Technician created in Firebase Auth, but Google Sheets sync failed.')}</div>
+            <button type="button" class="btn-primary" onclick="window.retryTechnicianSync('${escapeHtml(data.firebaseUid)}', '${escapeHtml(data.technicianId)}', '${escapeHtml(data.name)}', '${escapeHtml(data.phoneNumber)}', '${escapeHtml(data.accountStatus)}', '${escapeHtml(data.staffId)}')"
+              style="margin-top:8px; padding:6px 14px; font-size:12px;">
+              Retry Sheets Sync
+            </button>
+          `;
+          alertEl.style.display = 'block';
+          alertEl.style.background = '#FEF3C7';
+          alertEl.style.color = '#92400E';
+        }
+        showToast('Technician created in Firebase Auth. Complete Google Sheets sync.', 'info');
+        fetchTechniciansFromBackend(false);
+      } else {
+        const errMsg = (data && data.error) || 'Failed to create technician account.';
+        if (alertEl) {
+          alertEl.textContent = errMsg;
+          alertEl.style.display = 'block';
+          alertEl.style.background = '#FEE2E2';
+          alertEl.style.color = '#B91C1C';
+        }
+        showToast(errMsg, 'error');
+      }
+    } catch (err) {
+      console.error('[submitAddTechnician] Error:', err);
+      if (alertEl) {
+        alertEl.textContent = 'Network error. Please try again.';
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#FEE2E2';
+        alertEl.style.color = '#B91C1C';
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Technician';
+      }
+    }
+  }
+  window.submitAddTechnician = submitAddTechnician;
+
+  async function retryTechnicianSync(firebaseUid, technicianId, displayName, phoneNumber, accountStatus, staffId) {
+    const token = sessionStorage.getItem('mmsAuthToken') || '';
+    if (!token) return;
+
+    try {
+      const res = await fetch('/.netlify/functions/manage-technicians', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'retry-sync',
+          firebaseUid,
+          technicianId,
+          displayName,
+          phoneNumber,
+          accountStatus,
+          staffId
+        })
+      });
+
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.success) {
+        showToast('Synchronization successful!', 'success');
+        closeAllModals();
+        fetchTechniciansFromBackend(false);
+      } else {
+        showToast('Retry sync failed: ' + ((data && data.error) || 'Unknown error'), 'error');
+      }
+    } catch (err) {
+      showToast('Network error retrying sync.', 'error');
+    }
+  }
+  window.retryTechnicianSync = retryTechnicianSync;
+
+  function openEditTechnicianModal(techId) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    const tech = (state.technicians || []).find(t =>
+      (t.technicianId && t.technicianId.toUpperCase() === String(techId).toUpperCase()) ||
+      (t.staffId && t.staffId.toUpperCase() === String(techId).toUpperCase())
+    );
+
+    if (!tech) {
+      showToast('Technician record not found.', 'error');
+      return;
+    }
+
+    const modal = document.getElementById('editTechnicianModal');
+    const alertEl = document.getElementById('editTechAlert');
+    if (alertEl) { alertEl.style.display = 'none'; alertEl.innerHTML = ''; }
+
+    const idInput = document.getElementById('editTechId');
+    const uidInput = document.getElementById('editTechUid');
+    const staffIdInput = document.getElementById('editTechStaffId');
+    const nameInput = document.getElementById('editTechName');
+    const phoneInput = document.getElementById('editTechPhone');
+    const statusSelect = document.getElementById('editTechStatus');
+
+    if (idInput) idInput.value = tech.technicianId || `TECH-${tech.staffId || ''}`;
+    if (uidInput) uidInput.value = tech.firebaseUid || '';
+    if (staffIdInput) staffIdInput.value = tech.staffId || '';
+    if (nameInput) nameInput.value = tech.name || '';
+    if (phoneInput) phoneInput.value = tech.phoneNumber || '';
+    if (statusSelect) statusSelect.value = (tech.accountStatus === 'Inactive' || tech.disabled) ? 'Inactive' : 'Active';
+
+    if (modal) modal.classList.add('active');
+  }
+  window.openEditTechnicianModal = openEditTechnicianModal;
+
+  async function submitEditTechnician() {
+    const token = sessionStorage.getItem('mmsAuthToken') || '';
+    if (!token) return;
+
+    const idInput = document.getElementById('editTechId');
+    const uidInput = document.getElementById('editTechUid');
+    const staffIdInput = document.getElementById('editTechStaffId');
+    const nameInput = document.getElementById('editTechName');
+    const phoneInput = document.getElementById('editTechPhone');
+    const statusSelect = document.getElementById('editTechStatus');
+    const alertEl = document.getElementById('editTechAlert');
+    const submitBtn = document.getElementById('submitEditTechBtn');
+
+    const technicianId = (idInput ? idInput.value : '').trim();
+    const firebaseUid = (uidInput ? uidInput.value : '').trim();
+    const staffId = (staffIdInput ? staffIdInput.value : '').trim();
+    const displayName = (nameInput ? nameInput.value : '').trim();
+    const phoneNumber = (phoneInput ? phoneInput.value : '').trim();
+    const accountStatus = statusSelect ? statusSelect.value : 'Active';
+
+    if (!displayName) {
+      if (alertEl) {
+        alertEl.textContent = 'Full Name is required.';
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#FEE2E2';
+        alertEl.style.color = '#B91C1C';
+      }
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/manage-technicians', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'update',
+          firebaseUid,
+          technicianId,
+          staffId,
+          displayName,
+          phoneNumber,
+          accountStatus
+        })
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (res.ok && data && data.success) {
+        showToast('Technician details updated successfully!', 'success');
+        const target = (state.technicians || []).find(t =>
+          (t.technicianId && t.technicianId === technicianId) ||
+          (t.firebaseUid && t.firebaseUid === firebaseUid)
+        );
+        if (target) {
+          target.name = displayName;
+          target.phoneNumber = phoneNumber;
+          target.accountStatus = accountStatus;
+          target.disabled = accountStatus === 'Inactive';
+        }
+        closeAllModals();
+        renderTechniciansView();
+        fetchTechniciansFromBackend(false);
+      } else {
+        const errMsg = (data && data.error) || 'Failed to update technician.';
+        if (alertEl) {
+          alertEl.textContent = errMsg;
+          alertEl.style.display = 'block';
+          alertEl.style.background = '#FEE2E2';
+          alertEl.style.color = '#B91C1C';
+        }
+        showToast(errMsg, 'error');
+      }
+    } catch (err) {
+      console.error('[submitEditTechnician] Error:', err);
+      if (alertEl) {
+        alertEl.textContent = 'Network error saving changes.';
+        alertEl.style.display = 'block';
+        alertEl.style.background = '#FEE2E2';
+        alertEl.style.color = '#B91C1C';
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Changes';
+      }
+    }
+  }
+  window.submitEditTechnician = submitEditTechnician;
+
+  function openViewTechnicianModal(techId) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    const tech = (state.technicians || []).find(t =>
+      (t.technicianId && t.technicianId.toUpperCase() === String(techId).toUpperCase()) ||
+      (t.staffId && t.staffId.toUpperCase() === String(techId).toUpperCase())
+    );
+
+    if (!tech) {
+      showToast('Technician record not found.', 'error');
+      return;
+    }
+
+    currentViewingTechId = tech.technicianId || tech.staffId;
+
+    const metrics = calculateTechnicianMetrics(tech);
+    const initials = getInitials(tech.name);
+
+    const avatarEl = document.getElementById('viewTechAvatar');
+    const nameEl = document.getElementById('viewTechName');
+    const badgeEl = document.getElementById('viewTechStatusBadge');
+    const idBadgeEl = document.getElementById('viewTechIdBadge');
+    const staffIdEl = document.getElementById('viewTechStaffId');
+    const phoneEl = document.getElementById('viewTechPhone');
+    const lastActiveEl = document.getElementById('viewTechLastActive');
+    const accountStatusEl = document.getElementById('viewTechAccountStatus');
+    const uidEl = document.getElementById('viewTechUid');
+    const activeJobsListEl = document.getElementById('viewTechActiveJobsList');
+    const bdCompletedEl = document.getElementById('viewTechBdCompleted');
+    const pmCompletedEl = document.getElementById('viewTechPmCompleted');
+    const totalCompletedEl = document.getElementById('viewTechTotalCompleted');
+
+    if (avatarEl) avatarEl.textContent = initials;
+    if (nameEl) nameEl.textContent = tech.name || `Technician ${tech.staffId}`;
+    if (badgeEl) {
+      badgeEl.className = `status-badge ${metrics.statusBadgeClass}`;
+      badgeEl.textContent = metrics.computedStatus;
+    }
+    if (idBadgeEl) idBadgeEl.textContent = tech.technicianId || `TECH-${tech.staffId || ''}`;
+    if (staffIdEl) staffIdEl.textContent = tech.staffId || '—';
+    if (phoneEl) phoneEl.textContent = tech.phoneNumber || '—';
+    if (lastActiveEl) lastActiveEl.textContent = tech.lastActive || '—';
+    if (accountStatusEl) accountStatusEl.textContent = tech.accountStatus || 'Active';
+    if (uidEl) uidEl.textContent = tech.firebaseUid || 'Not linked to Firebase UID';
+
+    if (bdCompletedEl) bdCompletedEl.textContent = metrics.completedBreakdowns.length;
+    if (pmCompletedEl) pmCompletedEl.textContent = metrics.completedPMs.length;
+    if (totalCompletedEl) totalCompletedEl.textContent = metrics.completedCount;
+
+    if (activeJobsListEl) {
+      const activeItems = [];
+      metrics.activeBreakdowns.forEach(b => {
+        activeItems.push(`
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #F1F5F9;">
+            <div>
+              <span class="status-badge status-badge-blue" style="font-size:11px;">${escapeHtml(b.id)}</span>
+              <span style="font-weight:600; color:var(--navy-darkest); margin-left:6px;">${escapeHtml(b.machine)}</span>
+              <span style="font-size:11.5px; color:var(--text-muted); margin-left:4px;">(${escapeHtml(b.problemCategory || 'Breakdown')})</span>
+            </div>
+            <span class="status-badge status-badge-amber" style="font-size:11px;">${escapeHtml(b.status || 'Active')}</span>
+          </div>
+        `);
+      });
+
+      metrics.activePMs.forEach(pm => {
+        activeItems.push(`
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #F1F5F9;">
+            <div>
+              <span class="status-badge status-badge-blue" style="font-size:11px;">${escapeHtml(pm.pmCode)}</span>
+              <span style="font-weight:600; color:var(--navy-darkest); margin-left:6px;">${escapeHtml(pm.machine)}</span>
+              <span style="font-size:11.5px; color:var(--text-muted); margin-left:4px;">(${escapeHtml(pm.taskTitle || 'PM')})</span>
+            </div>
+            <span class="status-badge status-badge-amber" style="font-size:11px;">${escapeHtml(pm.status || 'Scheduled')}</span>
+          </div>
+        `);
+      });
+
+      if (activeItems.length === 0) {
+        activeJobsListEl.innerHTML = `<span style="color:var(--text-muted);">None — No active Breakdown or PM jobs currently assigned.</span>`;
+      } else {
+        activeJobsListEl.innerHTML = activeItems.join('');
+      }
+    }
+
+    const modal = document.getElementById('viewTechnicianModal');
+    if (modal) modal.classList.add('active');
+  }
+  window.openViewTechnicianModal = openViewTechnicianModal;
+
+  function editFromViewModal() {
+    closeAllModals();
+    if (currentViewingTechId) {
+      openEditTechnicianModal(currentViewingTechId);
+    }
+  }
+  window.editFromViewModal = editFromViewModal;
+
+  /**
+   * Throttled activity updater: pings backend to update Last Active timestamp
+   * at most once every 15 minutes per session.
+   */
+  function recordUserActivityThrottled() {
+    const token = sessionStorage.getItem('mmsAuthToken') || '';
+    if (!token) return;
+
+    const LAST_PING_KEY = 'mms_last_activity_ping';
+    const lastPing = parseInt(sessionStorage.getItem(LAST_PING_KEY), 10) || 0;
+    const now = Date.now();
+    const FIFTEEN_MINS = 15 * 60 * 1000;
+
+    if (now - lastPing < FIFTEEN_MINS) {
+      return;
+    }
+
+    sessionStorage.setItem(LAST_PING_KEY, String(now));
+    fetch('/.netlify/functions/manage-technicians', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ action: 'record-activity' })
+    }).catch(e => console.warn('[recordActivity] Background ping notice:', e.message));
+  }
+  window.recordUserActivityThrottled = recordUserActivityThrottled;
 
   // =========================================================================
   // 10. NOTIFICATION SYSTEM
@@ -3882,88 +4849,702 @@
     openResolvePMModal(pmId);
   }
 
-  // Edit Stock Modal
+  // =========================================================================
+  // SPARE PARTS & STOCK REQUEST MODAL HANDLERS
+  // =========================================================================
+
+  function formatCurrentDateTime() {
+    const now = new Date();
+    const pad = n => (n < 10 ? '0' + n : n);
+    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + ' ' +
+      pad(now.getHours()) + ':' + pad(now.getMinutes());
+  }
+
+  // 1. ADD NEW SPARE PART (ADMIN ONLY)
+  function openAddStockModal() {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Adding spare parts is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    const form = document.getElementById('addStockForm');
+    if (form) form.reset();
+
+    const initialQty = document.getElementById('addStockInitialQty');
+    if (initialQty) initialQty.value = '0';
+    const minLimit = document.getElementById('addStockMinLimit');
+    if (minLimit) minLimit.value = '5';
+    const unitEl = document.getElementById('addStockUnit');
+    if (unitEl) unitEl.value = 'pcs';
+
+    const modal = document.getElementById('addStockModal');
+    if (modal) modal.classList.add('active');
+  }
+
+  async function submitAddStock(e) {
+    if (e) e.preventDefault();
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Adding spare parts is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    const code = (document.getElementById('addStockPartCode')?.value || '').trim().toUpperCase();
+    const name = (document.getElementById('addStockPartName')?.value || '').trim();
+    const category = (document.getElementById('addStockCategory')?.value || '').trim();
+    const location = (document.getElementById('addStockLocation')?.value || '').trim();
+    const initialQty = parseInt(document.getElementById('addStockInitialQty')?.value, 10);
+    const minLimit = parseInt(document.getElementById('addStockMinLimit')?.value, 10);
+    const unit = (document.getElementById('addStockUnit')?.value || 'pcs').trim();
+    const unitPrice = parseFloat(document.getElementById('addStockUnitPrice')?.value);
+    const supplier = (document.getElementById('addStockSupplier')?.value || '').trim();
+
+    if (!code || !name || !category || !location || !unit || !supplier) {
+      showToast('All fields are required to add a new spare part.', 'error');
+      return;
+    }
+    if (isNaN(initialQty) || initialQty < 0) {
+      showToast('Initial Stock Quantity must be zero or a positive whole number.', 'error');
+      return;
+    }
+    if (isNaN(minLimit) || minLimit < 0) {
+      showToast('Minimum Stock Limit must be zero or a positive whole number.', 'error');
+      return;
+    }
+    if (isNaN(unitPrice) || unitPrice < 0) {
+      showToast('Unit Price must be zero or a positive number.', 'error');
+      return;
+    }
+
+    // Check unique Part Code locally
+    if ((state.spareParts || []).some(p => p.code.toUpperCase() === code)) {
+      showToast(`Part Code "${code}" already exists in inventory. Part Code must be unique.`, 'error');
+      return;
+    }
+
+    const submitBtn = document.getElementById('addStockSubmitBtn');
+    const spinner = document.getElementById('addStockSpinner');
+    if (submitBtn) submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+
+    const newPart = {
+      code,
+      name,
+      category,
+      location,
+      currentStock: initialQty,
+      minStock: minLimit,
+      unit,
+      unitPrice,
+      supplier,
+      createdAt: formatCurrentDateTime(),
+      updatedAt: formatCurrentDateTime()
+    };
+
+    try {
+      const token = getStoredAuthToken() || '';
+      if (token) {
+        await fetch('/.netlify/functions/manage-spare-parts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'add-stock',
+            code,
+            name,
+            category,
+            location,
+            currentStock: initialQty,
+            minStock: minLimit,
+            unit,
+            unitPrice,
+            supplier
+          })
+        }).catch(err => console.warn('Backend sync warning:', err));
+      }
+
+      state.spareParts.unshift(newPart);
+
+      if (initialQty > 0) {
+        const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
+        state.stockMovements.unshift({
+          id: mId,
+          date: formatCurrentDateTime(),
+          partCode: code,
+          partName: name,
+          type: 'Stock In',
+          qty: initialQty,
+          previousStock: 0,
+          updatedStock: initialQty,
+          balance: initialQty,
+          supplier: supplier,
+          updatedBy: state.currentUser.staffId || state.currentUser.name || 'ADMIN',
+          reference: 'Initial Stock Setup'
+        });
+      }
+
+      saveState();
+      closeAllModals();
+      renderSparePartsView();
+      showToast(`Spare part ${code} added successfully!`, 'success');
+    } catch (err) {
+      showToast('Error saving new spare part: ' + err.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+
+  // 2. ADJUST MINIMUM STOCK LIMIT (ADMIN ONLY)
+  let currentAdjustLimitPartCode = null;
+  function openAdjustLimitModal(partCode) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Adjusting minimum stock limit is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    currentAdjustLimitPartCode = partCode;
+    const part = (state.spareParts || []).find(p => p.code === partCode);
+    if (!part) return;
+
+    document.getElementById('adjLimitPartCode').value = part.code;
+    document.getElementById('adjLimitPartName').value = part.name;
+    document.getElementById('adjLimitCurrentQty').value = `${part.currentStock} ${part.unit}`;
+    document.getElementById('adjLimitCurrentMin').value = `${part.minStock} ${part.unit}`;
+    document.getElementById('adjLimitNewMin').value = part.minStock;
+
+    const modal = document.getElementById('adjustLimitModal');
+    if (modal) modal.classList.add('active');
+  }
+
+  async function submitAdjustLimit(e) {
+    if (e) e.preventDefault();
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Adjusting minimum stock limit is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    if (!currentAdjustLimitPartCode) return;
+    const part = (state.spareParts || []).find(p => p.code === currentAdjustLimitPartCode);
+    if (!part) return;
+
+    const newMin = parseInt(document.getElementById('adjLimitNewMin')?.value, 10);
+    if (isNaN(newMin) || newMin < 0) {
+      showToast('Minimum stock limit must be zero or a positive whole number.', 'error');
+      return;
+    }
+
+    const submitBtn = document.getElementById('adjLimitSubmitBtn');
+    const spinner = document.getElementById('adjLimitSpinner');
+    if (submitBtn) submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+
+    try {
+      const token = getStoredAuthToken() || '';
+      if (token) {
+        await fetch('/.netlify/functions/manage-spare-parts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'adjust-limit',
+            code: part.code,
+            newMinLimit: newMin
+          })
+        }).catch(err => console.warn('Backend sync warning:', err));
+      }
+
+      // Update minimum limit strictly without modifying stock quantity or creating a movement record
+      part.minStock = newMin;
+      part.updatedAt = formatCurrentDateTime();
+
+      saveState();
+      closeAllModals();
+      renderSparePartsView();
+      showToast(`Minimum stock limit for ${part.code} updated to ${newMin} ${part.unit}!`, 'success');
+    } catch (err) {
+      showToast('Failed to update minimum stock limit: ' + err.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+
+  // 3. ADJUST STOCK QUANTITY (ADMIN ONLY)
   let currentEditingPartCode = null;
   function openEditStockModal(partCode) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Adjusting stock quantity is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
     currentEditingPartCode = partCode;
-    const part = state.spareParts.find(p => p.code === partCode);
+    const part = (state.spareParts || []).find(p => p.code === partCode);
     if (!part) return;
 
     document.getElementById('editStockPartCode').value = part.code;
     document.getElementById('editStockPartName').value = part.name;
     document.getElementById('editStockCurrentQty').value = part.currentStock;
-    document.getElementById('editStockMinQty').value = part.minStock;
     document.getElementById('editStockAdjustment').value = 0;
+    const refInput = document.getElementById('editStockReference');
+    if (refInput) refInput.value = '';
 
     const modal = document.getElementById('editStockModal');
     if (modal) modal.classList.add('active');
   }
 
-  function submitStockAdjustment(e) {
+  async function submitStockAdjustment(e) {
     if (e) e.preventDefault();
-    if (!currentEditingPartCode) return;
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Adjusting stock quantity is restricted to Administrator accounts.', 'error');
+      return;
+    }
 
-    const part = state.spareParts.find(p => p.code === currentEditingPartCode);
+    if (!currentEditingPartCode) return;
+    const part = (state.spareParts || []).find(p => p.code === currentEditingPartCode);
     if (!part) return;
 
     const adjustment = parseInt(document.getElementById('editStockAdjustment')?.value, 10) || 0;
-    const newMin = parseInt(document.getElementById('editStockMinQty')?.value, 10) || part.minStock;
+    const reference = (document.getElementById('editStockReference')?.value || 'Manual Adjustment').trim();
 
-    if (adjustment === 0 && newMin === part.minStock) {
+    if (adjustment === 0) {
       closeAllModals();
       return;
     }
 
-    const previousStock = part.currentStock;
-    part.currentStock = Math.max(0, part.currentStock + adjustment);
-    part.minStock = newMin;
+    const previousStock = Number(part.currentStock) || 0;
+    const newStock = Math.max(0, previousStock + adjustment);
 
-    if (adjustment !== 0) {
+    try {
+      const token = getStoredAuthToken() || '';
+      if (token) {
+        await fetch('/.netlify/functions/manage-spare-parts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'adjust-stock',
+            code: part.code,
+            adjustment,
+            reference
+          })
+        }).catch(err => console.warn('Backend sync warning:', err));
+      }
+
+      part.currentStock = newStock;
+      part.updatedAt = formatCurrentDateTime();
+
+      const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
+      const movementType = adjustment > 0 ? 'Stock In' : 'Stock Adjustment';
+
       state.stockMovements.unshift({
-        id: 'MV-' + Math.floor(500 + Math.random() * 500),
-        date: new Date().toLocaleDateString('en-GB') + ' ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        id: mId,
+        date: formatCurrentDateTime(),
         partCode: part.code,
         partName: part.name,
-        type: adjustment > 0 ? 'Received' : 'Manual Adjustment',
+        type: movementType,
         qty: adjustment,
-        balance: part.currentStock,
-        reference: 'Manual Adjustment',
-        handler: state.currentUser.name
+        previousStock,
+        updatedStock: newStock,
+        balance: newStock,
+        supplier: part.supplier,
+        updatedBy: state.currentUser.staffId || state.currentUser.name || 'ADMIN',
+        reference
       });
-    }
 
-    if (part.currentStock <= part.minStock && previousStock > part.minStock) {
-      addNotification('Low Stock Alert', `Spare part ${part.name} fell below threshold (${part.currentStock} left).`, 'spareparts', part.code);
+      saveState();
+      closeAllModals();
+      renderSparePartsView();
+      showToast(`Stock updated for ${part.code} (New balance: ${newStock} ${part.unit})`, 'success');
+    } catch (err) {
+      showToast('Failed to adjust stock: ' + err.message, 'error');
     }
-
-    saveState();
-    closeAllModals();
-    renderAll();
-    showToast(`Stock updated for ${part.code} (New balance: ${part.currentStock} ${part.unit})`, 'success');
   }
 
-  // Request Stock Modal
+  // 4. REQUEST STOCK WORKFLOW (ADMIN & TECHNICIAN)
   function openRequestStockModal(partCode) {
-    const part = state.spareParts.find(p => p.code === partCode);
-    if (part) {
-      document.getElementById('reqStockPartCode').value = part.code;
-      document.getElementById('reqStockPartName').value = part.name;
+    let part = null;
+    if (partCode) {
+      part = (state.spareParts || []).find(p => p.code === partCode);
     }
+    if (!part && state.spareParts && state.spareParts.length > 0) {
+      part = state.spareParts[0];
+    }
+
+    // Generate unique Request ID
+    let maxNum = 1000;
+    (state.stockRequests || []).forEach(r => {
+      const m = (r.requestId || '').match(/REQ-(\d+)/i);
+      if (m) {
+        const num = parseInt(m[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+    const nextReqId = 'REQ-' + (maxNum + 1);
+
+    const idEl = document.getElementById('reqStockId');
+    if (idEl) idEl.value = nextReqId;
+
+    const dateEl = document.getElementById('reqStockDateTime');
+    if (dateEl) dateEl.value = formatCurrentDateTime();
+
+    const user = state.currentUser || {};
+    const byEl = document.getElementById('reqStockRequestedBy');
+    if (byEl) byEl.value = `${user.name || 'Staff User'} (${user.staffId || user.id || 'STAFF'})`;
+
+    const codeEl = document.getElementById('reqStockPartCode');
+    if (codeEl) codeEl.value = part ? part.code : '';
+
+    const nameEl = document.getElementById('reqStockPartName');
+    if (nameEl) nameEl.value = part ? part.name : '';
+
+    const qtyEl = document.getElementById('reqStockQty');
+    if (qtyEl) qtyEl.value = '1';
+
+    const reasonEl = document.getElementById('reqStockReason');
+    if (reasonEl) reasonEl.value = '';
+
     const modal = document.getElementById('requestStockModal');
     if (modal) modal.classList.add('active');
   }
 
-  function submitRequestStock(e) {
+  async function submitRequestStock(e) {
     if (e) e.preventDefault();
-    const partCode = document.getElementById('reqStockPartCode')?.value;
-    const reqQty = document.getElementById('reqStockQty')?.value;
-    const reason = document.getElementById('reqStockReason')?.value;
 
-    addNotification('Spare Part Requested', `Requisition for ${reqQty} units of ${partCode} submitted by ${state.currentUser.name}. Reason: ${reason || 'Buffer restock'}`, 'spareparts', partCode);
-    saveState();
-    closeAllModals();
-    renderAll();
-    showToast(`Stock request for ${partCode} sent to supervisor approval!`, 'success');
+    const requestId = (document.getElementById('reqStockId')?.value || '').trim();
+    const partCode = (document.getElementById('reqStockPartCode')?.value || '').trim();
+    const partName = (document.getElementById('reqStockPartName')?.value || '').trim();
+    const reqQty = parseInt(document.getElementById('reqStockQty')?.value, 10);
+    const reason = (document.getElementById('reqStockReason')?.value || '').trim();
+
+    if (!partCode) {
+      showToast('Part Code is required.', 'error');
+      return;
+    }
+    if (isNaN(reqQty) || reqQty <= 0) {
+      showToast('Requested Quantity must be at least 1 unit.', 'error');
+      return;
+    }
+    if (!reason) {
+      showToast('Please provide a reason / remarks for requisition.', 'error');
+      return;
+    }
+
+    const submitBtn = document.getElementById('reqStockSubmitBtn');
+    const spinner = document.getElementById('reqStockSpinner');
+    if (submitBtn) submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+
+    const user = state.currentUser || {};
+    const staffId = (user.staffId || user.id || 'STAFF').toUpperCase();
+    const userName = user.name || 'Staff User';
+
+    const newRequest = {
+      requestId: requestId || ('REQ-' + Math.floor(1000 + Math.random() * 9000)),
+      requestDate: formatCurrentDateTime(),
+      requestedByStaffId: staffId,
+      requestedByName: userName,
+      partCode,
+      partName,
+      qtyRequested: reqQty,
+      reason,
+      status: 'Pending',
+      approvedBy: '',
+      approvedDate: '',
+      issuedBy: '',
+      issuedDate: '',
+      notes: ''
+    };
+
+    try {
+      const token = getStoredAuthToken() || '';
+      if (token) {
+        await fetch('/.netlify/functions/manage-spare-parts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'request-stock',
+            requestId: newRequest.requestId,
+            partCode,
+            partDescription: partName,
+            qtyRequested: reqQty,
+            reason
+          })
+        }).catch(err => console.warn('Backend sync warning:', err));
+      }
+
+      state.stockRequests.unshift(newRequest);
+      saveState();
+      closeAllModals();
+      renderSparePartsView();
+      switchSparePartsTab('stock-request');
+      showToast(`Stock request ${newRequest.requestId} submitted for approval!`, 'success');
+    } catch (err) {
+      showToast('Failed to submit stock request: ' + err.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+
+  // 5. APPROVE STOCK REQUEST (ADMIN ONLY)
+  async function handleApproveStockRequest(requestId) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Approving requests is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    const req = (state.stockRequests || []).find(r => r.requestId === requestId);
+    if (!req) return;
+
+    if (req.status === 'Issued') {
+      showToast(`Request ${requestId} has already been issued.`, 'error');
+      return;
+    }
+
+    try {
+      const token = getStoredAuthToken() || '';
+      if (token) {
+        await fetch('/.netlify/functions/manage-spare-parts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'approve-request',
+            requestId
+          })
+        }).catch(err => console.warn('Backend sync warning:', err));
+      }
+
+      req.status = 'Approved';
+      req.approvedBy = state.currentUser.staffId || state.currentUser.name || 'ADMIN';
+      req.approvedDate = formatCurrentDateTime();
+
+      saveState();
+      renderStockRequestsTable();
+      showToast(`Request ${requestId} marked as Approved. Ready for issuance.`, 'success');
+    } catch (err) {
+      showToast('Failed to approve request: ' + err.message, 'error');
+    }
+  }
+
+  // 6. REJECT STOCK REQUEST (ADMIN ONLY)
+  async function handleRejectStockRequest(requestId) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Rejecting requests is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    const req = (state.stockRequests || []).find(r => r.requestId === requestId);
+    if (!req) return;
+
+    if (req.status === 'Issued') {
+      showToast(`Cannot reject a request that has already been issued.`, 'error');
+      return;
+    }
+
+    try {
+      const token = getStoredAuthToken() || '';
+      if (token) {
+        await fetch('/.netlify/functions/manage-spare-parts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'reject-request',
+            requestId
+          })
+        }).catch(err => console.warn('Backend sync warning:', err));
+      }
+
+      req.status = 'Rejected';
+      req.approvedBy = state.currentUser.staffId || state.currentUser.name || 'ADMIN';
+      req.approvedDate = formatCurrentDateTime();
+
+      saveState();
+      renderStockRequestsTable();
+      showToast(`Request ${requestId} marked as Rejected.`, 'info');
+    } catch (err) {
+      showToast('Failed to reject request: ' + err.message, 'error');
+    }
+  }
+
+  // 7. ISSUE STOCK (ADMIN ONLY - DEDUCTS INVENTORY UNDER LOCK)
+  async function handleIssueStockRequest(requestId) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      showToast('Access Denied: Issuing stock is restricted to Administrator accounts.', 'error');
+      return;
+    }
+
+    const req = (state.stockRequests || []).find(r => r.requestId === requestId);
+    if (!req) return;
+
+    if (req.status === 'Issued') {
+      showToast(`Duplicate Issue Prevented: Request ${requestId} has already been issued.`, 'error');
+      return;
+    }
+    if (req.status !== 'Approved') {
+      showToast(`Cannot issue stock for request with status "${req.status}". It must be Approved first.`, 'error');
+      return;
+    }
+
+    const part = (state.spareParts || []).find(p => p.code === req.partCode);
+    if (!part) {
+      showToast(`Part ${req.partCode} not found in inventory database.`, 'error');
+      return;
+    }
+
+    const currentStock = Number(part.currentStock) || 0;
+    const requestedQty = Number(req.qtyRequested) || 0;
+
+    // Prevent negative stock
+    if (currentStock < requestedQty) {
+      showToast(`Insufficient stock to issue request! Available: ${currentStock} ${part.unit}, Requested: ${requestedQty} ${part.unit}.`, 'error');
+      return;
+    }
+
+    try {
+      const token = getStoredAuthToken() || '';
+      if (token) {
+        const res = await fetch('/.netlify/functions/manage-spare-parts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'issue-stock',
+            requestId
+          })
+        });
+        const result = await res.json().catch(() => null);
+        if (res.ok && result && result.newStock !== undefined) {
+          part.currentStock = result.newStock;
+        } else if (!res.ok) {
+          showToast((result && result.error) || 'Failed to issue stock on server.', 'error');
+          return;
+        } else {
+          part.currentStock = Math.max(0, currentStock - requestedQty);
+        }
+      } else {
+        part.currentStock = Math.max(0, currentStock - requestedQty);
+      }
+
+      req.status = 'Issued';
+      req.issuedBy = state.currentUser.staffId || state.currentUser.name || 'ADMIN';
+      req.issuedDate = formatCurrentDateTime();
+
+      // Record in audit log
+      const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
+      state.stockMovements.unshift({
+        id: mId,
+        date: formatCurrentDateTime(),
+        partCode: part.code,
+        partName: part.name,
+        type: 'Issued',
+        qty: -requestedQty,
+        previousStock: currentStock,
+        updatedStock: part.currentStock,
+        balance: part.currentStock,
+        supplier: part.supplier,
+        updatedBy: req.issuedBy,
+        reference: requestId
+      });
+
+      saveState();
+      renderSparePartsView();
+      showToast(`Successfully issued ${requestedQty} ${part.unit} of ${part.code}! New balance: ${part.currentStock} ${part.unit}.`, 'success');
+    } catch (err) {
+      showToast('Failed to issue stock: ' + err.message, 'error');
+    }
+  }
+
+  // 8. VIEW STOCK REQUEST DETAILS
+  function openStockRequestDetail(requestId) {
+    const req = (state.stockRequests || []).find(r => r.requestId === requestId);
+    if (!req) return;
+
+    const idEl = document.getElementById('detailReqId');
+    if (idEl) idEl.textContent = req.requestId;
+
+    const stEl = document.getElementById('detailReqStatus');
+    if (stEl) {
+      const st = (req.status || 'Pending').toLowerCase();
+      if (st === 'pending') stEl.innerHTML = `<span class="status-badge status-badge-amber">Pending</span>`;
+      else if (st === 'approved') stEl.innerHTML = `<span class="status-badge status-badge-blue">Approved</span>`;
+      else if (st === 'rejected') stEl.innerHTML = `<span class="status-badge status-badge-red">Rejected</span>`;
+      else if (st === 'issued') stEl.innerHTML = `<span class="status-badge status-badge-green">Issued</span>`;
+      else stEl.innerHTML = `<span class="status-badge status-badge-grey">${escapeHtml(req.status)}</span>`;
+    }
+
+    const dateEl = document.getElementById('detailReqDate');
+    if (dateEl) dateEl.textContent = req.requestDate || '—';
+
+    const byEl = document.getElementById('detailReqBy');
+    if (byEl) byEl.textContent = `${req.requestedByName || 'Staff'} (${req.requestedByStaffId || ''})`;
+
+    const codeEl = document.getElementById('detailReqCode');
+    if (codeEl) codeEl.textContent = req.partCode;
+
+    const qtyEl = document.getElementById('detailReqQty');
+    if (qtyEl) qtyEl.textContent = req.qtyRequested;
+
+    const nameEl = document.getElementById('detailReqName');
+    if (nameEl) nameEl.textContent = req.partName || '—';
+
+    const reasonEl = document.getElementById('detailReqReason');
+    if (reasonEl) reasonEl.textContent = req.reason || '—';
+
+    const secEl = document.getElementById('detailApprovalSection');
+    if (secEl) {
+      let notesHtml = '';
+      if (req.notes) {
+        notesHtml += `<div style="margin-bottom:6px;"><strong>Note:</strong> ${escapeHtml(req.notes)}</div>`;
+      }
+      if (req.approvedBy) {
+        notesHtml += `<div><strong>Approved By:</strong> ${escapeHtml(req.approvedBy)} &bull; ${escapeHtml(req.approvedDate || '—')}</div>`;
+      }
+      if (req.issuedBy) {
+        notesHtml += `<div><strong>Issued By:</strong> ${escapeHtml(req.issuedBy)} &bull; ${escapeHtml(req.issuedDate || '—')}</div>`;
+      }
+      if (!notesHtml) {
+        notesHtml = `<em>Pending supervisor review and approval.</em>`;
+      }
+      secEl.innerHTML = notesHtml;
+    }
+
+    const modal = document.getElementById('stockRequestDetailModal');
+    if (modal) modal.classList.add('active');
   }
 
   // Assign Technician Modal
@@ -4136,6 +5717,12 @@
     const editStockForm = document.getElementById('editStockForm');
     if (editStockForm) editStockForm.addEventListener('submit', submitStockAdjustment);
 
+    const addStockForm = document.getElementById('addStockForm');
+    if (addStockForm) addStockForm.addEventListener('submit', submitAddStock);
+
+    const adjustLimitForm = document.getElementById('adjustLimitForm');
+    if (adjustLimitForm) adjustLimitForm.addEventListener('submit', submitAdjustLimit);
+
     const requestStockForm = document.getElementById('requestStockForm');
     if (requestStockForm) requestStockForm.addEventListener('submit', submitRequestStock);
 
@@ -4230,8 +5817,20 @@
   window.syncPMDashboard = syncPMDashboard;
   window.calculatePMScheduleStatus = calculatePMScheduleStatus;
   window.completePMTask = completePMTask;
+  window.fetchSparePartsFromBackend = fetchSparePartsFromBackend;
+  window.switchSparePartsTab = switchSparePartsTab;
+  window.openAddStockModal = openAddStockModal;
+  window.submitAddStock = submitAddStock;
+  window.openAdjustLimitModal = openAdjustLimitModal;
+  window.submitAdjustLimit = submitAdjustLimit;
   window.openEditStockModal = openEditStockModal;
+  window.submitStockAdjustment = submitStockAdjustment;
   window.openRequestStockModal = openRequestStockModal;
+  window.submitRequestStock = submitRequestStock;
+  window.handleApproveStockRequest = handleApproveStockRequest;
+  window.handleRejectStockRequest = handleRejectStockRequest;
+  window.handleIssueStockRequest = handleIssueStockRequest;
+  window.openStockRequestDetail = openStockRequestDetail;
   window.openAssignTechnicianModal = openAssignTechnicianModal;
   window.resetState = resetState;
   window.showToast = showToast;
@@ -4866,6 +6465,10 @@
         populateStaffIdFromProfile();
         fetchBreakdownsFromBackend();
         fetchPMRecordsFromBackend();
+        if (u.roleCode === 'ADMIN' || u.role === 'Administrator') {
+          fetchTechniciansFromBackend(false);
+        }
+        recordUserActivityThrottled();
         return true;
       } else {
         clearAuthSession();
@@ -4893,6 +6496,10 @@
           populateStaffIdFromProfile();
           fetchBreakdownsFromBackend();
           fetchPMRecordsFromBackend();
+          if (u.roleCode === 'ADMIN' || u.role === 'Administrator') {
+            fetchTechniciansFromBackend(false);
+          }
+          recordUserActivityThrottled();
           return true;
         } catch (e) {
           // parse error
@@ -4986,6 +6593,10 @@
         populateStaffIdFromProfile();
         fetchBreakdownsFromBackend();
         fetchPMRecordsFromBackend();
+        if (u.roleCode === 'ADMIN' || u.role === 'Administrator') {
+          fetchTechniciansFromBackend(false);
+        }
+        recordUserActivityThrottled();
 
         showToast(`Welcome back, ${u.name} (${u.role})`, 'success');
       } else {
