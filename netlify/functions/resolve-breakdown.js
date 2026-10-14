@@ -287,34 +287,90 @@ exports.handler = async function (event, context) {
     }
   }
 
-  // 4. Strictly require and validate Assigned Technician using Firebase Admin SDK
-  const selectedUid = String(technicianUid || assignedTech || '').trim();
-  if (!selectedUid || selectedUid.toLowerCase() === 'unassigned') {
-    return {
-      statusCode: 422,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        error: 'Assigned Technician is strictly required before marking a breakdown as completed.'
-      })
-    };
-  }
-
+  // 4. Role-based Assigned Technician authorization & resolution
   let verifiedStaffId = '';
+  let selectedUid = '';
 
-  try {
-    let technicianRecord = null;
-    try {
-      technicianRecord = await adminAuth.getUser(selectedUid);
-    } catch (notFoundErr) {
+  if (callerRole === 'TECHNICIAN') {
+    // -------------------------------------------------------------------------
+    // B. TECHNICIAN ACCOUNT:
+    // - Ignore any assigned technician value submitted by the browser.
+    // - Resolve the Staff ID from the server-side verified Firebase identity.
+    // - Reject if Staff ID cannot be verified.
+    // -------------------------------------------------------------------------
+    verifiedStaffId = resolveTechnicianStaffId(callerUser);
+
+    if (!verifiedStaffId) {
+      console.warn(`[resolve-breakdown] Staff ID could not be resolved for authenticated technician UID ${callerUser.uid} (email: ${callerUser.email || 'none'})`);
       return {
         statusCode: 422,
         headers,
         body: JSON.stringify({
           success: false,
-          error: 'Assigned technician not found in registered accounts. Please select a valid technician.'
+          error: 'Authenticated technician does not have a verified Staff ID. Please contact system support.'
         })
       };
+    }
+    selectedUid = callerUser.uid;
+  } else if (callerRole === 'ADMIN') {
+    // -------------------------------------------------------------------------
+    // A. ADMIN ACCOUNT:
+    // - Require an explicitly selected valid Technician Staff ID / UID.
+    // - Verify it belongs to an existing registered Technician account.
+    // - Verify account is active (not disabled) and has custom claim role === 'TECHNICIAN'.
+    // - Save the selected Staff ID.
+    // -------------------------------------------------------------------------
+    const candidateTech = String(technicianUid || assignedTech || '').trim();
+    if (!candidateTech || candidateTech.toLowerCase() === 'unassigned') {
+      return {
+        statusCode: 422,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Assigned Technician is strictly required before marking a breakdown as completed.'
+        })
+      };
+    }
+
+    let technicianRecord = null;
+    try {
+      technicianRecord = await adminAuth.getUser(candidateTech);
+    } catch (notFoundErr) {
+      technicianRecord = null;
+    }
+
+    // Fallback: If candidateTech was passed as Staff ID / email rather than UID, search registered users
+    if (!technicianRecord) {
+      try {
+        const staffDomain = (process.env.FIREBASE_STAFF_DOMAIN || 'mms.internal').trim().toLowerCase();
+        if (candidateTech.includes('@')) {
+          try {
+            technicianRecord = await adminAuth.getUserByEmail(candidateTech.toLowerCase());
+          } catch (e) {}
+        } else {
+          try {
+            technicianRecord = await adminAuth.getUserByEmail(`${candidateTech.toLowerCase()}@${staffDomain}`);
+          } catch (e) {}
+        }
+
+        if (!technicianRecord) {
+          let pageToken;
+          do {
+            const listResult = await adminAuth.listUsers(1000, pageToken);
+            const found = (listResult.users || []).find(u => {
+              const sId = resolveTechnicianStaffId(u);
+              return sId && sId.toUpperCase() === candidateTech.toUpperCase();
+            });
+            if (found) {
+              technicianRecord = found;
+              break;
+            }
+            pageToken = listResult.pageToken;
+          } while (pageToken);
+        }
+      } catch (searchErr) {
+        console.warn('[resolve-breakdown] Technician search fallback error:', searchErr);
+      }
     }
 
     if (!technicianRecord) {
@@ -323,7 +379,7 @@ exports.handler = async function (event, context) {
         headers,
         body: JSON.stringify({
           success: false,
-          error: 'Assigned technician account does not exist.'
+          error: 'Assigned technician not found in registered accounts. Please select a valid technician.'
         })
       };
     }
@@ -356,7 +412,7 @@ exports.handler = async function (event, context) {
     // Resolve stable Staff ID: customClaims.staffId -> internal domain email prefix -> reject
     verifiedStaffId = resolveTechnicianStaffId(technicianRecord);
     if (!verifiedStaffId) {
-      console.error(`[resolve-breakdown] Technician assignment rejected for UID ${selectedUid}: no valid Staff ID in customClaims and email (${technicianRecord.email || 'none'}) does not match internal staff domain.`);
+      console.error(`[resolve-breakdown] Technician assignment rejected for UID/identifier ${candidateTech}: no valid Staff ID in customClaims and email (${technicianRecord.email || 'none'}) does not match internal staff domain.`);
       return {
         statusCode: 422,
         headers,
@@ -366,16 +422,8 @@ exports.handler = async function (event, context) {
         })
       };
     }
-  } catch (verifyTechErr) {
-    console.error('[resolve-breakdown] Server-side technician verification failed:', verifyTechErr);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        success: false,
-        error: 'Failed to verify technician account. Please try again or contact system support.'
-      })
-    };
+
+    selectedUid = technicianRecord.uid;
   }
 
   // 5. Connect to Google Apps Script

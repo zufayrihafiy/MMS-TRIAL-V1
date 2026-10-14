@@ -502,17 +502,17 @@
     const roleCode = state.currentUser ? state.currentUser.roleCode : '';
     const isAdmin = roleCode === 'ADMIN' || role === 'Administrator';
 
-    // BD Dashboard restricted indicator (strictly Administrator only)
-    const bdDashboardLock = document.getElementById('bdDashboardLockNotice');
-    const bdDashboardContent = document.getElementById('bdDashboardMainContent');
-    if (bdDashboardLock && bdDashboardContent) {
-      if (!isAdmin) {
-        bdDashboardLock.style.display = 'block';
-        bdDashboardContent.style.display = 'none';
-      } else {
-        bdDashboardLock.style.display = 'none';
-        bdDashboardContent.style.display = 'block';
+    // BD Dashboard access rules (strictly Administrator only)
+    const bdDashboardTab = document.getElementById('bdDashboardTabBtn');
+    if (bdDashboardTab) {
+      bdDashboardTab.style.display = isAdmin ? 'inline-block' : 'none';
+      if (!isAdmin && activeBreakdownTab === 'bd-dashboard') {
+        switchBreakdownTab('active-jobs');
       }
+    }
+    const bdDashboardContent = document.getElementById('bdDashboardMainContent');
+    if (bdDashboardContent) {
+      bdDashboardContent.style.display = isAdmin ? 'block' : 'none';
     }
 
     // Admin-only badges/buttons (strictly tied to verified Admin claim)
@@ -683,13 +683,32 @@
   }
 
   function renderBreakdownView() {
+    applyRolePermissions();
     renderBreakdownTables();
     if (activeBreakdownTab === 'bd-dashboard') {
-      updateBDDashboard();
+      const role = state.currentUser ? state.currentUser.role : '';
+      const roleCode = state.currentUser ? state.currentUser.roleCode : '';
+      const isAdmin = roleCode === 'ADMIN' || role === 'Administrator';
+      if (isAdmin) {
+        updateBDDashboard();
+      } else {
+        switchBreakdownTab('active-jobs');
+      }
     }
   }
 
   function switchBreakdownTab(tabName) {
+    if (tabName === 'bd-dashboard') {
+      const role = state.currentUser ? state.currentUser.role : '';
+      const roleCode = state.currentUser ? state.currentUser.roleCode : '';
+      const isAdmin = roleCode === 'ADMIN' || role === 'Administrator';
+      if (!isAdmin) {
+        showToast('Access Denied: BD Dashboard is restricted exclusively to Administrators.', 'error');
+        switchBreakdownTab('active-jobs');
+        return;
+      }
+    }
+
     activeBreakdownTab = tabName;
     document.querySelectorAll('#breakdownTabs .module-tab-btn').forEach(btn => {
       if (btn.getAttribute('data-tab') === tabName) {
@@ -715,7 +734,7 @@
     } else if (tabName === 'bd-dashboard') {
       updateBDDashboard();
     }
-    fetchBreakdownsFromBackend();
+    fetchBreakdownsFromBackend(true);
   }
 
   /**
@@ -1118,88 +1137,117 @@
 
     updateResolveDowntimePreview();
 
-    // Prepare Assigned Technician dropdown in loading state
+    // Role-based Assigned Technician setup
+    const role = state.currentUser ? state.currentUser.role : '';
+    const roleCode = state.currentUser ? state.currentUser.roleCode : '';
+    const isAdmin = roleCode === 'ADMIN' || role === 'Administrator' || role === 'ADMIN';
+
+    const techGroup = document.getElementById('resolveAssignedTechGroup');
     const techSelect = document.getElementById('resolveAssignedTechSelect');
     const submitBtn = document.getElementById('resolveSubmitBtn');
 
-    if (techSelect) {
-      techSelect.classList.remove('input-error');
-      techSelect.disabled = true;
-      techSelect.innerHTML = '<option value="">Loading registered technicians...</option>';
-      if (submitBtn) submitBtn.disabled = true;
-
-      techSelect.onchange = () => {
-        if (techSelect.value) {
-          techSelect.classList.remove('input-error');
-          if (techErrorEl) techErrorEl.style.display = 'none';
-          if (alertEl && alertEl.textContent.includes('Technician')) {
-            alertEl.style.display = 'none';
-          }
-        }
-      };
-    }
-
-    modal.classList.add('active');
-
-    // Fetch REAL technicians from /.netlify/functions/get-technicians
-    const dirResult = await fetchRegisteredTechnicians();
-
-    if (techSelect) {
-      if (!dirResult.ok) {
-        // If directory cannot be loaded, show error and disable Resolve submission
-        techSelect.disabled = true;
-        techSelect.classList.add('input-error');
-        techSelect.innerHTML = '<option value="">Error loading technicians</option>';
-        if (submitBtn) submitBtn.disabled = true;
-
-        if (techErrorEl) {
-          techErrorEl.textContent = 'Failed to load technician directory: ' + dirResult.error;
-          techErrorEl.style.display = 'block';
-        }
-        if (alertEl) {
-          alertEl.style.display = 'block';
-          alertEl.className = 'login-alert-banner alert-danger';
-          alertEl.innerHTML = `<strong>Technician Directory Error:</strong> ${escapeHtml(dirResult.error)}<br><small>Resolve submission is disabled until registered technicians can be retrieved.</small>`;
-        }
-      } else if (!dirResult.technicians || dirResult.technicians.length === 0) {
-        // If no registered technicians exist, show "No registered technicians available" and disable Resolve submission
-        techSelect.disabled = true;
-        techSelect.classList.add('input-error');
-        techSelect.innerHTML = '<option value="">No registered technicians available</option>';
-        if (submitBtn) submitBtn.disabled = true;
-
-        if (techErrorEl) {
-          techErrorEl.textContent = 'No registered technicians available';
-          techErrorEl.style.display = 'block';
-        }
-        if (alertEl) {
-          alertEl.style.display = 'block';
-          alertEl.className = 'login-alert-banner alert-danger';
-          alertEl.innerHTML = `<strong>No Registered Technicians:</strong> No accounts with the <code>TECHNICIAN</code> role claim exist.<br><small>Resolve submission is disabled.</small>`;
-        }
-      } else {
-        // Populate dropdown with Display Name (Staff ID) and store UID as value
+    if (!isAdmin) {
+      // B. TECHNICIAN ACCOUNT:
+      // 1. Completely hide the Assigned Technician dropdown and its label.
+      // 2. Do not show a disabled dropdown.
+      // 3. Do not require a technician selection.
+      if (techGroup) techGroup.style.display = 'none';
+      if (techSelect) {
+        techSelect.required = false;
         techSelect.disabled = false;
-        let optionsHtml = '<option value="">Select Technician</option>';
-        optionsHtml += dirResult.technicians.map(t => {
-          const label = `${t.displayName} (${t.staffId})`;
-          return `<option value="${escapeHtml(t.uid)}">${escapeHtml(label)}</option>`;
-        }).join('');
-        techSelect.innerHTML = optionsHtml;
+        techSelect.value = '';
+        techSelect.classList.remove('input-error');
+      }
+      if (techErrorEl) techErrorEl.style.display = 'none';
+      if (submitBtn) submitBtn.disabled = false;
 
-        // Enable Resolve submission
-        if (submitBtn) submitBtn.disabled = false;
+      modal.classList.add('active');
+    } else {
+      // A. ADMIN ACCOUNT:
+      // 1. Show the existing Assigned Technician dropdown and label.
+      // 2. Allow Admin to select a Technician.
+      // 3. Assigned Technician remains required.
+      if (techGroup) techGroup.style.display = 'block';
+      if (techSelect) {
+        techSelect.required = true;
+        techSelect.classList.remove('input-error');
+        techSelect.disabled = true;
+        techSelect.innerHTML = '<option value="">Loading registered technicians...</option>';
+        if (submitBtn) submitBtn.disabled = true;
 
-        // Pre-select if already assigned to a valid technician
-        if (item.assignedTech && item.assignedTech !== 'Unassigned' && item.assignedTech.trim() !== '') {
-          const match = dirResult.technicians.find(t => t.uid === item.assignedTech || t.staffId === item.assignedTech);
-          if (match) {
-            techSelect.value = match.uid;
+        techSelect.onchange = () => {
+          if (techSelect.value) {
+            techSelect.classList.remove('input-error');
+            if (techErrorEl) techErrorEl.style.display = 'none';
+            if (alertEl && alertEl.textContent.includes('Technician')) {
+              alertEl.style.display = 'none';
+            }
+          }
+        };
+      }
+
+      modal.classList.add('active');
+
+      // Fetch REAL technicians from /.netlify/functions/get-technicians
+      const dirResult = await fetchRegisteredTechnicians();
+
+      if (techSelect) {
+        if (!dirResult.ok) {
+          // If directory cannot be loaded, show error and disable Resolve submission
+          techSelect.disabled = true;
+          techSelect.classList.add('input-error');
+          techSelect.innerHTML = '<option value="">Error loading technicians</option>';
+          if (submitBtn) submitBtn.disabled = true;
+
+          if (techErrorEl) {
+            techErrorEl.textContent = 'Failed to load technician directory: ' + dirResult.error;
+            techErrorEl.style.display = 'block';
+          }
+          if (alertEl) {
+            alertEl.style.display = 'block';
+            alertEl.className = 'login-alert-banner alert-danger';
+            alertEl.innerHTML = `<strong>Technician Directory Error:</strong> ${escapeHtml(dirResult.error)}<br><small>Resolve submission is disabled until registered technicians can be retrieved.</small>`;
+          }
+        } else if (!dirResult.technicians || dirResult.technicians.length === 0) {
+          // If no registered technicians exist, show "No registered technicians available" and disable Resolve submission
+          techSelect.disabled = true;
+          techSelect.classList.add('input-error');
+          techSelect.innerHTML = '<option value="">No registered technicians available</option>';
+          if (submitBtn) submitBtn.disabled = true;
+
+          if (techErrorEl) {
+            techErrorEl.textContent = 'No registered technicians available';
+            techErrorEl.style.display = 'block';
+          }
+          if (alertEl) {
+            alertEl.style.display = 'block';
+            alertEl.className = 'login-alert-banner alert-danger';
+            alertEl.innerHTML = `<strong>No Registered Technicians:</strong> No accounts with the <code>TECHNICIAN</code> role claim exist.<br><small>Resolve submission is disabled.</small>`;
+          }
+        } else {
+          // Populate dropdown with Display Name (Staff ID) and store UID as value
+          techSelect.disabled = false;
+          let optionsHtml = '<option value="">Select Technician</option>';
+          optionsHtml += dirResult.technicians.map(t => {
+            const label = `${t.displayName} (${t.staffId})`;
+            return `<option value="${escapeHtml(t.uid)}">${escapeHtml(label)}</option>`;
+          }).join('');
+          techSelect.innerHTML = optionsHtml;
+
+          // Enable Resolve submission
+          if (submitBtn) submitBtn.disabled = false;
+
+          // Pre-select if already assigned to a valid technician
+          if (item.assignedTech && item.assignedTech !== 'Unassigned' && item.assignedTech.trim() !== '') {
+            const match = dirResult.technicians.find(t => t.uid === item.assignedTech || t.staffId === item.assignedTech);
+            if (match) {
+              techSelect.value = match.uid;
+            } else {
+              techSelect.value = '';
+            }
           } else {
             techSelect.value = '';
           }
-        } else {
-          techSelect.value = '';
         }
       }
     }
@@ -1301,22 +1349,29 @@
       return;
     }
 
-    // 2. Validate Assigned Technician (MANDATORY REQUIREMENT: Must be a selected Firebase technician UID)
-    if (!selectedTechUid || selectedTechUid.toLowerCase() === 'unassigned') {
-      if (alertEl) {
-        alertEl.style.display = 'block';
-        alertEl.className = 'login-alert-banner alert-danger';
-        alertEl.textContent = 'Assigned Technician is strictly required. Please select a registered technician before completing repair.';
+    // Check role for role-based resolve workflow
+    const role = state.currentUser ? state.currentUser.role : '';
+    const roleCode = state.currentUser ? state.currentUser.roleCode : '';
+    const isAdmin = roleCode === 'ADMIN' || role === 'Administrator' || role === 'ADMIN';
+
+    // 2. Validate Assigned Technician (FOR ADMIN ONLY)
+    if (isAdmin) {
+      if (!selectedTechUid || selectedTechUid.toLowerCase() === 'unassigned') {
+        if (alertEl) {
+          alertEl.style.display = 'block';
+          alertEl.className = 'login-alert-banner alert-danger';
+          alertEl.textContent = 'Assigned Technician is strictly required. Please select a registered technician before completing repair.';
+        }
+        if (techErrorEl) {
+          techErrorEl.textContent = 'Please select a registered technician from the dropdown.';
+          techErrorEl.style.display = 'block';
+        }
+        if (techSelect) {
+          techSelect.classList.add('input-error');
+          techSelect.focus();
+        }
+        return;
       }
-      if (techErrorEl) {
-        techErrorEl.textContent = 'Please select a registered technician from the dropdown.';
-        techErrorEl.style.display = 'block';
-      }
-      if (techSelect) {
-        techSelect.classList.add('input-error');
-        techSelect.focus();
-      }
-      return;
     }
 
     // Set Loading State
@@ -1340,19 +1395,22 @@
 
     const targetItem = state.breakdowns.find(b => b.id === bdId);
 
-    // Payload passes technician UID to be verified server-side via Firebase Admin SDK
+    // Payload: For Admin, pass selected technician UID. For Technician, do NOT pass user-selected ID (resolved server-side).
     const payload = {
       id: bdId,
       machine: targetItem ? targetItem.machine : '',
       startTime: startVal,
       endTime: endTime,
-      technicianUid: selectedTechUid,
-      assignedTech: selectedTechUid,
       staffId: targetItem ? (targetItem.reportedBy || targetItem.staffId || '') : '',
       downtime: diffMin,
       afterPhoto: afterPhotoObj ? afterPhotoObj.name : '',
       photoFiles: afterPhotoObj ? { after: afterPhotoObj } : null
     };
+
+    if (isAdmin && selectedTechUid) {
+      payload.technicianUid = selectedTechUid;
+      payload.assignedTech = selectedTechUid;
+    }
 
     try {
       const response = await fetch('/.netlify/functions/resolve-breakdown', {
@@ -1365,9 +1423,9 @@
 
       if (response.ok && result && result.success) {
         // Resolve display name / staff ID for UI feedback
-        const matchedTech = cachedFirebaseTechnicians?.find(t => t.uid === selectedTechUid);
-        const resolvedStaffId = result.assignedTech || (matchedTech ? matchedTech.staffId : selectedTechUid);
-        const resolvedDisplay = matchedTech ? `${matchedTech.displayName} (${matchedTech.staffId})` : resolvedStaffId;
+        const matchedTech = cachedFirebaseTechnicians?.find(t => t.uid === (isAdmin ? selectedTechUid : result.technicianUid));
+        const resolvedStaffId = result.assignedTech || (matchedTech ? matchedTech.staffId : (isAdmin ? selectedTechUid : (state.currentUser?.staffId || '')));
+        const resolvedDisplay = matchedTech ? `${matchedTech.displayName} (${matchedTech.staffId})` : (state.currentUser?.name ? `${state.currentUser.name} (${resolvedStaffId})` : resolvedStaffId);
 
         // Update local state record
         const item = targetItem || state.breakdowns.find(b => b.id === bdId);
@@ -1375,7 +1433,7 @@
           item.status = 'Completed';
           item.endTime = endTime;
           item.assignedTech = resolvedStaffId;
-          item.technicianUid = selectedTechUid;
+          item.technicianUid = isAdmin ? selectedTechUid : (result.technicianUid || state.currentUser?.uid || '');
           item.downtimeMin = (result.downtime !== undefined && result.downtime !== null) ? result.downtime : diffMin;
           item.downtime = item.downtimeMin;
           if (afterPhotoObj) {
@@ -1421,25 +1479,23 @@
   async function updateBDDashboard() {
     const monthSelect = document.getElementById('bdDashboardMonth');
     const yearSelect = document.getElementById('bdDashboardYear');
-    const lockNotice = document.getElementById('bdDashboardLockNotice');
     const mainContent = document.getElementById('bdDashboardMainContent');
 
-    const now = new Date();
-    const selectedMonth = monthSelect ? parseInt(monthSelect.value, 10) : now.getMonth();
-    const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : now.getFullYear();
-
-    // Verify Server-Side Authorization for Admin
+    // Strict Client Route Protection: ADMIN Only
     const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
     const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
 
     if (!isAdmin) {
-      if (lockNotice) lockNotice.style.display = 'block';
       if (mainContent) mainContent.style.display = 'none';
+      switchBreakdownTab('active-jobs');
       return;
     } else {
-      if (lockNotice) lockNotice.style.display = 'none';
       if (mainContent) mainContent.style.display = 'block';
     }
+
+    const now = new Date();
+    const selectedMonth = monthSelect ? parseInt(monthSelect.value, 10) : now.getMonth();
+    const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : now.getFullYear();
 
     // 1. Breakdowns occurring in selected period (based on Breakdown Start Time)
     const monthBreakdowns = state.breakdowns.filter(b => {
@@ -1818,14 +1874,50 @@
 
   let lastBackendFetchError = null;
 
+  let isActiveJobsSyncing = false;
+
+  /**
+   * Sync Active Breakdown Jobs button handler with loading spinner, session preservation, and duplicate protection.
+   */
+  async function syncActiveJobs() {
+    if (isActiveJobsSyncing) return;
+    isActiveJobsSyncing = true;
+
+    const btn = document.getElementById('syncActiveJobsBtn');
+    const spinIcon = btn ? btn.querySelector('.sync-icon') : null;
+    const textSpan = btn ? btn.querySelector('span') : null;
+    const originalText = textSpan ? textSpan.textContent : 'Sync';
+
+    if (btn) btn.disabled = true;
+    if (spinIcon) spinIcon.classList.add('is-spinning');
+    if (textSpan) textSpan.textContent = 'Syncing...';
+
+    try {
+      const result = await fetchBreakdownsFromBackend(false);
+      if (result && result.ok) {
+        showToast('Breakdown records updated successfully.', 'success');
+      } else {
+        const errMsg = (result && result.error) || 'Failed to update breakdown records from database.';
+        showToast('Sync Failed: ' + errMsg, 'error');
+      }
+    } catch (err) {
+      showToast('Sync Error: ' + err.message, 'error');
+    } finally {
+      isActiveJobsSyncing = false;
+      if (spinIcon) spinIcon.classList.remove('is-spinning');
+      if (textSpan) textSpan.textContent = originalText;
+      if (btn) btn.disabled = false;
+    }
+  }
+
   /**
    * Fetch live records from Google Sheets BD DATABASE via Netlify Function
    * All records originate strictly from the backend. If backend returns no records,
    * display an empty state. If request fails, show an appropriate error without fabricated data.
    */
-  async function fetchBreakdownsFromBackend() {
+  async function fetchBreakdownsFromBackend(silent = true) {
     const token = getStoredAuthToken() || '';
-    if (!token) return;
+    if (!token) return { ok: false, error: 'Not authenticated' };
 
     try {
       const res = await fetch('/.netlify/functions/get-breakdowns', {
@@ -1863,25 +1955,29 @@
         saveState();
         renderBreakdownTables();
         updateKPICounters();
-        if (activeBreakdownTab === 'bd-dashboard') {
+        const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+        const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+        if (isAdmin && activeBreakdownTab === 'bd-dashboard') {
           updateBDDashboard();
         }
+        return { ok: true, count: state.breakdowns.length };
       } else {
         const errMsg = (result && (result.error || result.message)) || `Server returned HTTP ${res.status}`;
         lastBackendFetchError = errMsg;
         renderBreakdownTables();
-        if (activeBreakdownTab === 'bd-dashboard') {
-          updateBDDashboard();
+        if (!silent) {
+          showToast('Database Sync Error: ' + errMsg, 'error');
         }
-        showToast('Database Sync Error: ' + errMsg, 'error');
+        return { ok: false, error: errMsg };
       }
     } catch (e) {
-      lastBackendFetchError = 'Network connection failed: ' + e.message;
+      const errMsg = 'Network connection failed: ' + e.message;
+      lastBackendFetchError = errMsg;
       renderBreakdownTables();
-      if (activeBreakdownTab === 'bd-dashboard') {
-        updateBDDashboard();
+      if (!silent) {
+        showToast('Network error: Unable to connect to Google Sheets backend.', 'error');
       }
-      showToast('Network error: Unable to connect to Google Sheets backend.', 'error');
+      return { ok: false, error: errMsg };
     }
   }
 
@@ -2074,6 +2170,81 @@
   }
 
   /**
+   * Get current date string (YYYY-MM-DD) in Asia/Kuala_Lumpur (UTC+8)
+   */
+  function getTodayDateStringKL() {
+    try {
+      const klFormatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      return klFormatter.format(new Date());
+    } catch (e) {
+      const now = new Date();
+      return now.toISOString().slice(0, 10);
+    }
+  }
+
+  /**
+   * Calculate schedule indicator for a PM record:
+   * Timezone: Asia/Kuala_Lumpur
+   * Week definition: Monday through Sunday
+   * - Waiting (Green): today < Monday of scheduled week
+   * - On Going (Yellow): Monday <= today <= Sunday of scheduled week
+   * - Overdue (Red): today > Sunday of scheduled week
+   */
+  function calculatePMScheduleStatus(scheduledDateStr) {
+    if (!scheduledDateStr) {
+      return { status: 'Waiting', badgeClass: 'status-badge-green' };
+    }
+
+    const todayKL = getTodayDateStringKL();
+
+    const cleanDate = String(scheduledDateStr).trim().slice(0, 10);
+    const parts = cleanDate.split(/[-/]/).map(Number);
+    if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
+      return { status: 'Waiting', badgeClass: 'status-badge-green' };
+    }
+
+    const year = parts[0];
+    const month = parts[1];
+    const day = parts[2];
+    const dt = new Date(Date.UTC(year, month - 1, day));
+    const dayOfWeek = dt.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+    const monDiff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const sunDiff = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+
+    const monDate = new Date(Date.UTC(year, month - 1, day + monDiff));
+    const sunDate = new Date(Date.UTC(year, month - 1, day + sunDiff));
+
+    const mondayStr = monDate.toISOString().slice(0, 10);
+    const sundayStr = sunDate.toISOString().slice(0, 10);
+
+    if (todayKL < mondayStr) {
+      return { status: 'Waiting', badgeClass: 'status-badge-green' };
+    } else if (todayKL <= sundayStr) {
+      return { status: 'On Going', badgeClass: 'status-badge-yellow' };
+    } else {
+      return { status: 'Overdue', badgeClass: 'status-badge-red' };
+    }
+  }
+
+  // Periodic check (every 60 seconds) to recalculate schedule indicators if calendar day changes in KL
+  let lastEvaluatedDayKL = getTodayDateStringKL();
+  setInterval(() => {
+    const currentDay = getTodayDateStringKL();
+    if (currentDay !== lastEvaluatedDayKL) {
+      lastEvaluatedDayKL = currentDay;
+      if (activeMaintenanceTab === 'pm-schedule') {
+        renderOngoingPMTable();
+      }
+    }
+  }, 60000);
+
+  /**
    * Render Table 1: Ongoing Preventive Maintenance
    */
   function renderOngoingPMTable() {
@@ -2081,7 +2252,7 @@
     if (!tbody) return;
 
     if (lastPMFetchError && (!state.preventiveMaintenance || state.preventiveMaintenance.length === 0)) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#E53E3E; font-weight:500;">
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:#E53E3E; font-weight:500;">
         <div style="margin-bottom:6px;">&#9888; Database Connection Error</div>
         <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(lastPMFetchError)}</div>
       </td></tr>`;
@@ -2097,7 +2268,7 @@
     ongoingList.sort((a, b) => String(a.scheduledDate || '').localeCompare(String(b.scheduledDate || '')));
 
     if (ongoingList.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:32px 16px; color:var(--text-muted);">
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px 16px; color:var(--text-muted);">
         <div style="font-weight:600; color:var(--navy-darkest); margin-bottom:4px;">No ongoing preventive maintenance tasks found.</div>
         <div style="font-size:12px;">All scheduled maintenance tasks are currently up-to-date or resolved.</div>
       </td></tr>`;
@@ -2112,6 +2283,7 @@
       const assignedTech = (item.assignedTech || '').toUpperCase();
       const canResolve = isAdmin || (assignedTech === currentStaffId && currentStaffId !== '');
       const typeBadgeClass = item.maintenanceType === 'Scheduled' ? 'status-badge-blue' : 'status-badge-purple';
+      const schedStatus = calculatePMScheduleStatus(item.scheduledDate);
 
       return `
         <tr>
@@ -2131,6 +2303,7 @@
               ${escapeHtml(item.assignedTech || 'Unassigned')}
             </span>
           </td>
+          <td><span class="status-badge ${schedStatus.badgeClass}">${escapeHtml(schedStatus.status)}</span></td>
           <td>
             <div class="action-btn-group">
               ${canResolve ? `
@@ -2601,16 +2774,69 @@
   /**
    * PM DASHBOARD: Admin-Only KPI & Chart Rendering
    */
-  async function updatePMDashboard() {
-    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
-    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
-    if (!isAdmin) return;
+  let isPMDashboardSyncing = false;
 
-    const token = getStoredAuthToken() || '';
-    if (!token) return;
+  /**
+   * Sync PM Dashboard button handler with loading spinner, session preservation, and duplicate protection.
+   */
+  async function syncPMDashboard() {
+    if (isPMDashboardSyncing) return;
+    isPMDashboardSyncing = true;
+
+    const btn = document.getElementById('syncPMDashboardBtn');
+    const spinIcon = btn ? btn.querySelector('.sync-icon') : null;
+    const textSpan = btn ? btn.querySelector('span') : null;
+    const originalText = textSpan ? textSpan.textContent : 'Sync';
+
+    if (btn) btn.disabled = true;
+    if (spinIcon) spinIcon.classList.add('is-spinning');
+    if (textSpan) textSpan.textContent = 'Syncing...';
 
     try {
-      const res = await fetch('/.netlify/functions/get-pm-dashboard', {
+      const result = await updatePMDashboard(false);
+      if (result && result.ok) {
+        showToast('PM Dashboard records updated successfully.', 'success');
+      } else {
+        const errMsg = (result && result.error) || 'Failed to update PM Dashboard records from database.';
+        showToast('Sync Failed: ' + errMsg, 'error');
+      }
+    } catch (err) {
+      showToast('Sync Error: ' + err.message, 'error');
+    } finally {
+      isPMDashboardSyncing = false;
+      if (spinIcon) spinIcon.classList.remove('is-spinning');
+      if (textSpan) textSpan.textContent = originalText;
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  /**
+   * Update PM Dashboard KPI cards and Infographics with period filter support.
+   */
+  async function updatePMDashboard(silent = true) {
+    const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+    const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+    if (!isAdmin) {
+      switchMaintenanceTab('pm-schedule');
+      return { ok: false, error: 'Access Denied: Admin only' };
+    }
+
+    const monthSelect = document.getElementById('pmDashboardMonth');
+    const yearSelect = document.getElementById('pmDashboardYear');
+    const todayKL = getTodayDateStringKL();
+    const [currYearKL, currMonthKL] = todayKL.split('-').map(Number);
+
+    const selectedMonth = monthSelect && monthSelect.value !== '' ? parseInt(monthSelect.value, 10) : (currMonthKL - 1);
+    const selectedYear = yearSelect && yearSelect.value !== '' ? parseInt(yearSelect.value, 10) : currYearKL;
+
+    const token = getStoredAuthToken() || '';
+    if (!token) {
+      if (!silent) showToast('Authentication session expired. Please log in again.', 'error');
+      return { ok: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const res = await fetch(`/.netlify/functions/get-pm-dashboard?month=${selectedMonth}&year=${selectedYear}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -2620,39 +2846,80 @@
           // 1. KPI Cards
           const compRateEl = document.getElementById('pmKpiComplianceRate');
           if (compRateEl) compRateEl.textContent = data.kpis.complianceRate || 'N/A';
+          const compSubEl = document.getElementById('pmKpiComplianceSub');
+          if (compSubEl && data.kpis.complianceRateSub) compSubEl.textContent = data.kpis.complianceRateSub;
 
+          const compTitleEl = document.getElementById('pmKpiCompletedTitle');
+          if (compTitleEl && data.kpis.completedInPeriodTitle) compTitleEl.textContent = data.kpis.completedInPeriodTitle;
+
+          const compCount = data.kpis.completedInPeriod !== undefined ? data.kpis.completedInPeriod : data.kpis.completedPast30Days;
           const comp30El = document.getElementById('pmKpiCompleted30Days');
-          if (comp30El) comp30El.textContent = `${data.kpis.completedPast30Days} Tasks`;
+          if (comp30El) comp30El.textContent = `${compCount} Tasks`;
+
+          const comp30SubEl = document.getElementById('pmKpiCompleted30DaysSub');
+          if (comp30SubEl && data.kpis.completedInPeriodSub) comp30SubEl.textContent = data.kpis.completedInPeriodSub;
 
           const ratioEl = document.getElementById('pmKpiRatio');
           if (ratioEl) ratioEl.textContent = data.kpis.breakdownVsPmRatio || 'N/A';
+          const ratioSubEl = document.getElementById('pmKpiRatioSub');
+          if (ratioSubEl && data.kpis.rawRatioLabel) ratioSubEl.textContent = data.kpis.rawRatioLabel;
 
           const overdueEl = document.getElementById('pmKpiOverdue');
           if (overdueEl) {
             overdueEl.textContent = data.kpis.overdueTasks;
             overdueEl.style.color = data.kpis.overdueTasks > 0 ? '#E53E3E' : '#10B981';
           }
+          const overdueSubEl = document.getElementById('pmKpiOverdueSub');
+          if (overdueSubEl && data.kpis.overdueSub) overdueSubEl.textContent = data.kpis.overdueSub;
 
-          // 2. Charts
+          // 2. Chart Subtitles
+          const trendSubEl = document.getElementById('chartPMCompletionTrendSub');
+          if (trendSubEl && data.charts.monthlyTrend.subtitle) trendSubEl.textContent = data.charts.monthlyTrend.subtitle;
+
+          const typeDistSubEl = document.getElementById('chartPMTypeDistributionSub');
+          if (typeDistSubEl && data.charts.typeDistribution.subtitle) typeDistSubEl.textContent = data.charts.typeDistribution.subtitle;
+
+          const machineRankSubEl = document.getElementById('chartPMMachineRankSub');
+          if (machineRankSubEl && data.charts.machineRank.subtitle) machineRankSubEl.textContent = data.charts.machineRank.subtitle;
+
+          // 3. Render Charts
           renderPMDashboardCharts(data.charts.monthlyTrend, data.charts.typeDistribution, data.charts.machineRank);
-          return;
+          return { ok: true };
         }
       }
-    } catch (err) {
-      console.warn('Dashboard fetch warning, falling back to local calculation:', err);
-    }
 
-    // Client-side fallback calculation if endpoint is offline
-    calculateAndRenderPMLocalDashboard();
+      const errMsg = `Server returned HTTP ${res.status}`;
+      if (!silent) showToast('Sync Failed: ' + errMsg, 'error');
+      return { ok: false, error: errMsg };
+    } catch (err) {
+      console.warn('Dashboard fetch error:', err);
+      if (!silent) showToast('Network Error: Unable to reach PM Dashboard service.', 'error');
+      // Client-side fallback calculation if endpoint is temporarily unreachable
+      calculateAndRenderPMLocalDashboard(selectedMonth, selectedYear);
+      return { ok: false, error: err.message };
+    }
   }
 
-  function calculateAndRenderPMLocalDashboard() {
+  function calculateAndRenderPMLocalDashboard(filterMonth, filterYear) {
     const pmList = state.preventiveMaintenance || [];
     const bdList = state.breakdowns || [];
 
-    const now = new Date();
-    const todayKL = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    const thirtyDaysAgoMs = now.getTime() - (30 * 24 * 60 * 60 * 1000);
+    const todayKL = getTodayDateStringKL();
+    const [currYearKL, currMonthKL] = todayKL.split('-').map(Number);
+
+    const selectedMonth = filterMonth !== undefined ? filterMonth : (currMonthKL - 1);
+    const selectedYear = filterYear !== undefined ? filterYear : currYearKL;
+
+    const pad2 = n => String(n).padStart(2, '0');
+    const monthNum = selectedMonth + 1;
+    const monthKey = `${selectedYear}-${pad2(monthNum)}`;
+    const lastDayOfMonth = new Date(Date.UTC(selectedYear, monthNum, 0)).getUTCDate();
+    const periodStart = `${monthKey}-01`;
+    const periodEnd = `${monthKey}-${pad2(lastDayOfMonth)}`;
+
+    const isCurrentMonth = (selectedYear === currYearKL && monthNum === currMonthKL);
+    const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const repMonthShort = MONTH_NAMES_SHORT[selectedMonth];
 
     // 1. Compliance Rate
     let scheduledDue = 0;
@@ -2660,9 +2927,19 @@
     for (const r of pmList) {
       if ((r.maintenanceType || '').trim() !== 'Scheduled') continue;
       const sDate = (r.scheduledDate || '').trim().slice(0, 10);
-      if (!sDate) continue;
+      if (!sDate || !/^\d{4}-\d{2}-\d{2}$/.test(sDate)) continue;
+      if (sDate < periodStart || sDate > periodEnd) continue;
+
       const isComp = (r.status || '').trim() === 'Completed';
-      if (sDate <= todayKL || isComp) {
+      if (isCurrentMonth) {
+        if (sDate <= todayKL || isComp) {
+          scheduledDue++;
+          if (isComp && r.completionDateTime) {
+            const compDate = (r.completionDateTime || '').trim().slice(0, 10);
+            if (compDate && compDate <= sDate) scheduledOnTime++;
+          }
+        }
+      } else {
         scheduledDue++;
         if (isComp && r.completionDateTime) {
           const compDate = (r.completionDateTime || '').trim().slice(0, 10);
@@ -2672,69 +2949,113 @@
     }
     const compRateStr = scheduledDue > 0 ? ((scheduledOnTime / scheduledDue) * 100).toFixed(1) + '%' : 'N/A';
 
-    // 2. Completed Past 30 Days
-    let comp30Count = 0;
+    // 2. Completed PMs in reporting period
+    let compCount = 0;
     for (const r of pmList) {
       if ((r.status || '').trim() !== 'Completed') continue;
-      const t = new Date(r.completionDateTime).getTime();
-      if (!isNaN(t) && t >= thirtyDaysAgoMs) comp30Count++;
+      const compDate = (r.completionDateTime || r.scheduledDate || '').trim().slice(0, 10);
+      if (compDate >= periodStart && compDate <= periodEnd) compCount++;
     }
 
     // 3. Ratio
-    const totalBD = bdList.length;
-    let totalPM = pmList.filter(r => (r.status || '').trim() === 'Completed').length;
+    let bdInPeriod = 0;
+    for (const r of bdList) {
+      const d = (r.startTime || r.reportedAt || r.time || '').trim().slice(0, 10);
+      if (d >= periodStart && d <= periodEnd) bdInPeriod++;
+    }
+
     let ratioStr = 'N/A';
-    if (totalBD === 0 && totalPM === 0) ratioStr = '0 : 0';
-    else if (totalBD === 0) ratioStr = `0 : ${totalPM}`;
-    else if (totalPM === 0) ratioStr = `${totalBD} : 0`;
-    else ratioStr = `1 : ${(totalPM / totalBD).toFixed(1)}`;
+    if (bdInPeriod === 0 && compCount === 0) ratioStr = '0 : 0';
+    else if (bdInPeriod === 0) ratioStr = `0 : ${compCount}`;
+    else if (compCount === 0) ratioStr = `${bdInPeriod} : 0`;
+    else ratioStr = `1 : ${(compCount / bdInPeriod).toFixed(1)}`;
 
     // 4. Overdue
     let overdueCount = 0;
     for (const r of pmList) {
-      if ((r.status || '').trim() === 'Completed') continue;
       if ((r.maintenanceType || '').trim() !== 'Scheduled') continue;
       const sDate = (r.scheduledDate || '').trim().slice(0, 10);
-      if (sDate && sDate < todayKL) overdueCount++;
+      if (!sDate || !/^\d{4}-\d{2}-\d{2}$/.test(sDate)) continue;
+
+      if (isCurrentMonth) {
+        const s = (r.status || '').trim();
+        if ((s === 'Pending' || s === 'In Progress') && sDate < todayKL) overdueCount++;
+      } else {
+        if (sDate >= periodStart && sDate <= periodEnd) {
+          const isComp = (r.status || '').trim() === 'Completed';
+          if (!isComp) overdueCount++;
+          else if (r.completionDateTime && (r.completionDateTime || '').trim().slice(0, 10) > sDate) overdueCount++;
+        }
+      }
     }
 
     const compRateEl = document.getElementById('pmKpiComplianceRate');
     if (compRateEl) compRateEl.textContent = compRateStr;
+    const compSubEl = document.getElementById('pmKpiComplianceSub');
+    if (compSubEl) compSubEl.textContent = `Scheduled PMs met on deadline (${repMonthShort} ${selectedYear})`;
+
+    const compTitleEl = document.getElementById('pmKpiCompletedTitle');
+    if (compTitleEl) compTitleEl.textContent = `Completed PMs (${repMonthShort} ${selectedYear})`;
     const comp30El = document.getElementById('pmKpiCompleted30Days');
-    if (comp30El) comp30El.textContent = `${comp30Count} Tasks`;
+    if (comp30El) comp30El.textContent = `${compCount} Tasks`;
+    const comp30SubEl = document.getElementById('pmKpiCompleted30DaysSub');
+    if (comp30SubEl) comp30SubEl.textContent = `Actual closed tasks in ${repMonthShort} ${selectedYear}`;
+
     const ratioEl = document.getElementById('pmKpiRatio');
     if (ratioEl) ratioEl.textContent = ratioStr;
+    const ratioSubEl = document.getElementById('pmKpiRatioSub');
+    if (ratioSubEl) ratioSubEl.textContent = `Breakdowns : Completed PMs (${repMonthShort} ${selectedYear})`;
+
     const overdueEl = document.getElementById('pmKpiOverdue');
     if (overdueEl) {
       overdueEl.textContent = overdueCount;
       overdueEl.style.color = overdueCount > 0 ? '#E53E3E' : '#10B981';
     }
+    const overdueSubEl = document.getElementById('pmKpiOverdueSub');
+    if (overdueSubEl) overdueSubEl.textContent = isCurrentMonth ? 'Scheduled tasks past due date' : `Overdue tasks in ${repMonthShort} ${selectedYear}`;
 
     // Charts fallback
     const months = [];
     const mCounts = {};
     for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      months.push({ k, label: d.toLocaleString('en-US', { month: 'short', year: '2-digit' }) });
+      const d = new Date(Date.UTC(selectedYear, selectedMonth - i, 1));
+      const yr = d.getUTCFullYear();
+      const m = d.getUTCMonth();
+      const k = `${yr}-${pad2(m + 1)}`;
+      months.push({ k, label: `${MONTH_NAMES_SHORT[m]} ${String(yr).slice(-2)}` });
       mCounts[k] = 0;
     }
     for (const r of pmList) {
       if ((r.status || '').trim() !== 'Completed') continue;
-      const m = (r.completionDateTime || '').slice(0, 7);
+      const m = (r.completionDateTime || r.scheduledDate || '').slice(0, 7);
       if (mCounts[m] !== undefined) mCounts[m]++;
     }
 
-    let schedCount = pmList.filter(r => (r.maintenanceType || '').trim() === 'Scheduled').length;
-    let unschedCount = pmList.filter(r => (r.maintenanceType || '').trim() === 'Unscheduled').length;
+    let schedCount = 0;
+    let unschedCount = 0;
+    for (const r of pmList) {
+      const sDate = (r.scheduledDate || r.completionDateTime || '').trim().slice(0, 10);
+      if (sDate < periodStart || sDate > periodEnd) continue;
+      if ((r.maintenanceType || '').trim() === 'Scheduled') schedCount++;
+      else if ((r.maintenanceType || '').trim() === 'Unscheduled') unschedCount++;
+    }
 
     const machCounts = {};
     for (const r of pmList) {
       if ((r.status || '').trim() !== 'Completed') continue;
+      const compDate = (r.completionDateTime || r.scheduledDate || '').trim().slice(0, 10);
+      if (compDate < periodStart || compDate > periodEnd) continue;
       const mach = r.machine || 'Unknown';
       machCounts[mach] = (machCounts[mach] || 0) + 1;
     }
     const topMach = Object.keys(machCounts).map(m => ({ name: m, count: machCounts[m] })).sort((a,b) => b.count - a.count).slice(0, 5);
+
+    const trendSubEl = document.getElementById('chartPMCompletionTrendSub');
+    if (trendSubEl) trendSubEl.textContent = `Historical completed maintenance count (12 Months ending ${repMonthShort} ${selectedYear})`;
+    const typeDistSubEl = document.getElementById('chartPMTypeDistributionSub');
+    if (typeDistSubEl) typeDistSubEl.textContent = `Scheduled vs. Unscheduled PM workload ratio (${repMonthShort} ${selectedYear})`;
+    const machineRankSubEl = document.getElementById('chartPMMachineRankSub');
+    if (machineRankSubEl) machineRankSubEl.textContent = `Top machines ranked by completed PM volume (${repMonthShort} ${selectedYear})`;
 
     renderPMDashboardCharts(
       { labels: months.map(m => m.label), data: months.map(m => mCounts[m.k]) },
@@ -3895,6 +4216,7 @@
   window.closeResolvedDetailModal = closeResolvedDetailModal;
   window.filterResolvedHistory = filterResolvedHistory;
   window.updateBDDashboard = updateBDDashboard;
+  window.syncActiveJobs = syncActiveJobs;
   window.fetchBreakdownsFromBackend = fetchBreakdownsFromBackend;
   window.fetchPMRecordsFromBackend = fetchPMRecordsFromBackend;
   window.syncPMRecords = syncPMRecords;
@@ -3905,6 +4227,8 @@
   window.handlePMPhotoSelect = handlePMPhotoSelect;
   window.openViewPMHistoryModal = openViewPMHistoryModal;
   window.updatePMDashboard = updatePMDashboard;
+  window.syncPMDashboard = syncPMDashboard;
+  window.calculatePMScheduleStatus = calculatePMScheduleStatus;
   window.completePMTask = completePMTask;
   window.openEditStockModal = openEditStockModal;
   window.openRequestStockModal = openRequestStockModal;

@@ -357,6 +357,7 @@ body {
   display: flex;
   align-items: center;
   gap: 24px;
+  margin-left: auto;
 }
 
 /* Dynamic Live Date & Time */
@@ -1146,7 +1147,8 @@ body {
   border: 1px solid var(--green-border);
 }
 
-.status-badge-amber {
+.status-badge-amber,
+.status-badge-yellow {
   background: var(--amber-soft-bg);
   color: var(--amber-primary);
   border: 1px solid var(--amber-border);

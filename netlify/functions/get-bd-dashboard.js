@@ -162,7 +162,8 @@ exports.handler = async function (event, context) {
 
   // 3. Strict Server-Side Role Authorization: ADMIN ONLY
   const claims = callerAuth.caller.customClaims || {};
-  const isAdmin = claims.role === 'ADMIN';
+  const callerRole = String(claims.role || '').trim().toUpperCase();
+  const isAdmin = callerRole === 'ADMIN';
 
   if (!isAdmin) {
     return {

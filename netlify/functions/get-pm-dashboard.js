@@ -232,16 +232,49 @@ exports.handler = async function (event, context) {
     const bdRecords = Array.isArray(bdJson.data) ? bdJson.data : [];
 
     // =========================================================================
-    // KPI CALCULATIONS (Time Zone: Asia/Kuala_Lumpur, UTC+8)
+    // QUERY PARAMETER VALIDATION (Month & Year)
     // =========================================================================
-    const todayKL = getTodayDateStringKL();
-    const nowMs = Date.now();
-    const thirtyDaysAgoMs = nowMs - (30 * 24 * 60 * 60 * 1000);
+    const query = event.queryStringParameters || {};
+    const todayKL = getTodayDateStringKL(); // 'YYYY-MM-DD'
+    const [currYearKL, currMonthKL] = todayKL.split('-').map(Number);
 
-    // 1. PM SCHEDULE COMPLIANCE RATE
-    // Scheduled PM records only:
-    // Compliance Rate = (Scheduled PMs completed on or before Scheduled Date deadline) / (Scheduled PMs due in reporting period) * 100
-    // Scheduled Date deadline is end of that local calendar day (23:59:59 Asia/Kuala_Lumpur).
+    let selectedMonth = parseInt(query.month, 10);
+    let selectedYear = parseInt(query.year, 10);
+
+    // Validate Month (0 = January, 11 = December)
+    if (isNaN(selectedMonth) || selectedMonth < 0 || selectedMonth > 11) {
+      selectedMonth = currMonthKL - 1; // 0-indexed, default to current month
+    }
+    // Validate Year (2000 to 2100)
+    if (isNaN(selectedYear) || selectedYear < 2000 || selectedYear > 2100) {
+      selectedYear = currYearKL;
+    }
+
+    const pad2 = n => String(n).padStart(2, '0');
+    const monthNum = selectedMonth + 1; // 1 to 12
+    const monthKey = `${selectedYear}-${pad2(monthNum)}`;
+
+    const lastDayOfMonth = new Date(Date.UTC(selectedYear, monthNum, 0)).getUTCDate();
+    const periodStart = `${monthKey}-01`;
+    const periodEnd = `${monthKey}-${pad2(lastDayOfMonth)}`;
+
+    const isCurrentMonth = (selectedYear === currYearKL && monthNum === currMonthKL);
+    const isFutureMonth = (selectedYear > currYearKL || (selectedYear === currYearKL && monthNum > currMonthKL));
+
+    const MONTH_NAMES = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const MONTH_NAMES_SHORT = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    const reportingMonthName = MONTH_NAMES[selectedMonth];
+    const reportingMonthShort = MONTH_NAMES_SHORT[selectedMonth];
+
+    // =========================================================================
+    // KPI 1: PM SCHEDULE COMPLIANCE RATE (Reporting Period)
+    // =========================================================================
     let scheduledDueCount = 0;
     let scheduledOnTimeCompletedCount = 0;
 
@@ -252,15 +285,34 @@ exports.handler = async function (event, context) {
       const schedDate = (record.scheduledDate || '').trim().slice(0, 10);
       if (!schedDate || !/^\d{4}-\d{2}-\d{2}$/.test(schedDate)) continue;
 
+      // Filter strictly to scheduled tasks within the reporting period
+      if (schedDate < periodStart || schedDate > periodEnd) continue;
+
       const isCompleted = (record.status || '').trim() === 'Completed';
 
-      // Due in reporting period if schedDate <= todayKL OR if already completed
-      if (schedDate <= todayKL || isCompleted) {
+      // For current month: do not include future dates as completed work
+      if (isCurrentMonth) {
+        if (schedDate <= todayKL || isCompleted) {
+          scheduledDueCount++;
+          if (isCompleted && record.completionDateTime) {
+            const compDateStr = (record.completionDateTime || '').trim().slice(0, 10);
+            if (compDateStr && compDateStr <= schedDate) {
+              scheduledOnTimeCompletedCount++;
+            }
+          }
+        }
+      } else if (isFutureMonth) {
+        if (isCompleted) {
+          scheduledDueCount++;
+          const compDateStr = (record.completionDateTime || '').trim().slice(0, 10);
+          if (compDateStr && compDateStr <= schedDate) {
+            scheduledOnTimeCompletedCount++;
+          }
+        }
+      } else {
+        // Historical month: all tasks scheduled in that month were due
         scheduledDueCount++;
-
         if (isCompleted && record.completionDateTime) {
-          // Compare completion date with scheduled date
-          // If completion date is <= schedDate (date comparison or datetime <= schedDate 23:59:59)
           const compDateStr = (record.completionDateTime || '').trim().slice(0, 10);
           if (compDateStr && compDateStr <= schedDate) {
             scheduledOnTimeCompletedCount++;
@@ -273,73 +325,96 @@ exports.handler = async function (event, context) {
       ? ((scheduledOnTimeCompletedCount / scheduledDueCount) * 100).toFixed(1) + '%'
       : 'N/A';
 
-    // 2. COMPLETED PMs (PAST 30 DAYS)
-    let completedPast30Days = 0;
+    // =========================================================================
+    // KPI 2: COMPLETED PMs (Reporting Period)
+    // =========================================================================
+    let completedInPeriod = 0;
     for (const record of pmRecords) {
       if ((record.status || '').trim() !== 'Completed') continue;
-      const compMs = parseTimestampSafe(record.completionDateTime);
-      if (!isNaN(compMs) && compMs >= thirtyDaysAgoMs && compMs <= nowMs) {
-        completedPast30Days++;
+      const compDate = (record.completionDateTime || record.scheduledDate || '').trim().slice(0, 10);
+      if (compDate >= periodStart && compDate <= periodEnd) {
+        completedInPeriod++;
       }
     }
 
-    // 3. BREAKDOWN VS PM RATIO
-    // Total breakdowns from BD DATABASE vs total completed PMs from PM DATABASE
-    const totalBreakdowns = bdRecords.length;
-    let totalCompletedPMs = 0;
-    for (const record of pmRecords) {
-      if ((record.status || '').trim() === 'Completed') {
-        totalCompletedPMs++;
+    // =========================================================================
+    // KPI 3: BREAKDOWN VS PM RATIO (Reporting Period)
+    // =========================================================================
+    let breakdownsInPeriod = 0;
+    for (const record of bdRecords) {
+      const rawTime = (record.startTime || record.reportedAt || record.time || '').trim().slice(0, 10);
+      if (rawTime >= periodStart && rawTime <= periodEnd) {
+        breakdownsInPeriod++;
+      } else if (!rawTime && record.month && (record.month.trim() === reportingMonthName || record.month.trim() === reportingMonthShort)) {
+        breakdownsInPeriod++;
       }
     }
 
     let bdPmRatioStr = 'N/A';
-    if (totalBreakdowns === 0 && totalCompletedPMs === 0) {
+    if (breakdownsInPeriod === 0 && completedInPeriod === 0) {
       bdPmRatioStr = '0 : 0';
-    } else if (totalBreakdowns === 0) {
-      bdPmRatioStr = `0 : ${totalCompletedPMs}`;
-    } else if (totalCompletedPMs === 0) {
-      bdPmRatioStr = `${totalBreakdowns} : 0`;
+    } else if (breakdownsInPeriod === 0) {
+      bdPmRatioStr = `0 : ${completedInPeriod}`;
+    } else if (completedInPeriod === 0) {
+      bdPmRatioStr = `${breakdownsInPeriod} : 0`;
     } else {
-      const normalizedRatio = (totalCompletedPMs / totalBreakdowns).toFixed(1);
+      const normalizedRatio = (completedInPeriod / breakdownsInPeriod).toFixed(1);
       bdPmRatioStr = `1 : ${normalizedRatio}`;
     }
 
-    // 4. OVERDUE TASKS
-    // Ongoing Scheduled PM tasks whose Scheduled Date is before today
+    // =========================================================================
+    // KPI 4: OVERDUE TASKS (Reporting Period)
+    // =========================================================================
     let overdueCount = 0;
     for (const record of pmRecords) {
       const status = (record.status || '').trim();
-      if (status !== 'Pending' && status !== 'In Progress') continue;
-
       const type = (record.maintenanceType || '').trim();
       if (type !== 'Scheduled') continue;
 
       const schedDate = (record.scheduledDate || '').trim().slice(0, 10);
-      if (schedDate && schedDate < todayKL) {
-        overdueCount++;
+      if (!schedDate || !/^\d{4}-\d{2}-\d{2}$/.test(schedDate)) continue;
+
+      if (isCurrentMonth) {
+        // Ongoing tasks past due date
+        if ((status === 'Pending' || status === 'In Progress') && schedDate < todayKL) {
+          overdueCount++;
+        }
+      } else if (isFutureMonth) {
+        // Future month: none overdue
+      } else {
+        // Historical month: scheduled in period and not completed on time
+        if (schedDate >= periodStart && schedDate <= periodEnd) {
+          if (status !== 'Completed') {
+            overdueCount++;
+          } else if (record.completionDateTime) {
+            const compDateStr = (record.completionDateTime || '').trim().slice(0, 10);
+            if (compDateStr && compDateStr > schedDate) {
+              overdueCount++;
+            }
+          }
+        }
       }
     }
 
     // =========================================================================
-    // INFOGRAPHIC 1: MONTHLY PM COMPLETION TREND (Last 12 Months)
+    // INFOGRAPHIC 1: MONTHLY PM COMPLETION TREND (12 Months ending in selected month)
     // =========================================================================
     const monthsList = [];
     const monthCounts = {};
-    const now = new Date();
 
     for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleString('en-US', { month: 'short', year: '2-digit', timeZone: 'Asia/Kuala_Lumpur' });
+      const d = new Date(Date.UTC(selectedYear, selectedMonth - i, 1));
+      const yr = d.getUTCFullYear();
+      const m = d.getUTCMonth();
+      const key = `${yr}-${pad2(m + 1)}`;
+      const label = `${MONTH_NAMES_SHORT[m]} ${String(yr).slice(-2)}`;
       monthsList.push({ key, label });
       monthCounts[key] = 0;
     }
 
     for (const record of pmRecords) {
       if ((record.status || '').trim() !== 'Completed') continue;
-      const compStr = (record.completionDateTime || '').trim();
-      if (!compStr) continue;
+      const compStr = (record.completionDateTime || record.scheduledDate || '').trim();
       const mMatch = compStr.match(/^(\d{4})-(\d{2})/);
       if (mMatch) {
         const key = `${mMatch[1]}-${mMatch[2]}`;
@@ -351,14 +426,18 @@ exports.handler = async function (event, context) {
 
     const monthlyTrendLabels = monthsList.map(m => m.label);
     const monthlyTrendData = monthsList.map(m => monthCounts[m.key]);
+    const trendSub = `Historical completed maintenance count (12 Months ending ${reportingMonthShort} ${selectedYear})`;
 
     // =========================================================================
-    // INFOGRAPHIC 2: MAINTENANCE TYPE DISTRIBUTION (Scheduled vs Unscheduled)
+    // INFOGRAPHIC 2: MAINTENANCE TYPE DISTRIBUTION (Selected Month & Year)
     // =========================================================================
     let scheduledCount = 0;
     let unscheduledCount = 0;
 
     for (const record of pmRecords) {
+      const sDate = (record.scheduledDate || record.completionDateTime || '').trim().slice(0, 10);
+      if (sDate < periodStart || sDate > periodEnd) continue;
+
       const type = (record.maintenanceType || '').trim();
       if (type === 'Scheduled') {
         scheduledCount++;
@@ -367,12 +446,17 @@ exports.handler = async function (event, context) {
       }
     }
 
+    const typeDistSub = `Scheduled vs. Unscheduled PM workload ratio (${reportingMonthShort} ${selectedYear})`;
+
     // =========================================================================
-    // INFOGRAPHIC 3: PM COMPLETION BY MACHINE (Top 5 Ranked)
+    // INFOGRAPHIC 3: PM COMPLETION BY MACHINE (Top 5 Ranked in Selected Month)
     // =========================================================================
     const machineCounts = {};
     for (const record of pmRecords) {
       if ((record.status || '').trim() !== 'Completed') continue;
+      const compDate = (record.completionDateTime || record.scheduledDate || '').trim().slice(0, 10);
+      if (compDate < periodStart || compDate > periodEnd) continue;
+
       const machine = (record.machine || 'Unknown').trim();
       machineCounts[machine] = (machineCounts[machine] || 0) + 1;
     }
@@ -382,33 +466,47 @@ exports.handler = async function (event, context) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
+    const machineRankSub = `Top machines ranked by completed PM volume (${reportingMonthShort} ${selectedYear})`;
+
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
         timeZone: 'Asia/Kuala_Lumpur (UTC+8)',
+        selectedMonth,
+        selectedYear,
+        reportingPeriod: `${reportingMonthName} ${selectedYear}`,
+        reportingPeriodShort: `${reportingMonthShort} ${selectedYear}`,
         kpis: {
           complianceRate: complianceRateStr,
-          completedPast30Days,
+          complianceRateSub: `Scheduled PMs met on deadline (${reportingMonthShort} ${selectedYear})`,
+          completedInPeriod,
+          completedPast30Days: completedInPeriod, // Backwards compatibility
+          completedInPeriodTitle: `Completed PMs (${reportingMonthShort} ${selectedYear})`,
+          completedInPeriodSub: `Actual closed tasks in ${reportingMonthShort} ${selectedYear}`,
           breakdownVsPmRatio: bdPmRatioStr,
-          rawRatioLabel: 'Breakdowns : Completed PMs',
-          breakdownCount: totalBreakdowns,
-          completedPmCount: totalCompletedPMs,
-          overdueTasks: overdueCount
+          rawRatioLabel: `Breakdowns : Completed PMs (${reportingMonthShort} ${selectedYear})`,
+          breakdownCount: breakdownsInPeriod,
+          completedPmCount: completedInPeriod,
+          overdueTasks: overdueCount,
+          overdueSub: isCurrentMonth ? 'Scheduled tasks past due date' : `Overdue tasks in ${reportingMonthShort} ${selectedYear}`
         },
         charts: {
           monthlyTrend: {
             labels: monthlyTrendLabels,
-            data: monthlyTrendData
+            data: monthlyTrendData,
+            subtitle: trendSub
           },
           typeDistribution: {
             labels: ['Scheduled', 'Unscheduled'],
-            data: [scheduledCount, unscheduledCount]
+            data: [scheduledCount, unscheduledCount],
+            subtitle: typeDistSub
           },
           machineRank: {
             labels: sortedMachines.map(m => m.name),
-            data: sortedMachines.map(m => m.count)
+            data: sortedMachines.map(m => m.count),
+            subtitle: machineRankSub
           }
         }
       })
