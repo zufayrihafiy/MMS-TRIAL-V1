@@ -3097,48 +3097,61 @@
    * and concurrency locking.
    */
   let isSyncingSpareParts = false;
+  const isSyncingSparePartsTabs = {};
+
   async function syncSparePartsTab(targetTab) {
-    if (isSyncingSpareParts) return;
+    if (isSyncingSparePartsTabs[targetTab]) return;
+    isSyncingSparePartsTabs[targetTab] = true;
     isSyncingSpareParts = true;
 
-    const btnParts = document.getElementById('syncSparePartsBtn');
-    const btnMovements = document.getElementById('syncStockMovementsBtn');
-    const btnRequests = document.getElementById('syncStockRequestsBtn');
+    let btn = null;
+    if (targetTab === 'parts-list') {
+      btn = document.getElementById('syncSparePartsBtn');
+    } else if (targetTab === 'stock-movement') {
+      btn = document.getElementById('syncStockMovementsBtn');
+    } else if (targetTab === 'stock-request') {
+      btn = document.getElementById('syncStockRequestsBtn');
+    }
 
-    [btnParts, btnMovements, btnRequests].forEach(btn => {
-      if (btn) {
-        btn.disabled = true;
-        btn.classList.add('syncing');
-      }
-    });
+    const spinIcon = btn ? btn.querySelector('.sync-icon') : null;
+    const textSpan = btn ? btn.querySelector('span') : null;
+    const originalText = textSpan ? textSpan.textContent : 'Sync';
+
+    if (btn) btn.disabled = true;
+    if (spinIcon) spinIcon.classList.add('is-spinning');
+    if (textSpan) textSpan.textContent = 'Syncing...';
 
     try {
       const result = await fetchSparePartsFromBackend(true);
       if (result && result.ok) {
         if (targetTab === 'parts-list') {
+          renderSparePartsTable();
           showToast('Spare Parts List synchronized with Google Sheets.', 'success');
         } else if (targetTab === 'stock-movement') {
+          const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
+          const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
+          if (isAdmin) renderStockMovementsTable();
           showToast('Stock Movement History synchronized with Google Sheets.', 'success');
         } else if (targetTab === 'stock-request') {
+          renderStockRequestsTable();
           showToast('Stock Requests synchronized with Google Sheets.', 'success');
         } else {
+          renderSparePartsView();
           showToast('Inventory database synchronized successfully.', 'success');
         }
       } else {
         const msg = (result && result.error) || 'Failed to fetch latest data.';
-        showToast(`Sync notice: ${msg}`, 'error');
+        showToast(`Sync Failed: ${msg}`, 'error');
       }
     } catch (err) {
       console.error('[syncSparePartsTab] Error:', err);
-      showToast('Network error during synchronization.', 'error');
+      showToast('Sync Error: ' + err.message, 'error');
     } finally {
-      [btnParts, btnMovements, btnRequests].forEach(btn => {
-        if (btn) {
-          btn.disabled = false;
-          btn.classList.remove('syncing');
-        }
-      });
-      isSyncingSpareParts = false;
+      if (spinIcon) spinIcon.classList.remove('is-spinning');
+      if (textSpan) textSpan.textContent = originalText;
+      if (btn) btn.disabled = false;
+      isSyncingSparePartsTabs[targetTab] = false;
+      isSyncingSpareParts = Object.values(isSyncingSparePartsTabs).some(Boolean);
     }
   }
   window.syncSparePartsTab = syncSparePartsTab;
@@ -3316,11 +3329,10 @@
       return;
     }
 
-    // Filter to only Stock In and Stock Adjustment
-    // Technician-requested issued stock is displayed under Stock Request instead
+    // Filter to Stock In, Stock Adjustment, and Issued
     const filteredMovements = (state.stockMovements || []).filter(m => {
       const typeLower = (m.type || '').toLowerCase();
-      return typeLower === 'stock in' || typeLower === 'stock adjustment' || typeLower === 'received' || typeLower === 'manual adjustment';
+      return typeLower === 'stock in' || typeLower === 'stock adjustment' || typeLower === 'received' || typeLower === 'manual adjustment' || typeLower === 'issued' || typeLower === 'stock out';
     });
 
     if (filteredMovements.length === 0) {
@@ -3333,11 +3345,23 @@
       const part = (state.spareParts || []).find(p => p.code === m.partCode);
       const supplierName = (part && part.supplier) || m.supplier || 'N/A';
       const isPositive = Number(m.qty) > 0;
-      const typeDisplay = (m.type === 'Received' || m.type === 'Stock In') ? 'Stock In' : 'Stock Adjustment';
-      const badgeClass = typeDisplay === 'Stock In' ? 'status-badge-green' : 'status-badge-blue';
+      let typeDisplay = 'Stock Adjustment';
+      let badgeClass = 'status-badge-blue';
+      const typeLower = (m.type || '').toLowerCase();
+      if (typeLower === 'stock in' || typeLower === 'received') {
+        typeDisplay = 'Stock In';
+        badgeClass = 'status-badge-green';
+      } else if (typeLower === 'issued' || typeLower === 'stock out') {
+        typeDisplay = 'Issued';
+        badgeClass = 'status-badge-blue';
+      } else {
+        typeDisplay = 'Stock Adjustment';
+        badgeClass = 'status-badge-amber';
+      }
 
       const prev = m.previousStock !== undefined ? m.previousStock : '—';
       const updated = m.updatedStock !== undefined ? m.updatedStock : (m.balance !== undefined ? m.balance : '—');
+      const qtyDisplay = Number(m.qty) > 0 ? ('+' + m.qty) : String(m.qty);
 
       return `
         <tr>
@@ -3346,7 +3370,7 @@
           <td>${escapeHtml(m.partName || (part && part.name) || '—')}</td>
           <td><span class="status-badge ${badgeClass}">${typeDisplay}</span></td>
           <td style="font-weight:700; color:${isPositive ? '#10B981' : 'var(--red-primary)'};">
-            ${isPositive ? '+' + m.qty : m.qty}
+            ${qtyDisplay}
           </td>
           <td>${prev}</td>
           <td style="font-weight:700; color:var(--navy-darkest);">${updated}</td>
@@ -3362,6 +3386,11 @@
     const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
     const currentStaffId = (state.currentUser ? (state.currentUser.staffId || state.currentUser.id || '') : '').toUpperCase();
 
+    const reasonTh = document.getElementById('thStockRequestReason');
+    if (reasonTh) {
+      reasonTh.style.display = isAdmin ? '' : 'none';
+    }
+
     const tbody = document.getElementById('stockRequestTbody');
     if (!tbody) return;
 
@@ -3371,8 +3400,9 @@
       requests = requests.filter(r => (r.requestedByStaffId || '').toUpperCase() === currentStaffId);
     }
 
+    const colSpan = isAdmin ? 9 : 8;
     if (requests.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">No stock requests found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding:30px; color:var(--text-muted);">No stock requests found.</td></tr>`;
       return;
     }
 
@@ -3437,6 +3467,10 @@
         `;
       }
 
+      const rawReason = (r.reason !== undefined && r.reason !== null) ? String(r.reason).trim() : '';
+      const displayReason = rawReason ? escapeHtml(rawReason) : '-';
+      const reasonTdHtml = isAdmin ? `<td style="max-width:200px; white-space:normal; word-break:break-word;">${displayReason}</td>` : '';
+
       return `
         <tr>
           <td><strong>${escapeHtml(r.requestId)}</strong></td>
@@ -3448,6 +3482,7 @@
           <td><strong>${escapeHtml(r.partCode)}</strong></td>
           <td>${escapeHtml(r.partName || '—')}</td>
           <td style="font-size:14px; font-weight:700; color:var(--navy-darkest);">${r.qtyRequested}</td>
+          ${reasonTdHtml}
           <td>${statusBadge}</td>
           <td>${actionsHtml}</td>
         </tr>
@@ -4948,8 +4983,11 @@
       return;
     }
 
-    const req = (state.stockRequests || []).find(r => r.requestId === requestId);
-    if (!req) return;
+    const req = (state.stockRequests || []).find(r => (r.requestId || '').trim().toUpperCase() === String(requestId).trim().toUpperCase());
+    if (!req) {
+      showToast(`Stock request ${requestId} not found.`, 'error');
+      return;
+    }
 
     if (req.status === 'Issued') {
       showToast(`Duplicate Issue Prevented: Request ${requestId} has already been issued.`, 'error');
@@ -4960,7 +4998,8 @@
       return;
     }
 
-    const part = (state.spareParts || []).find(p => p.code === req.partCode);
+    const reqPartCode = (req.partCode || '').trim().toUpperCase();
+    const part = (state.spareParts || []).find(p => (p.code || '').trim().toUpperCase() === reqPartCode);
     if (!part) {
       showToast(`Part ${req.partCode} not found in inventory database.`, 'error');
       return;
@@ -4971,43 +5010,69 @@
 
     // Prevent negative stock
     if (currentStock < requestedQty) {
-      showToast(`Insufficient stock to issue request! Available: ${currentStock} ${part.unit}, Requested: ${requestedQty} ${part.unit}.`, 'error');
+      showToast(`Insufficient stock to issue request! Available: ${currentStock} ${part.unit || 'pcs'}, Requested: ${requestedQty} ${part.unit || 'pcs'}.`, 'error');
       return;
+    }
+
+    // Identify button and show loading state to prevent double clicks
+    const targetBtn = (typeof window.event !== 'undefined' && window.event && window.event.target) ? window.event.target.closest('button') : null;
+    const originalBtnText = targetBtn ? targetBtn.textContent : '';
+    if (targetBtn) {
+      targetBtn.disabled = true;
+      targetBtn.textContent = 'Issuing...';
     }
 
     try {
       const token = getStoredAuthToken() || '';
-      if (token) {
-        const res = await fetch('/.netlify/functions/manage-spare-parts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            action: 'issue-stock',
-            requestId
-          })
-        });
-        const result = await res.json().catch(() => null);
-        if (res.ok && result && result.newStock !== undefined) {
-          part.currentStock = result.newStock;
-        } else if (!res.ok) {
-          showToast((result && result.error) || 'Failed to issue stock on server.', 'error');
-          return;
-        } else {
-          part.currentStock = Math.max(0, currentStock - requestedQty);
+      if (!token) {
+        showToast('Authentication required to issue spare parts.', 'error');
+        if (targetBtn) {
+          targetBtn.disabled = false;
+          targetBtn.textContent = originalBtnText;
         }
-      } else {
-        part.currentStock = Math.max(0, currentStock - requestedQty);
+        return;
       }
 
+      const res = await fetch('/.netlify/functions/manage-spare-parts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'issue-stock',
+          requestId: req.requestId
+        })
+      });
+
+      const result = await res.json().catch(() => null);
+
+      // Never report success if the backend operation actually failed
+      if (!res.ok || !result || result.success === false) {
+        const errMsg = (result && result.error) || `Server failed with status ${res.status}`;
+        showToast(`Failed to issue stock: ${errMsg}`, 'error');
+        if (targetBtn) {
+          targetBtn.disabled = false;
+          targetBtn.textContent = originalBtnText;
+        }
+        return;
+      }
+
+      // Backend confirmed success!
+      let finalNewStock;
+      if (result.newStock !== undefined && !isNaN(Number(result.newStock))) {
+        finalNewStock = Number(result.newStock);
+      } else {
+        finalNewStock = Math.max(0, currentStock - requestedQty);
+      }
+
+      part.currentStock = finalNewStock;
       req.status = 'Issued';
       req.issuedBy = state.currentUser.staffId || state.currentUser.name || 'ADMIN';
       req.issuedDate = formatCurrentDateTime();
 
       // Record in audit log
-      const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
+      const mId = result.movementId || ('MV-' + Math.floor(1000 + Math.random() * 9000));
       state.stockMovements.unshift({
         id: mId,
         date: formatCurrentDateTime(),
@@ -5016,18 +5081,30 @@
         type: 'Issued',
         qty: -requestedQty,
         previousStock: currentStock,
-        updatedStock: part.currentStock,
-        balance: part.currentStock,
+        updatedStock: finalNewStock,
+        balance: finalNewStock,
         supplier: part.supplier,
         updatedBy: req.issuedBy,
-        reference: requestId
+        reference: req.requestId
       });
 
       saveState();
-      renderSparePartsView();
-      showToast(`Successfully issued ${requestedQty} ${part.unit} of ${part.code}! New balance: ${part.currentStock} ${part.unit}.`, 'success');
+
+      // Fetch fresh verified values from the real backend to ensure multi-module state coherence
+      try {
+        await fetchSparePartsFromBackend(true);
+      } catch (fetchErr) {
+        console.warn('[handleIssueStockRequest] Post-issuance background sync warning:', fetchErr);
+        renderSparePartsView();
+      }
+
+      showToast(`Successfully issued ${requestedQty} ${part.unit || 'pcs'} of ${part.code}! New balance: ${finalNewStock} ${part.unit || 'pcs'}.`, 'success');
     } catch (err) {
       showToast('Failed to issue stock: ' + err.message, 'error');
+      if (targetBtn) {
+        targetBtn.disabled = false;
+        targetBtn.textContent = originalBtnText;
+      }
     }
   }
 

@@ -1332,12 +1332,6 @@ function handleGetSpareParts(payload) {
         const pCode = String(row[2] || '').trim();
         const mType = String(row[4] || '').trim();
 
-        // Only display 'Stock In' and 'Stock Adjustment' in this table.
-        // Technician issued records are displayed under Stock Request.
-        if (mType === 'Issued') {
-          continue;
-        }
-
         const resolvedSupplier = supplierMap[pCode] || String(row[8] || '').trim() || 'N/A';
 
         stockMovements.push({
@@ -1377,7 +1371,7 @@ function handleGetSpareParts(payload) {
         continue;
       }
 
-      stockRequests.push({
+      const reqItem = {
         requestId: rId,
         requestDate: formatCellDate(row[1]),
         requestedByStaffId: reqStaffId,
@@ -1385,14 +1379,20 @@ function handleGetSpareParts(payload) {
         partCode: String(row[4] || '').trim(),
         partName: String(row[5] || '').trim(),
         qtyRequested: Number(row[6]) || 0,
-        reason: String(row[7] || '').trim(),
         status: String(row[8] || 'Pending').trim(),
         approvedBy: String(row[9] || '').trim(),
         approvedDate: formatCellDate(row[10]),
         issuedBy: String(row[11] || '').trim(),
         issuedDate: formatCellDate(row[12]),
         notes: String(row[13] || '').trim()
-      });
+      };
+
+      // Strict backend authorization: Reason column only accessible to ADMIN accounts
+      if (callerRole === 'ADMIN') {
+        reqItem.reason = String(row[7] || '').trim();
+      }
+
+      stockRequests.push(reqItem);
     }
   }
 
@@ -2238,7 +2238,8 @@ function handleIssueStock(payload) {
     }
 
     // 1. Locate Request Record
-    const srValues = srSheet.getRange(2, 1, srLastRow - 1, 14).getValues();
+    const srCols = Math.max(14, srSheet.getLastColumn());
+    const srValues = srSheet.getRange(2, 1, srLastRow - 1, srCols).getValues();
     let reqRowIndex = -1;
     let reqData = null;
 
@@ -2282,14 +2283,19 @@ function handleIssueStock(payload) {
       return createJsonResponse({ success: false, error: 'Spare parts database is empty.' }, 404);
     }
 
-    const spValues = spSheet.getRange(2, 1, spLastRow - 1, 11).getValues();
+    const spCols = Math.max(12, spSheet.getLastColumn());
+    const spValues = spSheet.getRange(2, 1, spLastRow - 1, spCols).getValues();
     let partRowIndex = -1;
     let partData = null;
 
     for (let i = 0; i < spValues.length; i++) {
-      if (String(spValues[i][0] || '').trim().toUpperCase() === partCode) {
+      const row = spValues[i];
+      const isArchived = row.length >= 12 && String(row[11] || '').trim().toLowerCase() === 'archived';
+      if (isArchived) continue;
+
+      if (String(row[0] || '').trim().toUpperCase() === partCode) {
         partRowIndex = i + 2;
-        partData = spValues[i];
+        partData = row;
         break;
       }
     }
@@ -2345,6 +2351,7 @@ function handleIssueStock(payload) {
       issuedQty: qtyRequested,
       previousStock: currentStock,
       newStock: newStock,
+      movementId: mId,
       message: 'Successfully issued ' + qtyRequested + ' ' + unit + ' of ' + partCode + '. New balance: ' + newStock + ' ' + unit + '.'
     }, 200);
 

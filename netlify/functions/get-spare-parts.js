@@ -222,7 +222,13 @@ exports.handler = async function (event) {
         const sanitizedMovements = callerRole === 'ADMIN' ? (gasData.stockMovements || []) : [];
         const sanitizedRequests = callerRole === 'ADMIN'
           ? (gasData.stockRequests || [])
-          : (gasData.stockRequests || []).filter(r => (r.requestedByStaffId || '').toUpperCase() === callerStaffId);
+          : (gasData.stockRequests || [])
+              .filter(r => (r.requestedByStaffId || '').toUpperCase() === callerStaffId)
+              .map(r => {
+                const reqCopy = { ...r };
+                delete reqCopy.reason;
+                return reqCopy;
+              });
 
         return {
           statusCode: 200,
