@@ -2120,6 +2120,27 @@ function handleCreateStockRequest(payload) {
 
 /**
  * Approve or Reject a stock request (ADMIN ONLY)
+ *
+ * NEW WORKFLOW:
+ * - When ADMIN approves a Pending request:
+ *   1. Strictly validates ADMIN permission.
+ *   2. Uses LockService to prevent concurrent approvals from deducting stock incorrectly.
+ *   3. Verifies request exists and status is 'Pending'. Prevents duplicate approval / double deduction.
+ *   4. Verifies requested spare part exists and is not archived.
+ *   5. Validates requested quantity is a positive whole number.
+ *   6. Verifies sufficient available stock (currentStock >= qtyRequested). Stock never becomes negative.
+ *   7. Rejects approval with HTTP 400 if stock is insufficient. Does not show Approved if deduction failed.
+ *   8. Deducts requested quantity from Current Stock in SPARE PARTS DATABASE (Col E: stock, Col K: timestamp).
+ *   9. Updates request status to 'Approved' in STOCK REQUESTS DATABASE (Col I: status, Col J: approvedBy, Col K: approvedDate).
+ *  10. Appends a stock movement transaction to STOCK MOVEMENTS DATABASE:
+ *      - Movement Type: 'Stock Out - Approved Request'
+ *      - Quantity: -qtyRequested
+ *      - Previous Stock: currentStock
+ *      - Updated Stock: newStock
+ *      - Reference: Request ID
+ * - When ADMIN rejects a request:
+ *   - For Pending requests: Pending -> Rejected, stock unchanged, no stock-out movement.
+ *   - For Approved requests: Rejection is blocked because stock was already deducted. Requires controlled return.
  */
 function handleUpdateStockRequestStatus(payload) {
   const callerRole = String(payload.callerRole || '').trim().toUpperCase();
@@ -2158,7 +2179,8 @@ function handleUpdateStockRequestStatus(payload) {
       return createJsonResponse({ success: false, error: 'No stock requests found.' }, 404);
     }
 
-    const values = srSheet.getRange(2, 1, lastRow - 1, 14).getValues();
+    const srCols = Math.max(14, srSheet.getLastColumn());
+    const values = srSheet.getRange(2, 1, lastRow - 1, srCols).getValues();
     let rowIndex = -1;
     let reqData = null;
 
@@ -2175,22 +2197,158 @@ function handleUpdateStockRequestStatus(payload) {
     }
 
     const currentStatus = String(reqData[8] || '').trim();
-    if (currentStatus === 'Issued') {
-      return createJsonResponse({ success: false, error: 'Cannot modify a request that has already been Issued.' }, 400);
+
+    if (newStatus === 'Approved') {
+      // 1. Verify current status is strictly Pending
+      if (currentStatus === 'Approved') {
+        return createJsonResponse({
+          success: false,
+          error: 'Duplicate Approval Prevented: Request ' + requestId + ' is already Approved. Stock was previously deducted.'
+        }, 400);
+      }
+      if (currentStatus === 'Issued') {
+        return createJsonResponse({
+          success: false,
+          error: 'Cannot approve request ' + requestId + ' that has already been Issued.'
+        }, 400);
+      }
+      if (currentStatus !== 'Pending') {
+        return createJsonResponse({
+          success: false,
+          error: 'Cannot approve request ' + requestId + ' with status "' + currentStatus + '". Only Pending requests can be approved.'
+        }, 400);
+      }
+
+      const partCode = String(reqData[4] || '').trim().toUpperCase();
+      const partName = String(reqData[5] || '').trim();
+      const qtyRequested = parseInt(reqData[6], 10) || 0;
+
+      if (qtyRequested <= 0) {
+        return createJsonResponse({ success: false, error: 'Invalid requested quantity: ' + qtyRequested }, 400);
+      }
+
+      // 2. Locate spare part in SPARE PARTS DATABASE
+      const spSheet = getOrInitSparePartsSheet(ss);
+      const spLastRow = spSheet.getLastRow();
+      if (spLastRow <= 1) {
+        return createJsonResponse({ success: false, error: 'Spare parts database is empty.' }, 404);
+      }
+
+      const spCols = Math.max(12, spSheet.getLastColumn());
+      const spValues = spSheet.getRange(2, 1, spLastRow - 1, spCols).getValues();
+      let partRowIndex = -1;
+      let partData = null;
+
+      for (let i = 0; i < spValues.length; i++) {
+        const row = spValues[i];
+        const isArchived = row.length >= 12 && String(row[11] || '').trim().toLowerCase() === 'archived';
+        if (isArchived) continue;
+
+        if (String(row[0] || '').trim().toUpperCase() === partCode) {
+          partRowIndex = i + 2;
+          partData = row;
+          break;
+        }
+      }
+
+      if (partRowIndex === -1 || !partData) {
+        return createJsonResponse({ success: false, error: 'Spare part ' + partCode + ' not found in inventory.' }, 404);
+      }
+
+      const currentStock = Number(partData[4]) || 0;
+      const unit = String(partData[6] || 'pcs').trim();
+      const supplier = String(partData[8] || '').trim();
+
+      // 3. Verify sufficient stock (prevent negative stock!)
+      if (currentStock < qtyRequested) {
+        return createJsonResponse({
+          success: false,
+          error: 'Insufficient stock for ' + partCode + '. Available: ' + currentStock + ' ' + unit + ', Requested: ' + qtyRequested + ' ' + unit + '. Stock deduction rejected.'
+        }, 400);
+      }
+
+      const newStock = currentStock - qtyRequested;
+      const timestamp = formatCurrentTimestamp();
+
+      // 4. Deduct requested quantity from SPARE PARTS DATABASE (Col E: Current Stock, Col K: Updated At)
+      spSheet.getRange(partRowIndex, 5).setValue(newStock);
+      spSheet.getRange(partRowIndex, 11).setValue(timestamp);
+
+      // 5. Update request status to 'Approved' (Col I: Status, Col J: Approved By, Col K: Approved Date)
+      srSheet.getRange(rowIndex, 9).setValue('Approved');
+      srSheet.getRange(rowIndex, 10).setValue(callerStaffId || 'ADMIN');
+      srSheet.getRange(rowIndex, 11).setValue(timestamp);
+
+      // 6. Append audit log entry in STOCK MOVEMENTS DATABASE
+      const smSheet = getOrInitStockMovementsSheet(ss);
+      const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
+      smSheet.appendRow([
+        mId,
+        timestamp,
+        partCode,
+        partName,
+        'Stock Out - Approved Request',
+        -qtyRequested,
+        currentStock,
+        newStock,
+        supplier,
+        callerStaffId || 'ADMIN',
+        requestId
+      ]);
+
+      return createJsonResponse({
+        success: true,
+        requestId: requestId,
+        status: 'Approved',
+        partCode: partCode,
+        qtyDeducted: qtyRequested,
+        previousStock: currentStock,
+        newStock: newStock,
+        movementId: mId,
+        message: 'Request ' + requestId + ' approved. Deducted ' + qtyRequested + ' ' + unit + ' from ' + partCode + '. New balance: ' + newStock + ' ' + unit + '.'
+      }, 200);
+
+    } else if (newStatus === 'Rejected') {
+      // If request is already Approved, stock has already been deducted upon approval!
+      // Do not silently change Approved to Rejected; require controlled stock return.
+      if (currentStatus === 'Approved') {
+        return createJsonResponse({
+          success: false,
+          error: 'Cannot directly reject an Approved request because stock (' + reqData[6] + ' units) has already been deducted upon approval. Cancellation requires a controlled stock-return workflow.'
+        }, 400);
+      }
+      if (currentStatus === 'Issued') {
+        return createJsonResponse({
+          success: false,
+          error: 'Cannot reject a request that has already been Issued.'
+        }, 400);
+      }
+      if (currentStatus === 'Rejected') {
+        return createJsonResponse({
+          success: false,
+          error: 'Request ' + requestId + ' is already Rejected.'
+        }, 400);
+      }
+      if (currentStatus !== 'Pending') {
+        return createJsonResponse({
+          success: false,
+          error: 'Cannot reject request ' + requestId + ' with status "' + currentStatus + '". Only Pending requests can be rejected.'
+        }, 400);
+      }
+
+      // Pending -> Rejected: Stock remains unchanged, no stock movement created
+      const timestamp = formatCurrentTimestamp();
+      srSheet.getRange(rowIndex, 9).setValue('Rejected');
+      srSheet.getRange(rowIndex, 10).setValue(callerStaffId || 'ADMIN');
+      srSheet.getRange(rowIndex, 11).setValue(timestamp);
+
+      return createJsonResponse({
+        success: true,
+        requestId: requestId,
+        status: 'Rejected',
+        message: 'Request ' + requestId + ' marked as Rejected. Stock remains unchanged.'
+      }, 200);
     }
-
-    const timestamp = formatCurrentTimestamp();
-    // Update Status (Column I), Approved By (Column J), Approved Date (Column K)
-    srSheet.getRange(rowIndex, 9).setValue(newStatus);
-    srSheet.getRange(rowIndex, 10).setValue(callerStaffId || 'ADMIN');
-    srSheet.getRange(rowIndex, 11).setValue(timestamp);
-
-    return createJsonResponse({
-      success: true,
-      requestId: requestId,
-      status: newStatus,
-      message: 'Request ' + requestId + ' marked as ' + newStatus + '.'
-    }, 200);
 
   } catch (err) {
     return createJsonResponse({ success: false, error: 'Failed to update request: ' + err.toString() }, 500);
@@ -2201,7 +2359,20 @@ function handleUpdateStockRequestStatus(payload) {
 
 /**
  * Issue Stock for an Approved request (ADMIN ONLY)
- * Strictly verifies available stock, prevents double deduction, deducts stock under lock.
+ *
+ * NEW BEHAVIOR:
+ * When ADMIN clicks Issue Stock for an already Approved request:
+ * 1. Strictly verifies ADMIN permission.
+ * 2. Uses LockService to prevent concurrent executions.
+ * 3. Verifies request is Approved.
+ * 4. Checks whether stock was already deducted during approval by scanning STOCK MOVEMENTS DATABASE
+ *    for a record linked to this Request ID.
+ *    - If historical request has NO deduction record: blocks automatic issue and requires manual reconciliation.
+ * 5. Changes request status: Approved -> Issued.
+ * 6. Records Issued By and Issued Date.
+ * 7. DO NOT deduct stock again.
+ * 8. DO NOT create another stock-out transaction.
+ * 9. Prevents issuing the same request twice.
  */
 function handleIssueStock(payload) {
   const callerRole = String(payload.callerRole || '').trim().toUpperCase();
@@ -2229,7 +2400,6 @@ function handleIssueStock(payload) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const srSheet = getOrInitStockRequestsSheet(ss);
-    const spSheet = getOrInitSparePartsSheet(ss);
     const smSheet = getOrInitStockMovementsSheet(ss);
 
     const srLastRow = srSheet.getLastRow();
@@ -2270,89 +2440,68 @@ function handleIssueStock(payload) {
     }
 
     const partCode = String(reqData[4] || '').trim().toUpperCase();
-    const partName = String(reqData[5] || '').trim();
     const qtyRequested = parseInt(reqData[6], 10) || 0;
 
-    if (qtyRequested <= 0) {
-      return createJsonResponse({ success: false, error: 'Invalid requested quantity: ' + qtyRequested }, 400);
-    }
-
-    // 2. Locate Spare Part in SPARE PARTS DATABASE
-    const spLastRow = spSheet.getLastRow();
-    if (spLastRow <= 1) {
-      return createJsonResponse({ success: false, error: 'Spare parts database is empty.' }, 404);
-    }
-
-    const spCols = Math.max(12, spSheet.getLastColumn());
-    const spValues = spSheet.getRange(2, 1, spLastRow - 1, spCols).getValues();
-    let partRowIndex = -1;
-    let partData = null;
-
-    for (let i = 0; i < spValues.length; i++) {
-      const row = spValues[i];
-      const isArchived = row.length >= 12 && String(row[11] || '').trim().toLowerCase() === 'archived';
-      if (isArchived) continue;
-
-      if (String(row[0] || '').trim().toUpperCase() === partCode) {
-        partRowIndex = i + 2;
-        partData = row;
-        break;
+    // 2. CRITICAL HISTORICAL & MIGRATION SAFETY CHECK:
+    // Determine whether stock was already deducted for this request.
+    // Check STOCK MOVEMENTS DATABASE for a movement record linked by Reference === requestId.
+    let deductionFound = false;
+    const smLastRow = smSheet.getLastRow();
+    if (smLastRow > 1) {
+      const smCols = Math.max(11, smSheet.getLastColumn());
+      const smValues = smSheet.getRange(2, 1, smLastRow - 1, smCols).getValues();
+      for (let i = 0; i < smValues.length; i++) {
+        const ref = String(smValues[i][10] || '').trim().toUpperCase();
+        const mType = String(smValues[i][4] || '').trim().toLowerCase();
+        if (ref === requestId && (mType === 'stock out - approved request' || mType === 'issued' || mType === 'stock out')) {
+          deductionFound = true;
+          break;
+        }
       }
     }
 
-    if (partRowIndex === -1 || !partData) {
-      return createJsonResponse({ success: false, error: 'Spare part ' + partCode + ' not found in inventory.' }, 404);
-    }
-
-    const currentStock = Number(partData[4]) || 0;
-    const unit = String(partData[6] || 'pcs').trim();
-    const supplier = String(partData[8] || '').trim();
-
-    // Verify sufficient stock (prevent negative stock!)
-    if (currentStock < qtyRequested) {
+    // If deduction status cannot be established for a historical Approved request:
+    // Do NOT perform automatic deduction or issue. Require manual reconciliation.
+    if (!deductionFound) {
       return createJsonResponse({
         success: false,
-        error: 'Insufficient stock for ' + partCode + '. Available: ' + currentStock + ' ' + unit + ', Requested: ' + qtyRequested + ' ' + unit + '.'
+        error: 'Historical request ' + requestId + ' was approved under the legacy workflow without stock deduction. Automatic issuance is blocked. Please reconcile stock manually before issuing.',
+        reconciliationRequired: true
       }, 400);
     }
 
-    const newStock = currentStock - qtyRequested;
     const timestamp = formatCurrentTimestamp();
 
-    // 3. Deduct stock from SPARE PARTS DATABASE (Column E & Column K)
-    spSheet.getRange(partRowIndex, 5).setValue(newStock);
-    spSheet.getRange(partRowIndex, 11).setValue(timestamp);
-
-    // 4. Update request status to 'Issued' (Columns I, L, M)
+    // 3. Update request status to 'Issued' (Col 9: Status, Col 12: Issued By, Col 13: Issued Date)
+    // DO NOT DEDUCT STOCK AGAIN. DO NOT CREATE ANOTHER STOCK-OUT TRANSACTION.
     srSheet.getRange(reqRowIndex, 9).setValue('Issued');
     srSheet.getRange(reqRowIndex, 12).setValue(callerStaffId || 'ADMIN');
     srSheet.getRange(reqRowIndex, 13).setValue(timestamp);
 
-    // 5. Append audit log entry in STOCK MOVEMENTS DATABASE
-    const mId = 'MV-' + Math.floor(1000 + Math.random() * 9000);
-    smSheet.appendRow([
-      mId,
-      timestamp,
-      partCode,
-      partName,
-      'Issued',
-      -qtyRequested,
-      currentStock,
-      newStock,
-      supplier,
-      callerStaffId || 'ADMIN',
-      requestId
-    ]);
+    // 4. Retrieve current stock of part (read-only) for informative response
+    let currentStock = null;
+    let unit = 'pcs';
+    const spSheet = getOrInitSparePartsSheet(ss);
+    const spLastRow = spSheet.getLastRow();
+    if (spLastRow > 1) {
+      const spCols = Math.max(12, spSheet.getLastColumn());
+      const spValues = spSheet.getRange(2, 1, spLastRow - 1, spCols).getValues();
+      for (let i = 0; i < spValues.length; i++) {
+        if (String(spValues[i][0] || '').trim().toUpperCase() === partCode) {
+          currentStock = Number(spValues[i][4]) || 0;
+          unit = String(spValues[i][6] || 'pcs').trim();
+          break;
+        }
+      }
+    }
 
     return createJsonResponse({
       success: true,
       requestId: requestId,
       partCode: partCode,
       issuedQty: qtyRequested,
-      previousStock: currentStock,
-      newStock: newStock,
-      movementId: mId,
-      message: 'Successfully issued ' + qtyRequested + ' ' + unit + ' of ' + partCode + '. New balance: ' + newStock + ' ' + unit + '.'
+      currentStock: currentStock,
+      message: 'Request ' + requestId + ' marked as Issued. Stock (' + qtyRequested + ' ' + unit + ') was previously deducted upon approval.'
     }, 200);
 
   } catch (err) {

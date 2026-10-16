@@ -6,9 +6,9 @@
  *   - adjust-stock: ADMIN ONLY. Adjusts physical stock quantity (+ or -).
  *   - adjust-limit: ADMIN ONLY. Adjusts minimum stock limit without touching quantity.
  *   - request-stock: ADMIN & TECHNICIAN. Submits a requisition for approval.
- *   - approve-request: ADMIN ONLY. Approves a pending request (does not deduct stock).
- *   - reject-request: ADMIN ONLY. Rejects a pending request.
- *   - issue-stock: ADMIN ONLY. Issues approved stock, verifies availability, and deducts inventory under lock.
+ *   - approve-request: ADMIN ONLY. Approves a pending request, validates stock, and deducts inventory immediately.
+ *   - reject-request: ADMIN ONLY. Rejects a pending request (Approved requests cannot be directly rejected).
+ *   - issue-stock: ADMIN ONLY. Issues approved stock, verifies prior deduction under lock, and marks as Issued without double deducting.
  *
  * Security & Integrity Features:
  * 1. Strict Fail-Closed Bearer Token Authentication via Firebase Admin SDK.
@@ -480,6 +480,8 @@ exports.handler = async function (event) {
     body: JSON.stringify({
       success: true,
       action: gasAction,
+      requestId: gasPayload.requestId,
+      status: gasPayload.newStatus || (action === 'issue-stock' ? 'Issued' : 'Approved'),
       message: `Operation "${action}" accepted successfully (Local simulated mode).`
     })
   };

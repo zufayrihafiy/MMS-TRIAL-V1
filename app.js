@@ -3329,10 +3329,10 @@
       return;
     }
 
-    // Filter to Stock In, Stock Adjustment, and Issued
+    // Filter to Stock In, Stock Adjustment, Issued, and Stock Out
     const filteredMovements = (state.stockMovements || []).filter(m => {
       const typeLower = (m.type || '').toLowerCase();
-      return typeLower === 'stock in' || typeLower === 'stock adjustment' || typeLower === 'received' || typeLower === 'manual adjustment' || typeLower === 'issued' || typeLower === 'stock out';
+      return typeLower === 'stock in' || typeLower === 'stock adjustment' || typeLower === 'received' || typeLower === 'manual adjustment' || typeLower === 'issued' || typeLower === 'stock out' || typeLower.includes('approved request') || typeLower.includes('stock out');
     });
 
     if (filteredMovements.length === 0) {
@@ -3345,18 +3345,21 @@
       const part = (state.spareParts || []).find(p => p.code === m.partCode);
       const supplierName = (part && part.supplier) || m.supplier || 'N/A';
       const isPositive = Number(m.qty) > 0;
-      let typeDisplay = 'Stock Adjustment';
+      let typeDisplay = m.type || 'Stock Adjustment';
       let badgeClass = 'status-badge-blue';
       const typeLower = (m.type || '').toLowerCase();
       if (typeLower === 'stock in' || typeLower === 'received') {
         typeDisplay = 'Stock In';
         badgeClass = 'status-badge-green';
-      } else if (typeLower === 'issued' || typeLower === 'stock out') {
+      } else if (typeLower === 'issued') {
         typeDisplay = 'Issued';
         badgeClass = 'status-badge-blue';
+      } else if (typeLower.includes('approved request') || typeLower.includes('stock out')) {
+        typeDisplay = m.type || 'Stock Out - Approved Request';
+        badgeClass = 'status-badge-amber';
       } else {
         typeDisplay = 'Stock Adjustment';
-        badgeClass = 'status-badge-amber';
+        badgeClass = 'status-badge-blue';
       }
 
       const prev = m.previousStock !== undefined ? m.previousStock : '—';
@@ -4884,7 +4887,7 @@
     }
   }
 
-  // 5. APPROVE STOCK REQUEST (ADMIN ONLY)
+  // 5. APPROVE STOCK REQUEST (ADMIN ONLY - DEDUCTS STOCK IMMEDIATELY)
   async function handleApproveStockRequest(requestId) {
     const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
     const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
@@ -4893,43 +4896,135 @@
       return;
     }
 
-    const req = (state.stockRequests || []).find(r => r.requestId === requestId);
-    if (!req) return;
+    const req = (state.stockRequests || []).find(r => (r.requestId || '').trim().toUpperCase() === String(requestId).trim().toUpperCase());
+    if (!req) {
+      showToast(`Stock request ${requestId} not found.`, 'error');
+      return;
+    }
 
+    if (req.status === 'Approved') {
+      showToast(`Duplicate Approval Prevented: Request ${requestId} has already been approved and stock was deducted.`, 'error');
+      return;
+    }
     if (req.status === 'Issued') {
       showToast(`Request ${requestId} has already been issued.`, 'error');
       return;
     }
+    if (req.status !== 'Pending') {
+      showToast(`Cannot approve request with status "${req.status}". Only Pending requests can be approved.`, 'error');
+      return;
+    }
+
+    const reqPartCode = (req.partCode || '').trim().toUpperCase();
+    const part = (state.spareParts || []).find(p => (p.code || '').trim().toUpperCase() === reqPartCode);
+    if (!part) {
+      showToast(`Part ${req.partCode} not found in inventory database.`, 'error');
+      return;
+    }
+
+    const currentStock = Number(part.currentStock) || 0;
+    const requestedQty = Number(req.qtyRequested) || 0;
+
+    // Validate available stock upfront (Task 1 & Task 3: Current Stock must never become negative)
+    if (currentStock < requestedQty) {
+      showToast(`Insufficient stock to approve request! Available: ${currentStock} ${part.unit || 'pcs'}, Requested: ${requestedQty} ${part.unit || 'pcs'}. Stock deduction rejected.`, 'error');
+      return;
+    }
+
+    // Identify button and show loading state to prevent double clicks
+    const targetBtn = (typeof window.event !== 'undefined' && window.event && window.event.target) ? window.event.target.closest('button') : null;
+    const originalBtnText = targetBtn ? targetBtn.textContent : '';
+    if (targetBtn) {
+      targetBtn.disabled = true;
+      targetBtn.textContent = 'Approving...';
+    }
 
     try {
       const token = getStoredAuthToken() || '';
-      if (token) {
-        await fetch('/.netlify/functions/manage-spare-parts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            action: 'approve-request',
-            requestId
-          })
-        }).catch(err => console.warn('Backend sync warning:', err));
+      if (!token) {
+        showToast('Authentication required to approve stock requests.', 'error');
+        if (targetBtn) {
+          targetBtn.disabled = false;
+          targetBtn.textContent = originalBtnText;
+        }
+        return;
       }
 
+      const res = await fetch('/.netlify/functions/manage-spare-parts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'approve-request',
+          requestId: req.requestId
+        })
+      });
+
+      const result = await res.json().catch(() => null);
+
+      if (!res.ok || !result || result.success === false) {
+        const errMsg = (result && result.error) || `Server failed with status ${res.status}`;
+        showToast(`Failed to approve request: ${errMsg}`, 'error');
+        if (targetBtn) {
+          targetBtn.disabled = false;
+          targetBtn.textContent = originalBtnText;
+        }
+        return;
+      }
+
+      // Backend confirmed approval and stock deduction!
+      let finalNewStock;
+      if (result.newStock !== undefined && !isNaN(Number(result.newStock))) {
+        finalNewStock = Number(result.newStock);
+      } else {
+        finalNewStock = Math.max(0, currentStock - requestedQty);
+      }
+
+      part.currentStock = finalNewStock;
       req.status = 'Approved';
       req.approvedBy = state.currentUser.staffId || state.currentUser.name || 'ADMIN';
       req.approvedDate = formatCurrentDateTime();
 
+      // Record in audit log
+      const mId = result.movementId || ('MV-' + Math.floor(1000 + Math.random() * 9000));
+      state.stockMovements.unshift({
+        id: mId,
+        date: formatCurrentDateTime(),
+        partCode: part.code,
+        partName: part.name,
+        type: 'Stock Out - Approved Request',
+        qty: -requestedQty,
+        previousStock: currentStock,
+        updatedStock: finalNewStock,
+        balance: finalNewStock,
+        supplier: part.supplier,
+        updatedBy: req.approvedBy,
+        reference: req.requestId
+      });
+
       saveState();
-      renderStockRequestsTable();
-      showToast(`Request ${requestId} marked as Approved. Ready for issuance.`, 'success');
+
+      // Fetch fresh verified values from Google Sheets backend (Task 6: Live update inventory, requests, movements)
+      try {
+        await fetchSparePartsFromBackend(true);
+      } catch (fetchErr) {
+        console.warn('[handleApproveStockRequest] Post-approval background sync warning:', fetchErr);
+        renderSparePartsView();
+      }
+
+      showToast(`Request ${requestId} approved! Deducted ${requestedQty} ${part.unit || 'pcs'} of ${part.code}. New balance: ${finalNewStock} ${part.unit || 'pcs'}.`, 'success');
     } catch (err) {
       showToast('Failed to approve request: ' + err.message, 'error');
+      if (targetBtn) {
+        targetBtn.disabled = false;
+        targetBtn.textContent = originalBtnText;
+      }
     }
   }
 
-  // 6. REJECT STOCK REQUEST (ADMIN ONLY)
+  // 6. REJECT STOCK REQUEST (ADMIN ONLY - ONLY PENDING REQUESTS CAN BE REJECTED)
   async function handleRejectStockRequest(requestId) {
     const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
     const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
@@ -4938,18 +5033,30 @@
       return;
     }
 
-    const req = (state.stockRequests || []).find(r => r.requestId === requestId);
+    const req = (state.stockRequests || []).find(r => (r.requestId || '').trim().toUpperCase() === String(requestId).trim().toUpperCase());
     if (!req) return;
 
+    if (req.status === 'Approved') {
+      showToast(`Cannot reject an already Approved request. Stock was deducted upon approval. Cancellation requires a controlled return process.`, 'error');
+      return;
+    }
     if (req.status === 'Issued') {
       showToast(`Cannot reject a request that has already been issued.`, 'error');
+      return;
+    }
+    if (req.status === 'Rejected') {
+      showToast(`Request ${requestId} is already Rejected.`, 'error');
+      return;
+    }
+    if (req.status !== 'Pending') {
+      showToast(`Cannot reject request with status "${req.status}". Only Pending requests can be rejected.`, 'error');
       return;
     }
 
     try {
       const token = getStoredAuthToken() || '';
       if (token) {
-        await fetch('/.netlify/functions/manage-spare-parts', {
+        const res = await fetch('/.netlify/functions/manage-spare-parts', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -4957,9 +5064,15 @@
           },
           body: JSON.stringify({
             action: 'reject-request',
-            requestId
+            requestId: req.requestId
           })
-        }).catch(err => console.warn('Backend sync warning:', err));
+        });
+        const result = await res.json().catch(() => null);
+        if (!res.ok || !result || result.success === false) {
+          const errMsg = (result && result.error) || 'Failed to reject request.';
+          showToast(errMsg, 'error');
+          return;
+        }
       }
 
       req.status = 'Rejected';
@@ -4967,14 +5080,18 @@
       req.approvedDate = formatCurrentDateTime();
 
       saveState();
-      renderStockRequestsTable();
-      showToast(`Request ${requestId} marked as Rejected.`, 'info');
+      try {
+        await fetchSparePartsFromBackend(true);
+      } catch (e) {
+        renderSparePartsView();
+      }
+      showToast(`Request ${requestId} marked as Rejected. Stock remains unchanged.`, 'info');
     } catch (err) {
       showToast('Failed to reject request: ' + err.message, 'error');
     }
   }
 
-  // 7. ISSUE STOCK (ADMIN ONLY - DEDUCTS INVENTORY UNDER LOCK)
+  // 7. ISSUE STOCK (ADMIN ONLY - MARKS AS ISSUED, DOES NOT DEDUCT STOCK)
   async function handleIssueStockRequest(requestId) {
     const roleCode = state.currentUser ? (state.currentUser.roleCode || state.currentUser.role) : '';
     const isAdmin = roleCode === 'ADMIN' || roleCode === 'Administrator';
@@ -4995,22 +5112,6 @@
     }
     if (req.status !== 'Approved') {
       showToast(`Cannot issue stock for request with status "${req.status}". It must be Approved first.`, 'error');
-      return;
-    }
-
-    const reqPartCode = (req.partCode || '').trim().toUpperCase();
-    const part = (state.spareParts || []).find(p => (p.code || '').trim().toUpperCase() === reqPartCode);
-    if (!part) {
-      showToast(`Part ${req.partCode} not found in inventory database.`, 'error');
-      return;
-    }
-
-    const currentStock = Number(part.currentStock) || 0;
-    const requestedQty = Number(req.qtyRequested) || 0;
-
-    // Prevent negative stock
-    if (currentStock < requestedQty) {
-      showToast(`Insufficient stock to issue request! Available: ${currentStock} ${part.unit || 'pcs'}, Requested: ${requestedQty} ${part.unit || 'pcs'}.`, 'error');
       return;
     }
 
@@ -5047,7 +5148,6 @@
 
       const result = await res.json().catch(() => null);
 
-      // Never report success if the backend operation actually failed
       if (!res.ok || !result || result.success === false) {
         const errMsg = (result && result.error) || `Server failed with status ${res.status}`;
         showToast(`Failed to issue stock: ${errMsg}`, 'error');
@@ -5058,36 +5158,13 @@
         return;
       }
 
-      // Backend confirmed success!
-      let finalNewStock;
-      if (result.newStock !== undefined && !isNaN(Number(result.newStock))) {
-        finalNewStock = Number(result.newStock);
-      } else {
-        finalNewStock = Math.max(0, currentStock - requestedQty);
-      }
-
-      part.currentStock = finalNewStock;
+      // Backend confirmed status changed to Issued without deducting stock again!
       req.status = 'Issued';
       req.issuedBy = state.currentUser.staffId || state.currentUser.name || 'ADMIN';
       req.issuedDate = formatCurrentDateTime();
 
-      // Record in audit log
-      const mId = result.movementId || ('MV-' + Math.floor(1000 + Math.random() * 9000));
-      state.stockMovements.unshift({
-        id: mId,
-        date: formatCurrentDateTime(),
-        partCode: part.code,
-        partName: part.name,
-        type: 'Issued',
-        qty: -requestedQty,
-        previousStock: currentStock,
-        updatedStock: finalNewStock,
-        balance: finalNewStock,
-        supplier: part.supplier,
-        updatedBy: req.issuedBy,
-        reference: req.requestId
-      });
-
+      // DO NOT deduct stock again.
+      // DO NOT create another stock-out transaction.
       saveState();
 
       // Fetch fresh verified values from the real backend to ensure multi-module state coherence
@@ -5098,7 +5175,7 @@
         renderSparePartsView();
       }
 
-      showToast(`Successfully issued ${requestedQty} ${part.unit || 'pcs'} of ${part.code}! New balance: ${finalNewStock} ${part.unit || 'pcs'}.`, 'success');
+      showToast(`Stock for request ${requestId} has been successfully issued to technician.`, 'success');
     } catch (err) {
       showToast('Failed to issue stock: ' + err.message, 'error');
       if (targetBtn) {
@@ -5460,6 +5537,7 @@
   window.openStockRequestDetail = openStockRequestDetail;
   window.openAssignTechnicianModal = openAssignTechnicianModal;
   window.resetState = resetState;
+  window.getMmsState = () => state;
   window.showToast = showToast;
   window.viewBreakdownDetails = openBreakdownDetailModal;
   window.simulateLogout = () => {
